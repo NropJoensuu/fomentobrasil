@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Nova Oportunidade — Fomento Brasil</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h1 class="mb-4">Nova Oportunidade</h1>
+    <form method="POST">
+      <div class="mb-3">
+        <label class="form-label">Título</label>
+        <input type="text" name="titulo" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Instituição</label>
+        <input type="text" name="instituicao" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Tipo</label>
+        <select name="tipo" class="form-select" required>
+          <option value="bolsa">Bolsa</option>
+          <option value="auxilio">Auxílio</option>
+          <option value="chamada_publica">Chamada Pública</option>
+          <option value="projeto">Projeto</option>
+          <option value="cooperacao_internacional">Cooperação Internacional</option>
+          <option value="premio">Prêmio</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Área do Conhecimento</label>
+        <input type="text" name="area_conhecimento" class="form-control">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Link do Edital</label>
+        <input type="url" name="link" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Fonte</label>
+        <input type="text" name="fonte" class="form-control" placeholder="Ex: CNPq" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Descrição</label>
+        <textarea name="descricao" class="form-control" rows="3"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar</button>
+    </form>
+  </div>
+</body>
+</html>
