@@ -13,15 +13,15 @@
     </div>
     <table class="table bg-white">
       <thead>
-        <tr><th>Título</th><th>Instituição</th><th>Tipo</th><th>Fonte</th><th>Link</th></tr>
+  <tr><th>Título</th><th>Financiadora</th><th>Executora</th><th>Tipo</th><th>Link</th></tr>
       </thead>
       <tbody>
         {% for o in oportunidades %}
         <tr>
           <td>{{ o.titulo }}</td>
-          <td>{{ o.instituicao }}</td>
+          <td>{{ o.instituicao_financiadora }}</td>
+          <td>{{ o.instituicao_executora }}</td>
           <td>{{ o.tipo }}</td>
-          <td>{{ o.fonte }}</td>
           <td><a href="{{ o.link }}" target="_blank">Ver edital</a></td>
         </tr>
         {% else %}

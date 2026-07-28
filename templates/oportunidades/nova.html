@@ -10,15 +10,36 @@
     <h1 class="mb-4">Nova Oportunidade</h1>
     <form method="POST">
       <div class="mb-3">
-        <label class="form-label">Título</label>
+        <label class="form-label">Título <span class="text-danger">*</span></label>
         <input type="text" name="titulo" class="form-control" required>
       </div>
+
       <div class="mb-3">
-        <label class="form-label">Instituição</label>
-        <input type="text" name="instituicao" class="form-control" required>
+        <label class="form-label">
+          Instituição Financiadora <span class="text-danger">*</span>
+          <span data-bs-toggle="tooltip" title="Quem origina o recurso financeiro (ex: CNPq, FAPESP, FACEPE).">ℹ️</span>
+        </label>
+        <input type="text" name="instituicao_financiadora" class="form-control" required>
       </div>
+
       <div class="mb-3">
-        <label class="form-label">Tipo</label>
+        <label class="form-label">
+          Instituição Executora
+          <span data-bs-toggle="tooltip" title="Quem usa o recurso na prática, executando o projeto (ex: uma universidade ou laboratório). Deixe em branco se não especificado no edital.">ℹ️</span>
+        </label>
+        <input type="text" name="instituicao_executora" class="form-control">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">
+          Instituição Beneficiária
+          <span data-bs-toggle="tooltip" title="Intermediária que recebe o recurso da financiadora e repassa para a executora (comum em fundações de apoio, ex: FAPEU, FUNDEP). Deixe em branco quando não houver.">ℹ️</span>
+        </label>
+        <input type="text" name="instituicao_beneficiaria" class="form-control">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Tipo <span class="text-danger">*</span></label>
         <select name="tipo" class="form-select" required>
           <option value="bolsa">Bolsa</option>
           <option value="auxilio">Auxílio</option>
@@ -28,24 +49,33 @@
           <option value="premio">Prêmio</option>
         </select>
       </div>
+
       <div class="mb-3">
-        <label class="form-label">Área do Conhecimento</label>
-        <input type="text" name="area_conhecimento" class="form-control">
+        <label class="form-label">
+          Área do Conhecimento
+          <span data-bs-toggle="tooltip" title="Separe múltiplas áreas por vírgula. Ex: Ciência da Computação, Engenharia, Física">ℹ️</span>
+        </label>
+        <input type="text" name="area_conhecimento" class="form-control" placeholder="Ex: Física, Química, Engenharia">
       </div>
+
       <div class="mb-3">
-        <label class="form-label">Link do Edital</label>
+        <label class="form-label">Link do Edital <span class="text-danger">*</span></label>
         <input type="url" name="link" class="form-control" required>
       </div>
-      <div class="mb-3">
-        <label class="form-label">Fonte</label>
-        <input type="text" name="fonte" class="form-control" placeholder="Ex: CNPq" required>
-      </div>
+
       <div class="mb-3">
         <label class="form-label">Descrição</label>
         <textarea name="descricao" class="form-control" rows="3"></textarea>
       </div>
+
       <button type="submit" class="btn btn-primary">Salvar</button>
     </form>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].forEach(el => new bootstrap.Tooltip(el));
+  </script>
 </body>
 </html>
