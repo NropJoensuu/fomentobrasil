@@ -25,6 +25,13 @@ def nova_oportunidade():
         areas_raw = request.form.get("area_conhecimento") or ""
         areas = [a.strip() for a in areas_raw.split(",") if a.strip()]
 
+        data_prazo_raw = request.form.get("data_prazo") or ""
+        data_prazo = (
+            datetime.strptime(data_prazo_raw, "%Y-%m-%d").date()
+            if data_prazo_raw
+            else None
+        )
+
         data_resultado_previsto_raw = request.form.get("data_resultado_previsto") or ""
         data_resultado_previsto = (
             datetime.strptime(data_resultado_previsto_raw, "%Y-%m-%d").date()
@@ -43,6 +50,7 @@ def nova_oportunidade():
             publico_alvo=request.form.getlist("publico_alvo"),
             tipo_parceria=request.form.get("tipo_parceria") or None,
             modalidade_pessoa=request.form.get("modalidade_pessoa") or None,
+            data_prazo=data_prazo,
             data_resultado_previsto=data_resultado_previsto,
             link=request.form["link"],
             descricao=request.form.get("descricao") or None,

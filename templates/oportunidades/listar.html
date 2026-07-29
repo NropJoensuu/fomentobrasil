@@ -13,7 +13,7 @@
     </div>
     <table class="table bg-white">
       <thead>
-  <tr><th>Título</th><th>Financiadora</th><th>Linha de Fomento</th><th>Link</th></tr>
+  <tr><th>Título</th><th>Financiadora</th><th>Linha de Fomento</th><th>Data Final de Submissão</th><th>Link</th></tr>
       </thead>
       <tbody>
         {% for o in oportunidades %}
@@ -21,10 +21,11 @@
           <td>{{ o.titulo }}</td>
           <td>{{ o.instituicao_financiadora }}</td>
           <td>{{ o.linha_de_fomento }}</td>
+          <td>{{ o.data_prazo.strftime('%d/%m/%Y') if o.data_prazo else '' }}</td>
           <td><a href="{{ o.link }}" target="_blank">Ver edital</a></td>
         </tr>
         {% else %}
-        <tr><td colspan="4" class="text-center text-muted">Nenhuma oportunidade cadastrada ainda.</td></tr>
+        <tr><td colspan="5" class="text-center text-muted">Nenhuma oportunidade cadastrada ainda.</td></tr>
         {% endfor %}
       </tbody>
     </table>
