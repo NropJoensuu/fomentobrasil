@@ -19,6 +19,14 @@ def listar_oportunidades():
     return render_template("oportunidades/listar.html", oportunidades=oportunidades)
 
 
+@main.route("/oportunidades/<int:id>")
+def detalhe_oportunidade(id):
+    oportunidade = Oportunidade.query.get_or_404(id)
+    hoje = datetime.utcnow().date()
+    aberta = oportunidade.data_prazo is None or oportunidade.data_prazo >= hoje
+    return render_template("oportunidades/detalhe.html", o=oportunidade, aberta=aberta)
+
+
 @main.route("/oportunidades/nova", methods=["GET", "POST"])
 def nova_oportunidade():
     if request.method == "POST":

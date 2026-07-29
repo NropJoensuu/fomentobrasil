@@ -18,7 +18,7 @@
       <tbody>
         {% for o in oportunidades %}
         <tr>
-          <td>{{ o.titulo }}</td>
+          <td><a href="{{ url_for('main.detalhe_oportunidade', id=o.id) }}">{{ o.titulo }}</a></td>
           <td>{{ o.instituicao_financiadora }}</td>
           <td>{{ o.linha_de_fomento }}</td>
           <td>{{ o.data_prazo.strftime('%d/%m/%Y') if o.data_prazo else '' }}</td>
