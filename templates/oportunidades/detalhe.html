@@ -13,7 +13,15 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-3">
           <h1 class="h3 mb-0">{{ o.titulo }}</h1>
-          {% if aberta %}
+          {% if o.status_oficial == "suspensa" %}
+          <span class="badge bg-secondary">Suspensa</span>
+          {% elif o.status_oficial == "cancelada" %}
+          <span class="badge bg-danger">Cancelada</span>
+          {% elif o.status_oficial == "retificada" %}
+          <span class="badge bg-warning text-dark">Retificada</span>
+          {% elif o.status_oficial == "resultado_divulgado" %}
+          <span class="badge bg-info text-dark">Resultado Divulgado</span>
+          {% elif aberta %}
           <span class="badge bg-success">Aberta</span>
           {% else %}
           <span class="badge bg-secondary">Encerrada</span>
@@ -46,9 +54,29 @@
           <dd class="col-sm-8">{{ o.instituicao_executora }}</dd>
           {% endif %}
 
-          {% if o.valor %}
-          <dt class="col-sm-4">Valor</dt>
-          <dd class="col-sm-8">R$ {{ "%.2f"|format(o.valor) }}</dd>
+          {% if o.orcamento_total_chamada %}
+          <dt class="col-sm-4">Orçamento Total da Chamada</dt>
+          <dd class="col-sm-8">R$ {{ "%.2f"|format(o.orcamento_total_chamada) }}</dd>
+          {% endif %}
+
+          {% if o.valor_minimo_proposta %}
+          <dt class="col-sm-4">Valor Mínimo da Proposta</dt>
+          <dd class="col-sm-8">R$ {{ "%.2f"|format(o.valor_minimo_proposta) }}</dd>
+          {% endif %}
+
+          {% if o.valor_maximo_proposta %}
+          <dt class="col-sm-4">Valor Máximo da Proposta</dt>
+          <dd class="col-sm-8">R$ {{ "%.2f"|format(o.valor_maximo_proposta) }}</dd>
+          {% endif %}
+
+          {% if o.area_principal %}
+          <dt class="col-sm-4">Área Principal</dt>
+          <dd class="col-sm-8">{{ o.area_principal }}</dd>
+          {% endif %}
+
+          {% if o.palavras_chave %}
+          <dt class="col-sm-4">Palavras-chave</dt>
+          <dd class="col-sm-8">{{ o.palavras_chave | join(', ') }}</dd>
           {% endif %}
 
           {% if o.data_publicacao %}

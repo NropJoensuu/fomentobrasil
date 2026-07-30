@@ -30,8 +30,12 @@ def detalhe_oportunidade(id):
 @main.route("/oportunidades/nova", methods=["GET", "POST"])
 def nova_oportunidade():
     if request.method == "POST":
-        areas_raw = request.form.get("area_conhecimento") or ""
-        areas = [a.strip() for a in areas_raw.split(",") if a.strip()]
+        palavras_chave_raw = request.form.get("palavras_chave") or ""
+        palavras_chave = [p.strip() for p in palavras_chave_raw.split(",") if p.strip()]
+
+        def parse_decimal(campo):
+            valor_raw = request.form.get(campo) or ""
+            return float(valor_raw) if valor_raw else None
 
         data_prazo_raw = request.form.get("data_prazo") or ""
         data_prazo = (
@@ -58,11 +62,16 @@ def nova_oportunidade():
             publico_alvo=request.form.getlist("publico_alvo"),
             tipo_parceria=request.form.get("tipo_parceria") or None,
             modalidade_pessoa=request.form.get("modalidade_pessoa") or None,
+            status_oficial=request.form.get("status_oficial") or None,
+            orcamento_total_chamada=parse_decimal("orcamento_total_chamada"),
+            valor_minimo_proposta=parse_decimal("valor_minimo_proposta"),
+            valor_maximo_proposta=parse_decimal("valor_maximo_proposta"),
             data_prazo=data_prazo,
             data_resultado_previsto=data_resultado_previsto,
             link=request.form["link"],
             descricao=request.form.get("descricao") or None,
-            area_conhecimento=areas or None,
+            area_principal=request.form.get("area_principal") or None,
+            palavras_chave=palavras_chave or None,
         )
         db.session.add(oportunidade)
         db.session.commit()

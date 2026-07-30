@@ -150,10 +150,66 @@
 
       <div class="mb-3">
         <label class="form-label">
-          Área do Conhecimento
-          <span data-bs-toggle="tooltip" title="Separe múltiplas áreas por vírgula. Ex: Ciência da Computação, Engenharia, Física">ℹ️</span>
+          Área Principal
+          <span data-bs-toggle="tooltip" title="Grande Área da Tabela de Áreas do Conhecimento CNPq/CAPES.">ℹ️</span>
         </label>
-        <input type="text" name="area_conhecimento" class="form-control" placeholder="Ex: Física, Química, Engenharia">
+        <select name="area_principal" class="form-select">
+          <option value="">Não especificado</option>
+          <option value="Ciências Exatas e da Terra">Ciências Exatas e da Terra</option>
+          <option value="Ciências Biológicas">Ciências Biológicas</option>
+          <option value="Engenharias">Engenharias</option>
+          <option value="Ciências da Saúde">Ciências da Saúde</option>
+          <option value="Ciências Agrárias">Ciências Agrárias</option>
+          <option value="Ciências Sociais Aplicadas">Ciências Sociais Aplicadas</option>
+          <option value="Ciências Humanas">Ciências Humanas</option>
+          <option value="Linguística, Letras e Artes">Linguística, Letras e Artes</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">
+          Palavras-chave
+          <span data-bs-toggle="tooltip" title="Separe múltiplas palavras-chave por vírgula. Ex: Ciência da Computação, computer science, IA">ℹ️</span>
+        </label>
+        <input type="text" name="palavras_chave" class="form-control" placeholder="Ex: Física, Química, Engenharia">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">
+          Status Oficial
+          <span data-bs-toggle="tooltip" title="Situação oficial declarada pela instituição sobre o edital. Deixe em branco para calcular Aberta/Encerrada automaticamente pela data final de submissão.">ℹ️</span>
+        </label>
+        <select name="status_oficial" class="form-select">
+          <option value="">Nenhum — calcular automaticamente</option>
+          <option value="suspensa">Suspensa</option>
+          <option value="cancelada">Cancelada</option>
+          <option value="retificada">Retificada</option>
+          <option value="resultado_divulgado">Resultado Divulgado</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">
+          Orçamento Total da Chamada
+          <span data-bs-toggle="tooltip" title="Valor total disponibilizado pela chamada, quando informado no edital.">ℹ️</span>
+        </label>
+        <input type="number" step="0.01" name="orcamento_total_chamada" class="form-control">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">
+          Valor Mínimo da Proposta
+          <span data-bs-toggle="tooltip" title="Valor mínimo que pode ser solicitado por proposta.">ℹ️</span>
+        </label>
+        <input type="number" step="0.01" name="valor_minimo_proposta" class="form-control">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">
+          Valor Máximo da Proposta
+          <span data-bs-toggle="tooltip" title="Valor máximo que pode ser solicitado por proposta.">ℹ️</span>
+        </label>
+        <input type="number" step="0.01" name="valor_maximo_proposta" class="form-control">
       </div>
 
       <div class="mb-3">

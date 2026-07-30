@@ -46,3 +46,14 @@ Termos frequentemente confundidos entre si. Vocabulário de referência para man
 - **Nível de formação** (`nivel_formacao`) — grau acadêmico do beneficiário (mestrado, doutorado, pós-doutorado, iniciação científica, não aplicável). Independente de `publico_alvo` — só é relevante quando `natureza_recurso` inclui `bolsa` (não faz sentido para custeio ou capital direcionado a uma empresa, por exemplo).
 - **Modalidade de pessoa** (`modalidade_pessoa`) — só relevante quando `linha_de_fomento` é `apoio_formacao_capacitacao`. Descreve o tipo de movimentação de pessoal que o apoio financia: `atracao` (trazer pesquisador de fora), `fixacao` (reter pesquisador já vinculado), `capacitacao_exterior` (formação/estágio no exterior).
 - **Tipo de parceria** (`tipo_parceria`) — escopo geográfico/institucional da parceria entre instituições, quando a chamada exigir ou incentivar cooperação. Ex: `nacional`, `regional`, `internacional`. Distinto de `abrangencia` (que descreve o alcance geográfico da própria chamada, não da parceria).
+
+## `status` vs `status_oficial` — não confundir
+
+Dois campos parecidos, com significados completamente diferentes:
+
+- **`status`** — status de **moderação/curadoria interna** do registro no sistema: `rascunho`, `pendente`, `aprovado`, `rejeitado`. Controla se a oportunidade aparece na busca pública (ver seção "Autenticação e submissão pública de vagas" acima). Não tem relação com a situação do edital em si.
+- **`status_oficial`** — status **oficial declarado pela instituição** sobre o edital: `suspensa`, `cancelada`, `retificada`, `resultado_divulgado`. Fica `None`/vazio na maioria das chamadas (caso normal), e nesse caso o sistema calcula "Aberta"/"Encerrada" automaticamente comparando `data_prazo` com a data atual. Quando preenchido, `status_oficial` tem prioridade sobre esse cálculo na exibição — por exemplo, uma chamada com `status_oficial="suspensa"` mostra "Suspensa" mesmo que `data_prazo` ainda esteja no futuro.
+
+## `area_principal` — Tabela de Áreas do Conhecimento CNPq/CAPES
+
+`area_principal` é validado contra as 8 Grandes Áreas oficiais da Tabela de Áreas do Conhecimento CNPq/CAPES (Ciências Exatas e da Terra, Ciências Biológicas, Engenharias, Ciências da Saúde, Ciências Agrárias, Ciências Sociais Aplicadas, Ciências Humanas, Linguística/Letras/Artes). Por ora só o nível de granularidade "Grande Área" foi implementado — descer até "Área" e "Subárea" da tabela oficial fica como melhoria futura, se houver demanda real por filtragem mais fina. `palavras_chave` continua livre (lista de strings, sem validação) para cobrir termos que a Grande Área sozinha não capta.

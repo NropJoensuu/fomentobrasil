@@ -28,7 +28,11 @@ class Oportunidade(db.Model):
 
     # Proveniência: institucional (edital top-down) vs vaga_projeto (oferta ligada a projeto já financiado)
     origem = db.Column(db.String(30), nullable=False, default="institucional")
-    status = db.Column(db.String(30), nullable=False, default="aprovado")  # rascunho, pendente, aprovado, rejeitado
+    status = db.Column(db.String(30), nullable=False, default="aprovado")  # rascunho, pendente, aprovado, rejeitado (moderação/curadoria interna)
+
+    # Status oficial declarado pela instituição sobre o edital em si (distinto de `status`, que é moderação).
+    # Quando None (caso normal), aberta/encerrada é calculado a partir de data_prazo. Quando preenchido, tem prioridade sobre esse cálculo.
+    status_oficial = db.Column(db.String(30), nullable=True)  # suspensa, cancelada, retificada, resultado_divulgado
 
     # Quem financia vs onde a pessoa atua
     instituicao_financiadora = db.Column(db.String(200), nullable=False)  # quem origina o recurso: ex "CNPq", "FAPESP"
@@ -36,7 +40,9 @@ class Oportunidade(db.Model):
     instituicao_beneficiaria = db.Column(db.String(200), nullable=True)  # intermediária que recebe e repassa o recurso (ex: fundação de apoio)
 
     nivel_formacao = db.Column(db.String(50), nullable=True)  # mestrado, doutorado, pos_doutorado, iniciacao_cientifica, nao_aplicavel; só relevante quando natureza_recurso inclui bolsa
-    area_conhecimento = db.Column(ARRAY(db.String(150)), nullable=True)  # suporta múltiplas áreas
+
+    area_principal = db.Column(db.String(100), nullable=True)  # Grande Área da Tabela CNPq/CAPES (lista fechada, ver formulário)
+    palavras_chave = db.Column(ARRAY(db.String(150)), nullable=True)  # livre, suporta múltiplos valores
 
     # Escopo da parceria entre instituições, quando houver
     tipo_parceria = db.Column(db.String(30), nullable=True)  # nacional, regional, internacional
@@ -49,7 +55,9 @@ class Oportunidade(db.Model):
     uf = db.Column(db.String(2), nullable=True)  # preenchido só quando abrangencia="estadual"
     cidade = db.Column(db.String(150), nullable=True)
 
-    valor = db.Column(db.Numeric(12, 2), nullable=True)
+    orcamento_total_chamada = db.Column(db.Numeric(14, 2), nullable=True)
+    valor_minimo_proposta = db.Column(db.Numeric(14, 2), nullable=True)
+    valor_maximo_proposta = db.Column(db.Numeric(14, 2), nullable=True)
     link = db.Column(db.String(500), nullable=False)
 
     # Datas
