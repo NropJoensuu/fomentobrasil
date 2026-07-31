@@ -46,6 +46,19 @@
           <dd class="col-sm-8">{{ o.nivel_formacao }}</dd>
           {% endif %}
 
+          {% if o.abrangencia %}
+          <dt class="col-sm-4">Abrangência</dt>
+          <dd class="col-sm-8">
+            {{ o.abrangencia }}
+            {% if o.uf %} — {{ o.uf }} ({{ regiao }}){% endif %}
+          </dd>
+          {% endif %}
+
+          {% if o.cidade %}
+          <dt class="col-sm-4">Cidade</dt>
+          <dd class="col-sm-8">{{ o.cidade }}</dd>
+          {% endif %}
+
           <dt class="col-sm-4">Instituição Financiadora</dt>
           <dd class="col-sm-8">{{ o.instituicao_financiadora }}</dd>
 

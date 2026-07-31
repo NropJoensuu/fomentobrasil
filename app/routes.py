@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 
 from app import db
 from app.models import Oportunidade
+from app.utils import get_regiao
 
 main = Blueprint("main", __name__)
 
@@ -24,7 +25,8 @@ def detalhe_oportunidade(id):
     oportunidade = Oportunidade.query.get_or_404(id)
     hoje = datetime.utcnow().date()
     aberta = oportunidade.data_prazo is None or oportunidade.data_prazo >= hoje
-    return render_template("oportunidades/detalhe.html", o=oportunidade, aberta=aberta)
+    regiao = get_regiao(oportunidade.uf)
+    return render_template("oportunidades/detalhe.html", o=oportunidade, aberta=aberta, regiao=regiao)
 
 
 @main.route("/oportunidades/nova", methods=["GET", "POST"])
@@ -72,6 +74,14 @@ def nova_oportunidade():
             descricao=request.form.get("descricao") or None,
             area_principal=request.form.get("area_principal") or None,
             palavras_chave=palavras_chave or None,
+            nivel_formacao=request.form.get("nivel_formacao") or None,
+            abrangencia=request.form.get("abrangencia") or None,
+            uf=request.form.get("uf") or None,
+            cidade=request.form.get("cidade") or None,
+            data_publicacao=(
+                datetime.strptime(request.form["data_publicacao"], "%Y-%m-%d").date()
+                if request.form.get("data_publicacao") else None
+            ),
         )
         db.session.add(oportunidade)
         db.session.commit()
