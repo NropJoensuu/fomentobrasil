@@ -10,3 +10,10 @@ REGIAO_POR_UF = {
 
 def get_regiao(uf):
     return REGIAO_POR_UF.get(uf) if uf else None
+
+
+def get_ufs_por_regiao(regiao):
+    return [uf for uf, r in REGIAO_POR_UF.items() if r == regiao]
+
+
+REGIOES = sorted(set(REGIAO_POR_UF.values()))

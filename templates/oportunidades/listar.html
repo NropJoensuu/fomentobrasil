@@ -11,6 +11,73 @@
       <h1>Oportunidades</h1>
       <a href="{{ url_for('main.nova_oportunidade') }}" class="btn btn-primary">Nova Oportunidade</a>
     </div>
+    <form method="GET" class="row g-2 mb-4 bg-white p-3 rounded border">
+      <div class="col-md-2">
+        <select name="regiao" class="form-select form-select-sm">
+          <option value="">Região (todas)</option>
+          {% for r in regioes %}
+          <option value="{{ r }}" {{ 'selected' if filtros.regiao == r else '' }}>{{ r }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <select name="linha_de_fomento" class="form-select form-select-sm">
+          <option value="">Linha de Fomento (todas)</option>
+          <option value="auxilio_pesquisa" {{ 'selected' if filtros.linha_de_fomento == 'auxilio_pesquisa' else '' }}>Auxílio à Pesquisa</option>
+          <option value="auxilio_inovacao" {{ 'selected' if filtros.linha_de_fomento == 'auxilio_inovacao' else '' }}>Auxílio à Inovação</option>
+          <option value="auxilio_divulgacao_cientifica" {{ 'selected' if filtros.linha_de_fomento == 'auxilio_divulgacao_cientifica' else '' }}>Auxílio à Divulgação Científica</option>
+          <option value="apoio_formacao_capacitacao" {{ 'selected' if filtros.linha_de_fomento == 'apoio_formacao_capacitacao' else '' }}>Apoio à Formação/Capacitação</option>
+          <option value="apoio_redes_grupos_pesquisa" {{ 'selected' if filtros.linha_de_fomento == 'apoio_redes_grupos_pesquisa' else '' }}>Apoio a Redes e Grupos</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <select name="area_principal" class="form-select form-select-sm">
+          <option value="">Área Principal (todas)</option>
+          <option value="Ciências Exatas e da Terra" {{ 'selected' if filtros.area_principal == 'Ciências Exatas e da Terra' else '' }}>Ciências Exatas e da Terra</option>
+          <option value="Ciências Biológicas" {{ 'selected' if filtros.area_principal == 'Ciências Biológicas' else '' }}>Ciências Biológicas</option>
+          <option value="Engenharias" {{ 'selected' if filtros.area_principal == 'Engenharias' else '' }}>Engenharias</option>
+          <option value="Ciências da Saúde" {{ 'selected' if filtros.area_principal == 'Ciências da Saúde' else '' }}>Ciências da Saúde</option>
+          <option value="Ciências Agrárias" {{ 'selected' if filtros.area_principal == 'Ciências Agrárias' else '' }}>Ciências Agrárias</option>
+          <option value="Ciências Sociais Aplicadas" {{ 'selected' if filtros.area_principal == 'Ciências Sociais Aplicadas' else '' }}>Ciências Sociais Aplicadas</option>
+          <option value="Ciências Humanas" {{ 'selected' if filtros.area_principal == 'Ciências Humanas' else '' }}>Ciências Humanas</option>
+          <option value="Linguística, Letras e Artes" {{ 'selected' if filtros.area_principal == 'Linguística, Letras e Artes' else '' }}>Linguística, Letras e Artes</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <select name="publico_alvo" class="form-select form-select-sm">
+          <option value="">Público-Alvo (todos)</option>
+          <option value="pesquisadores" {{ 'selected' if filtros.publico_alvo == 'pesquisadores' else '' }}>Pesquisadores</option>
+          <option value="empresas" {{ 'selected' if filtros.publico_alvo == 'empresas' else '' }}>Empresas</option>
+          <option value="startups" {{ 'selected' if filtros.publico_alvo == 'startups' else '' }}>Startups</option>
+          <option value="ict" {{ 'selected' if filtros.publico_alvo == 'ict' else '' }}>ICT</option>
+          <option value="mestrandos" {{ 'selected' if filtros.publico_alvo == 'mestrandos' else '' }}>Mestrandos</option>
+          <option value="doutorandos" {{ 'selected' if filtros.publico_alvo == 'doutorandos' else '' }}>Doutorandos</option>
+          <option value="ies" {{ 'selected' if filtros.publico_alvo == 'ies' else '' }}>IES</option>
+          <option value="governo" {{ 'selected' if filtros.publico_alvo == 'governo' else '' }}>Governo</option>
+        </select>
+      </div>
+
+      <div class="col-md-1 d-flex align-items-center">
+        <div class="form-check">
+          <input type="checkbox" name="apenas_abertas" value="1" class="form-check-input" id="apenasAbertas" {{ 'checked' if filtros.apenas_abertas else '' }}>
+          <label class="form-check-label small" for="apenasAbertas">Só abertas</label>
+        </div>
+      </div>
+
+      <div class="col-md-1 d-grid">
+        <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+      </div>
+
+      {% if filtros.regiao or filtros.linha_de_fomento or filtros.area_principal or filtros.publico_alvo or filtros.apenas_abertas %}
+      <div class="col-12">
+        <a href="{{ url_for('main.listar_oportunidades') }}" class="small">Limpar filtros</a>
+      </div>
+      {% endif %}
+    </form>
+
     <table class="table bg-white">
       <thead>
   <tr><th>Título</th><th>Financiadora</th><th>Linha de Fomento</th><th>Data Final de Submissão</th><th>Link</th></tr>

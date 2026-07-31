@@ -1,10 +1,11 @@
 from datetime import datetime
 
 from flask import Blueprint, render_template, request, redirect, url_for
+from sqlalchemy import or_
 
 from app import db
 from app.models import Oportunidade
-from app.utils import get_regiao
+from app.utils import get_regiao, get_ufs_por_regiao, REGIOES
 
 main = Blueprint("main", __name__)
 
@@ -16,8 +17,45 @@ def index():
 
 @main.route("/oportunidades")
 def listar_oportunidades():
-    oportunidades = Oportunidade.query.order_by(Oportunidade.criado_em.desc()).all()
-    return render_template("oportunidades/listar.html", oportunidades=oportunidades)
+    query = Oportunidade.query
+
+    regiao = request.args.get("regiao") or ""
+    linha_de_fomento = request.args.get("linha_de_fomento") or ""
+    area_principal = request.args.get("area_principal") or ""
+    publico_alvo = request.args.get("publico_alvo") or ""
+    apenas_abertas = request.args.get("apenas_abertas") == "1"
+
+    if regiao:
+        ufs = get_ufs_por_regiao(regiao)
+        query = query.filter(Oportunidade.uf.in_(ufs))
+    if linha_de_fomento:
+        query = query.filter(Oportunidade.linha_de_fomento == linha_de_fomento)
+    if area_principal:
+        query = query.filter(Oportunidade.area_principal == area_principal)
+    if publico_alvo:
+        query = query.filter(Oportunidade.publico_alvo.any(publico_alvo))
+    if apenas_abertas:
+        hoje = datetime.utcnow().date()
+        query = query.filter(
+            or_(Oportunidade.data_prazo.is_(None), Oportunidade.data_prazo >= hoje)
+        )
+
+    oportunidades = query.order_by(Oportunidade.criado_em.desc()).all()
+
+    filtros = {
+        "regiao": regiao,
+        "linha_de_fomento": linha_de_fomento,
+        "area_principal": area_principal,
+        "publico_alvo": publico_alvo,
+        "apenas_abertas": apenas_abertas,
+    }
+
+    return render_template(
+        "oportunidades/listar.html",
+        oportunidades=oportunidades,
+        filtros=filtros,
+        regioes=REGIOES,
+    )
 
 
 @main.route("/oportunidades/<int:id>")
