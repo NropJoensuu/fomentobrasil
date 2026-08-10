@@ -57,3 +57,17 @@ Dois campos parecidos, com significados completamente diferentes:
 ## `area_principal` — Tabela de Áreas do Conhecimento CNPq/CAPES
 
 `area_principal` é validado contra as 8 Grandes Áreas oficiais da Tabela de Áreas do Conhecimento CNPq/CAPES (Ciências Exatas e da Terra, Ciências Biológicas, Engenharias, Ciências da Saúde, Ciências Agrárias, Ciências Sociais Aplicadas, Ciências Humanas, Linguística/Letras/Artes). Por ora só o nível de granularidade "Grande Área" foi implementado — descer até "Área" e "Subárea" da tabela oficial fica como melhoria futura, se houver demanda real por filtragem mais fina. `palavras_chave` continua livre (lista de strings, sem validação) para cobrir termos que a Grande Área sozinha não capta.
+
+## Decisão de escopo do MVP (revisão)
+
+MVP redefinido como um portal de **leitura pública**, no estilo de sites de concurso público 
+(PCI Concursos, QConcursos, Estratégia Concursos) — conteúdo agregado, buscável e filtrável, 
+sem exigir login para consulta. ORCID, papéis de usuário (admin/colaborador/usuário) e 
+submissão pública ficam confirmados como fase pós-MVP (ver seção "Autenticação e submissão 
+pública de vagas" acima) — infraestrutura de e-mail (dev@fomentobrasil.com.br via Cloudflare 
+Email Routing) já está pronta para quando essa fase começar, mas o cadastro OAuth no ORCID 
+Sandbox foi pausado por decisão consciente de foco.
+
+Implicação prática: o valor do MVP agora depende de **volume de conteúdo real** (scrapers e/ou 
+cadastro manual em escala), não de autenticação. Priorizar frentes que aumentam quantidade e 
+qualidade de oportunidades cadastradas.
