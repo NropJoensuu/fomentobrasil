@@ -50,6 +50,38 @@ Detalhes de parsing que não são óbvios e já quebraram uma versão anterior:
   conceitos distintos e divergem na prática (ex.: CNPq/ERC 21/2026, publicada 04/08 com 
   inscrições desde 03/08; CNPq/SETEC 13/2026, publicada 28/04 com 2ª rodada em 04/08).
 
+### Segundo scraper: FAPESP (chamadas de propostas)
+
+`scrapers/fapesp.py`, roda igual ao do CNPq (`python -m scrapers.fapesp`), também grava 
+como `status="pendente"` e deduplica por `link`.
+
+**Usar a listagem anual, não a página de categorias.** A URL correta é 
+`https://fapesp.br/2185/chamadas-de-propostas-2026` — uma lista única e limpa (41 chamadas 
+em 2026-08-10). A página `https://fapesp.br/chamadas/` repete a mesma chamada em várias 
+categorias, gerando duplicatas.
+
+Detalhes de parsing:
+
+- O seletor é `ul.list > li` (há um único `<ul class="list">` na página). Ancorar assim é 
+  obrigatório: o texto completo da listagem aparece **triplicado** no HTML, porque também é 
+  embutido nas meta tags `og:description` e `twitter:description`. Uma busca solta por `<li>` 
+  pegaria lixo de menu de navegação.
+- Cada `<li>` tem as linhas separadas por `<br>`, nesta ordem: título (link), 
+  "Chamada FAPESP NN/AAAA", linha(s) de prazo, descrição livre e "Apoio: ...".
+- **Quando há mais de um prazo, vale o último.** Acontece em dois formatos: pré-proposta vs 
+  proposta completa (ex.: T-AP, 08/07 e 28/10 → vale 28/10) e chamadas com dois ciclos 
+  (ex.: FICA-SP, 30/09/2026 e 26/02/2027 → vale 26/02/2027). O texto cru fica em 
+  `dados_extra.prazo_bruto` para conferência na curadoria.
+- Classificar linha de prazo pelo **início** da linha (rótulo "Prazo(s)", "Data(s) limite", 
+  "Inscrições"), não pela presença do termo em qualquer posição — há descrições que mencionam 
+  "submissão" no meio do texto e seriam engolidas. Pelo mesmo motivo, a linha de instituições 
+  exige os dois-pontos (`Apoio:`): existe descrição começando com "Apoio a projetos bilaterais...".
+- Rótulos de prazo no plural existem ("Datas limite ..."), então o regex precisa aceitar `datas?`.
+- Datas por extenso ("6 de abril de 2026") são entendidas. Datas **sem ano** ("Prazos: 21/05 
+  ... e 17/08") ficam com `data_prazo=None` de propósito — inferir o ano seria chute; o 
+  curador resolve pelo `prazo_bruto`. Hoje isso afeta 1 das 41 chamadas.
+- `dados_extra.chamada_numero` guarda o "Chamada FAPESP NN/AAAA" para referência/citação.
+
 ## Moderação — ainda não existe interface
 
 Não há tela de moderação (aprovar/rejeitar/editar pendentes). Hoje o fluxo é manual via shell:
