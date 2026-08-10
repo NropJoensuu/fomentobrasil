@@ -82,6 +82,61 @@ Detalhes de parsing:
   curador resolve pelo `prazo_bruto`. Hoje isso afeta 1 das 41 chamadas.
 - `dados_extra.chamada_numero` guarda o "Chamada FAPESP NN/AAAA" para referência/citação.
 
+### Terceiro scraper: FAPEMIG (API JSON, não scraping de HTML)
+
+`scrapers/fapemig.py`, roda igual aos outros (`python -m scrapers.fapemig`).
+
+**A FAPEMIG não precisa de scraping de HTML**: o site é Nuxt + WordPress headless e expõe 
+uma API REST com namespace próprio, que devolve os dados já estruturados — mais robusto e 
+imune a mudança visual do site.
+
+```
+GET https://api.site.fapemig.br/wp-json/fapemig-chamadas-e-editais/v1/chamadas
+    ?publicacao_status=publish&page=N
+```
+
+Resposta paginada: `{"data": [...], "total": N, "per_page": 20, "pagination": {"total_pages": N}}`. 
+O `link` público é montado como `https://fapemig.br/oportunidades/chamadas-e-editais/{slug}` 
+(confirmado que resolve, HTTP 200).
+
+**Caminho de descoberta, para tentar em outras FAPs antes de partir para HTML:** o site é 
+Nuxt, então o `_payload.json` da página revela de onde os dados vêm → daí chega-se ao 
+`/wp-json/` do WordPress → e finalmente ao namespace específico 
+(`fapemig-chamadas-e-editais/v1`). Vale testar esse caminho sempre que a FAP tiver cara de 
+SPA moderna (Nuxt/Next/React) — o custo de checar é baixo e o ganho é grande.
+
+Pontos de atenção:
+
+- **Só ~6% das chamadas estão abertas.** Em 2026-08-10: 189 publicadas, mas 12 `aberta`, 
+  136 `encerrada`, 33 `resultados`, 8 `analise`. O scraper importa **só as abertas** por 
+  padrão (`coletar_chamadas_fapemig(apenas_abertas=False)` traz todas). Motivo concreto: 
+  113 das encerradas não têm `data_fim_submissao`, e o site calcula "aberta" quando 
+  `data_prazo` é nulo — elas apareceriam como "Chamada aberta" sem estarem.
+- Das 12 abertas, 4 legitimamente não têm prazo (Portarias de credenciamento em fluxo 
+  contínuo) — nesse caso exibir "Aberta" está correto.
+- `descricao_chamada` às vezes vem com HTML (`<ul><li>`); é limpo com BeautifulSoup.
+- `data_divulgacao_resultado` vem como dict (`{"label":..., "data":...}`) ou `null`.
+- `status_chamada` da FAPEMIG não é o nosso vocabulário: só `resultados` tem equivalente 
+  (`status_oficial="resultado_divulgado"`). `encerrada` não tem — no nosso modelo isso 
+  deriva de `data_prazo`.
+- **A API já classifica linha de fomento, público-alvo e área de conhecimento** 
+  (`linhas_fomento`, `publico_alvo`, `areas_conhecimento`, cada um com `selected`). Esses 
+  valores vão para `dados_extra` em vez de irem direto para as colunas, porque o vocabulário 
+  não é idêntico ao nosso e a FAPEMIG marca **várias** linhas de fomento por chamada, 
+  enquanto `linha_de_fomento` é de valor único. Ver "Decisão pendente" abaixo.
+
+### Decisão pendente: aproveitar a taxonomia da FAPEMIG
+
+Diferente de CNPq e FAPESP, aqui há classificação estruturada na fonte — ex.: a chamada 
+013/2026 vem com `linhas_fomento = ["Auxílio à Inovação", "Auxílio à Pesquisa", "Capacitação 
+de Pessoas"]` e `publico_alvo = ["Empresas", "Pesquisadores"]`. Hoje isso só alimenta 
+`dados_extra`; as colunas seguem com placeholder e listas vazias, como nos outros scrapers.
+
+`publico_alvo` mapearia quase 1:1 para o nosso vocabulário e poderia ser preenchido 
+automaticamente. `linha_de_fomento` esbarra no fato de ser valor único aqui e múltiplo lá — 
+resolver isso provavelmente exige decidir se o campo vira lista (o que afeta o formulário, 
+os filtros e uma migração).
+
 ## Moderação — ainda não existe interface
 
 Não há tela de moderação (aprovar/rejeitar/editar pendentes). Hoje o fluxo é manual via shell:
