@@ -100,7 +100,16 @@
       <tbody>
         {% for o in oportunidades %}
         <tr>
-          <td><a href="{{ url_for('main.detalhe_oportunidade', id=o.id) }}">{{ o.titulo }}</a></td>
+          <td>
+            <a href="{{ url_for('main.detalhe_oportunidade', id=o.id) }}">{{ o.titulo }}</a>
+            {% if o.status == "pendente" %}
+            <span class="badge bg-warning text-dark ms-1"
+                  data-bs-toggle="tooltip"
+                  title="Coletado automaticamente, ainda não revisado por um curador. Alguns campos podem estar incompletos ou incorretos.">
+              Não verificado
+            </span>
+            {% endif %}
+          </td>
           <td>{{ o.instituicao_financiadora }}</td>
           <td>{{ o.linha_de_fomento }}</td>
           <td>{{ o.data_prazo.strftime('%d/%m/%Y') if o.data_prazo else '' }}</td>
@@ -112,5 +121,11 @@
       </tbody>
     </table>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].forEach(el => new bootstrap.Tooltip(el));
+  </script>
 </body>
 </html>

@@ -9,6 +9,16 @@
   <div class="container py-5">
     <a href="{{ url_for('main.listar_oportunidades') }}" class="d-inline-block mb-4">&larr; Voltar para Oportunidades</a>
 
+    {% if o.status == "pendente" %}
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert">
+      <strong>⚠ Não verificado</strong>
+      <span>Esta oportunidade foi coletada automaticamente e ainda não passou por revisão
+      humana. Alguns campos (como área, público-alvo ou prazo) podem estar incompletos,
+      desatualizados ou incorretos. Sempre confirme os detalhes no link oficial abaixo antes
+      de tomar qualquer decisão.</span>
+    </div>
+    {% endif %}
+
     <div class="card mb-4">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-3">

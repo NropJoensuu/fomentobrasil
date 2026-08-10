@@ -196,6 +196,17 @@ Uma tela de moderação é candidata natural para a próxima etapa, especialment
 sistema de usuários/papéis (admin/colaborador) for implementado — ver "Autenticação e 
 submissão pública de vagas" acima.
 
+### Decisão revisada (2026-08-10): visibilidade pública de pendentes
+
+A política original era esconder todo conteúdo pendente até aprovação manual. Isso foi 
+trocado por "mostrar tudo exceto rejeitado, com selo Não verificado" — motivo: curadoria 
+100%-antes-de-publicar cria um gargalo que trava o crescimento de conteúdo visível, e 
+conteúdo visível é o que atrai colaboradores para ajudar a curar (ciclo que precisa de um 
+empurrão inicial). O selo mantém honestidade sobre a origem e confiabilidade do dado. 
+Rejeitado continua sempre invisível — curadoria explícita de descarte não deve reaparecer. 
+Este é o modelo que também prepara o terreno para quando a submissão pública (ORCID) for 
+retomada: mostrar valor primeiro é o que dá motivo para alguém querer logar e colaborar.
+
 
 ## Vocabulário:
 Instituições com papéis jurídicos e financeiros distintos:
