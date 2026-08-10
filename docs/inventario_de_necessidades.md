@@ -143,6 +143,33 @@ propósito: **não é sinônimo de `startups`**, que é o valor mais próximo qu
 continua visível em `dados_extra["publico_alvo_fapemig"]` para o curador decidir caso a caso. 
 Se aparecer com frequência, é candidato a virar valor novo do nosso vocabulário.
 
+### Quarto scraper: FAPES (5 categorias, sem prazo de submissão)
+
+`scrapers/fapes.py`, roda igual aos outros (`python -m scrapers.fapes`).
+
+A FAPES publica editais abertos em **5 páginas separadas por categoria** (Carreira 
+Científica, Pesquisa, Difusão do Conhecimento, Extensão, Inovação), todas no mesmo template 
+HTML server-rendered (Orchard CMS). Confirmado em 2026-08-10 que **não há API JSON** 
+(`/api/editais` e `/wp-json/` devolvem a página de erro padrão do CMS, não dados 
+estruturados) — diferente da FAPEMIG, aqui é scraping de HTML mesmo.
+
+Cada edital é uma `<table class="table-downloads">` (um "acordeão"), e cada linha dessa 
+tabela é **um documento** (`<th class="coluna-1">` com link, título em `span.conteudo-value` 
+e descrição em `div.caption span.caption-value`; data em `span.dataatualizacao-value` na 
+coluna seguinte). Um mesmo edital frequentemente aparece com **múltiplas linhas** — versão 
+original + 1ª alteração + 2ª alteração/retificação, cada uma com seu próprio link — e o 
+scraper grava todas como registros separados (dedup só por `link`, que é único por PDF). A 
+categoria "Extensão" pode legitimamente ter zero editais abertos no momento (bloco vazio, 
+sem tabela).
+
+**Limitação sem precedente nos scrapers anteriores: não há prazo de submissão na listagem.** 
+A única data disponível é "Atualização", que é a data de última modificação do **arquivo 
+PDF**, não o prazo da chamada (o prazo só existe dentro do PDF, que não é extraído nesta 
+fase — ver "PDFs de editais" acima). Por isso `data_prazo` fica sempre `None` nos registros 
+da FAPES; a data do PDF vai só para `dados_extra["documento_atualizado_em"]`, como 
+referência. Um curador precisa abrir cada PDF pendente da FAPES para preencher `data_prazo` 
+manualmente até que a extração de PDF seja implementada.
+
 ### Decisão pendente: `linha_de_fomento` da FAPEMIG
 
 `linha_de_fomento` continua com placeholder mesmo com a API informando o valor, porque a 
