@@ -1,3 +1,44 @@
-body {
-    font-family: sans-serif;
+:root {
+  --cor-primaria: #1B3A5C;
+  --cor-destaque: #0E8C7F;
+  --cor-fundo: #F4F6F8;
+  --cor-texto: #1F2937;
+  --cor-texto-muted: #6B7280;
 }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--cor-fundo);
+  color: var(--cor-texto);
+}
+
+.navbar-fomento { background-color: var(--cor-primaria); }
+.navbar-fomento .navbar-brand,
+.navbar-fomento .nav-link { color: #ffffff !important; }
+.navbar-fomento .nav-link:hover { color: var(--cor-destaque) !important; }
+
+.btn-primary { background-color: var(--cor-primaria); border-color: var(--cor-primaria); }
+.btn-primary:hover { background-color: var(--cor-destaque); border-color: var(--cor-destaque); }
+
+.footer-fomento { background-color: var(--cor-primaria); color: #ffffff; font-size: 0.875rem; }
+.footer-fomento a { color: #ffffff; text-decoration: underline; }
+
+.hero-fomento {
+  background: linear-gradient(135deg, var(--cor-primaria) 0%, #142C47 100%);
+  color: #ffffff;
+}
+.hero-fomento .lead { color: #D9E2EC; }
+
+.card-oportunidade {
+  border: 1px solid #E5E9EE;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.card-oportunidade:hover {
+  box-shadow: 0 4px 16px rgba(27, 58, 92, 0.1);
+  transform: translateY(-2px);
+}
+.card-oportunidade a { color: var(--cor-primaria); text-decoration: none; font-weight: 600; }
+.card-oportunidade a:hover { color: var(--cor-destaque); }
+
+.badge-nao-verificado { background-color: #FFF3CD; color: #7A5C00; font-weight: 500; font-size: 0.7rem; }
+.badge-fonte { background-color: #E9EEF3; color: var(--cor-primaria); font-weight: 500; }

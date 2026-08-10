@@ -1,131 +1,121 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Oportunidades — Fomento Brasil</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-  <div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1>Oportunidades</h1>
-      <a href="{{ url_for('main.nova_oportunidade') }}" class="btn btn-primary">Nova Oportunidade</a>
-    </div>
-    <form method="GET" class="row g-2 mb-4 bg-white p-3 rounded border">
-      {% if filtros.status %}
-      <input type="hidden" name="status" value="{{ filtros.status }}">
-      <div class="col-12">
-        <div class="alert alert-warning py-2 mb-0 small">
-          Exibindo registros com status <strong>{{ filtros.status }}</strong> (visão de curadoria).
-          <a href="{{ url_for('main.listar_oportunidades') }}">Voltar à listagem pública</a>
-        </div>
-      </div>
-      {% endif %}
+{% extends "base.html" %}
+{% block title %}Oportunidades — Fomento Brasil{% endblock %}
 
-      <div class="col-12">
-        <label class="form-label small mb-1">Pesquisar</label>
-        <input type="text" name="busca" class="form-control form-control-sm" placeholder="Buscar por título, descrição ou palavras-chave" value="{{ filtros.busca }}">
-      </div>
-
-      <div class="col-md-2">
-        <select name="regiao" class="form-select form-select-sm">
-          <option value="">Região (todas)</option>
-          {% for r in regioes %}
-          <option value="{{ r }}" {{ 'selected' if filtros.regiao == r else '' }}>{{ r }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="col-md-3">
-        <select name="linha_de_fomento" class="form-select form-select-sm">
-          <option value="">Linha de Fomento (todas)</option>
-          <option value="auxilio_pesquisa" {{ 'selected' if filtros.linha_de_fomento == 'auxilio_pesquisa' else '' }}>Auxílio à Pesquisa</option>
-          <option value="auxilio_inovacao" {{ 'selected' if filtros.linha_de_fomento == 'auxilio_inovacao' else '' }}>Auxílio à Inovação</option>
-          <option value="auxilio_divulgacao_cientifica" {{ 'selected' if filtros.linha_de_fomento == 'auxilio_divulgacao_cientifica' else '' }}>Auxílio à Divulgação Científica</option>
-          <option value="apoio_formacao_capacitacao" {{ 'selected' if filtros.linha_de_fomento == 'apoio_formacao_capacitacao' else '' }}>Apoio à Formação/Capacitação</option>
-          <option value="apoio_redes_grupos_pesquisa" {{ 'selected' if filtros.linha_de_fomento == 'apoio_redes_grupos_pesquisa' else '' }}>Apoio a Redes e Grupos</option>
-        </select>
-      </div>
-
-      <div class="col-md-3">
-        <select name="area_principal" class="form-select form-select-sm">
-          <option value="">Área Principal (todas)</option>
-          <option value="Ciências Exatas e da Terra" {{ 'selected' if filtros.area_principal == 'Ciências Exatas e da Terra' else '' }}>Ciências Exatas e da Terra</option>
-          <option value="Ciências Biológicas" {{ 'selected' if filtros.area_principal == 'Ciências Biológicas' else '' }}>Ciências Biológicas</option>
-          <option value="Engenharias" {{ 'selected' if filtros.area_principal == 'Engenharias' else '' }}>Engenharias</option>
-          <option value="Ciências da Saúde" {{ 'selected' if filtros.area_principal == 'Ciências da Saúde' else '' }}>Ciências da Saúde</option>
-          <option value="Ciências Agrárias" {{ 'selected' if filtros.area_principal == 'Ciências Agrárias' else '' }}>Ciências Agrárias</option>
-          <option value="Ciências Sociais Aplicadas" {{ 'selected' if filtros.area_principal == 'Ciências Sociais Aplicadas' else '' }}>Ciências Sociais Aplicadas</option>
-          <option value="Ciências Humanas" {{ 'selected' if filtros.area_principal == 'Ciências Humanas' else '' }}>Ciências Humanas</option>
-          <option value="Linguística, Letras e Artes" {{ 'selected' if filtros.area_principal == 'Linguística, Letras e Artes' else '' }}>Linguística, Letras e Artes</option>
-        </select>
-      </div>
-
-      <div class="col-md-2">
-        <select name="publico_alvo" class="form-select form-select-sm">
-          <option value="">Público-Alvo (todos)</option>
-          <option value="pesquisadores" {{ 'selected' if filtros.publico_alvo == 'pesquisadores' else '' }}>Pesquisadores</option>
-          <option value="empresas" {{ 'selected' if filtros.publico_alvo == 'empresas' else '' }}>Empresas</option>
-          <option value="startups" {{ 'selected' if filtros.publico_alvo == 'startups' else '' }}>Startups</option>
-          <option value="ict" {{ 'selected' if filtros.publico_alvo == 'ict' else '' }}>ICT</option>
-          <option value="mestrandos" {{ 'selected' if filtros.publico_alvo == 'mestrandos' else '' }}>Mestrandos</option>
-          <option value="doutorandos" {{ 'selected' if filtros.publico_alvo == 'doutorandos' else '' }}>Doutorandos</option>
-          <option value="ies" {{ 'selected' if filtros.publico_alvo == 'ies' else '' }}>IES</option>
-          <option value="governo" {{ 'selected' if filtros.publico_alvo == 'governo' else '' }}>Governo</option>
-        </select>
-      </div>
-
-      <div class="col-md-1 d-flex align-items-center">
-        <div class="form-check">
-          <input type="checkbox" name="apenas_abertas" value="1" class="form-check-input" id="apenasAbertas" {{ 'checked' if filtros.apenas_abertas else '' }}>
-          <label class="form-check-label small" for="apenasAbertas">Só abertas</label>
-        </div>
-      </div>
-
-      <div class="col-md-1 d-grid">
-        <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
-      </div>
-
-      {% if filtros.busca or filtros.regiao or filtros.linha_de_fomento or filtros.area_principal or filtros.publico_alvo or filtros.apenas_abertas %}
-      <div class="col-12">
-        <a href="{{ url_for('main.listar_oportunidades') }}" class="small">Limpar filtros</a>
-      </div>
-      {% endif %}
-    </form>
-
-    <table class="table bg-white">
-      <thead>
-  <tr><th>Título</th><th>Financiadora</th><th>Linha de Fomento</th><th>Data Final de Submissão</th><th>Link</th></tr>
-      </thead>
-      <tbody>
-        {% for o in oportunidades %}
-        <tr>
-          <td>
-            <a href="{{ url_for('main.detalhe_oportunidade', id=o.id) }}">{{ o.titulo }}</a>
-            {% if o.status == "pendente" %}
-            <span class="badge bg-warning text-dark ms-1"
-                  data-bs-toggle="tooltip"
-                  title="Coletado automaticamente, ainda não revisado por um curador. Alguns campos podem estar incompletos ou incorretos.">
-              Não verificado
-            </span>
-            {% endif %}
-          </td>
-          <td>{{ o.instituicao_financiadora }}</td>
-          <td>{{ o.linha_de_fomento }}</td>
-          <td>{{ o.data_prazo.strftime('%d/%m/%Y') if o.data_prazo else '' }}</td>
-          <td><a href="{{ o.link }}" target="_blank">Ver edital</a></td>
-        </tr>
-        {% else %}
-        <tr><td colspan="5" class="text-center text-muted">Nenhuma oportunidade cadastrada ainda.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% block content %}
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Oportunidades</h1>
+    <a href="{{ url_for('main.nova_oportunidade') }}" class="btn btn-primary">Nova Oportunidade</a>
   </div>
+  <form method="GET" class="row g-2 mb-4 bg-white p-3 rounded border">
+    {% if filtros.status %}
+    <input type="hidden" name="status" value="{{ filtros.status }}">
+    <div class="col-12">
+      <div class="alert alert-warning py-2 mb-0 small">
+        Exibindo registros com status <strong>{{ filtros.status }}</strong> (visão de curadoria).
+        <a href="{{ url_for('main.listar_oportunidades') }}">Voltar à listagem pública</a>
+      </div>
+    </div>
+    {% endif %}
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    [...tooltipTriggerList].forEach(el => new bootstrap.Tooltip(el));
-  </script>
-</body>
-</html>
+    <div class="col-12">
+      <label class="form-label small mb-1">Pesquisar</label>
+      <input type="text" name="busca" class="form-control form-control-sm" placeholder="Buscar por título, descrição ou palavras-chave" value="{{ filtros.busca }}">
+    </div>
+
+    <div class="col-md-2">
+      <select name="regiao" class="form-select form-select-sm">
+        <option value="">Região (todas)</option>
+        {% for r in regioes %}
+        <option value="{{ r }}" {{ 'selected' if filtros.regiao == r else '' }}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <select name="linha_de_fomento" class="form-select form-select-sm">
+        <option value="">Linha de Fomento (todas)</option>
+        <option value="auxilio_pesquisa" {{ 'selected' if filtros.linha_de_fomento == 'auxilio_pesquisa' else '' }}>Auxílio à Pesquisa</option>
+        <option value="auxilio_inovacao" {{ 'selected' if filtros.linha_de_fomento == 'auxilio_inovacao' else '' }}>Auxílio à Inovação</option>
+        <option value="auxilio_divulgacao_cientifica" {{ 'selected' if filtros.linha_de_fomento == 'auxilio_divulgacao_cientifica' else '' }}>Auxílio à Divulgação Científica</option>
+        <option value="apoio_formacao_capacitacao" {{ 'selected' if filtros.linha_de_fomento == 'apoio_formacao_capacitacao' else '' }}>Apoio à Formação/Capacitação</option>
+        <option value="apoio_redes_grupos_pesquisa" {{ 'selected' if filtros.linha_de_fomento == 'apoio_redes_grupos_pesquisa' else '' }}>Apoio a Redes e Grupos</option>
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <select name="area_principal" class="form-select form-select-sm">
+        <option value="">Área Principal (todas)</option>
+        <option value="Ciências Exatas e da Terra" {{ 'selected' if filtros.area_principal == 'Ciências Exatas e da Terra' else '' }}>Ciências Exatas e da Terra</option>
+        <option value="Ciências Biológicas" {{ 'selected' if filtros.area_principal == 'Ciências Biológicas' else '' }}>Ciências Biológicas</option>
+        <option value="Engenharias" {{ 'selected' if filtros.area_principal == 'Engenharias' else '' }}>Engenharias</option>
+        <option value="Ciências da Saúde" {{ 'selected' if filtros.area_principal == 'Ciências da Saúde' else '' }}>Ciências da Saúde</option>
+        <option value="Ciências Agrárias" {{ 'selected' if filtros.area_principal == 'Ciências Agrárias' else '' }}>Ciências Agrárias</option>
+        <option value="Ciências Sociais Aplicadas" {{ 'selected' if filtros.area_principal == 'Ciências Sociais Aplicadas' else '' }}>Ciências Sociais Aplicadas</option>
+        <option value="Ciências Humanas" {{ 'selected' if filtros.area_principal == 'Ciências Humanas' else '' }}>Ciências Humanas</option>
+        <option value="Linguística, Letras e Artes" {{ 'selected' if filtros.area_principal == 'Linguística, Letras e Artes' else '' }}>Linguística, Letras e Artes</option>
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <select name="publico_alvo" class="form-select form-select-sm">
+        <option value="">Público-Alvo (todos)</option>
+        <option value="pesquisadores" {{ 'selected' if filtros.publico_alvo == 'pesquisadores' else '' }}>Pesquisadores</option>
+        <option value="empresas" {{ 'selected' if filtros.publico_alvo == 'empresas' else '' }}>Empresas</option>
+        <option value="startups" {{ 'selected' if filtros.publico_alvo == 'startups' else '' }}>Startups</option>
+        <option value="ict" {{ 'selected' if filtros.publico_alvo == 'ict' else '' }}>ICT</option>
+        <option value="mestrandos" {{ 'selected' if filtros.publico_alvo == 'mestrandos' else '' }}>Mestrandos</option>
+        <option value="doutorandos" {{ 'selected' if filtros.publico_alvo == 'doutorandos' else '' }}>Doutorandos</option>
+        <option value="ies" {{ 'selected' if filtros.publico_alvo == 'ies' else '' }}>IES</option>
+        <option value="governo" {{ 'selected' if filtros.publico_alvo == 'governo' else '' }}>Governo</option>
+      </select>
+    </div>
+
+    <div class="col-md-1 d-flex align-items-center">
+      <div class="form-check">
+        <input type="checkbox" name="apenas_abertas" value="1" class="form-check-input" id="apenasAbertas" {{ 'checked' if filtros.apenas_abertas else '' }}>
+        <label class="form-check-label small" for="apenasAbertas">Só abertas</label>
+      </div>
+    </div>
+
+    <div class="col-md-1 d-grid">
+      <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+    </div>
+
+    {% if filtros.busca or filtros.regiao or filtros.linha_de_fomento or filtros.area_principal or filtros.publico_alvo or filtros.apenas_abertas %}
+    <div class="col-12">
+      <a href="{{ url_for('main.listar_oportunidades') }}" class="small">Limpar filtros</a>
+    </div>
+    {% endif %}
+  </form>
+
+  <div class="row g-3 mt-2">
+    {% for o in oportunidades %}
+    <div class="col-12">
+      <div class="card card-oportunidade">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <a href="{{ url_for('main.detalhe_oportunidade', id=o.id) }}" class="fs-5">{{ o.titulo }}</a>
+            {% if o.status == "pendente" %}
+            <span class="badge badge-nao-verificado" data-bs-toggle="tooltip"
+                  title="Coletado automaticamente, ainda não revisado por um curador.">Não verificado</span>
+            {% endif %}
+          </div>
+          <div class="mt-2 mb-2">
+            <span class="badge badge-fonte me-1">{{ o.instituicao_financiadora }}</span>
+            {% if o.uf %}<span class="badge badge-fonte me-1">{{ o.uf }}</span>
+            {% elif o.abrangencia %}<span class="badge badge-fonte me-1">{{ o.abrangencia|capitalize }}</span>{% endif %}
+            {% if o.linha_de_fomento %}<span class="badge badge-fonte">{{ o.linha_de_fomento }}</span>{% endif %}
+          </div>
+          {% if o.descricao %}
+          <p class="text-muted small mb-0">{{ o.descricao[:200] }}{% if o.descricao|length > 200 %}...{% endif %}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+      <p class="text-muted text-center">Nenhuma oportunidade encontrada com esses filtros.</p>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

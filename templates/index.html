@@ -1,11 +1,17 @@
-<!doctype html>
-<html lang="pt-br">
-<head>
-    <meta charset="utf-8">
-    <title>Fomento Brasil</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <h1>Fomento Brasil</h1>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Fomento Brasil — Oportunidades de Financiamento Científico{% endblock %}
+
+{% block hero %}
+<section class="hero-fomento py-5">
+  <div class="container py-4">
+    <h1 class="display-6 fw-bold mb-3">Oportunidades de financiamento científico, em um só lugar</h1>
+    <p class="lead mb-0">Bolsas, auxílios, chamadas públicas e cooperação internacional — de CNPq, CAPES, FINEP e das FAPs — buscáveis e atualizadas.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<div class="text-center">
+  <a href="{{ url_for('main.listar_oportunidades') }}" class="btn btn-primary btn-lg">Ver Oportunidades</a>
+</div>
+{% endblock %}
