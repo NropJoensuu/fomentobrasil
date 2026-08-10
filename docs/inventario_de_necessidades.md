@@ -146,3 +146,15 @@ origem não permite inferir com confiança:
 - `dados_extra.inscricao_inicio` — data de início do período de inscrição, que não tem coluna 
   própria no modelo (`data_publicacao` é a data de publicação do edital, conceito distinto). 
   Guardada aí para não se perder; promover a coluna se virar necessidade recorrente de filtro.
+
+### Decisão pendente: qual data importa na listagem
+
+Hoje o scraper grava `data_publicacao` com a data de publicação do edital (o "Publicado em" 
+da página do CNPq) e joga o início das inscrições em `dados_extra.inscricao_inicio`.
+
+Inclinação registrada (2026-08-10, a decidir depois): **a data relevante para o portal é a de 
+submissão, não a de publicação** — o que o usuário final quer saber é a janela para se 
+candidatar. O modelo já tem `data_prazo` (fim da submissão) mas não tem o início, então a 
+forma provável é promover `inscricao_inicio` a coluna própria (ex.: `data_inicio_submissao`), 
+formando o par início/fim, e deixar `data_publicacao` como metadado secundário. 
+Não decidido ainda se `data_publicacao` continua sendo coletada ou some.
