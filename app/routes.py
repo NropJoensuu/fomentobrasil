@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from flask import Blueprint, render_template, request, redirect, url_for
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from app import db
 from app.models import Oportunidade
@@ -19,12 +19,22 @@ def index():
 def listar_oportunidades():
     query = Oportunidade.query
 
+    busca = request.args.get("busca") or ""
     regiao = request.args.get("regiao") or ""
     linha_de_fomento = request.args.get("linha_de_fomento") or ""
     area_principal = request.args.get("area_principal") or ""
     publico_alvo = request.args.get("publico_alvo") or ""
     apenas_abertas = request.args.get("apenas_abertas") == "1"
 
+    if busca:
+        termo = f"%{busca}%"
+        query = query.filter(
+            or_(
+                Oportunidade.titulo.ilike(termo),
+                Oportunidade.descricao.ilike(termo),
+                func.array_to_string(Oportunidade.palavras_chave, ",").ilike(termo),
+            )
+        )
     if regiao:
         ufs = get_ufs_por_regiao(regiao)
         query = query.filter(Oportunidade.uf.in_(ufs))
@@ -43,6 +53,7 @@ def listar_oportunidades():
     oportunidades = query.order_by(Oportunidade.criado_em.desc()).all()
 
     filtros = {
+        "busca": busca,
         "regiao": regiao,
         "linha_de_fomento": linha_de_fomento,
         "area_principal": area_principal,
