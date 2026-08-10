@@ -178,6 +178,20 @@ FAPEMIG marca **várias** linhas por chamada (ex.: a 013/2026 vem com "Auxílio 
 de verdade exige decidir se o campo vira lista — o que afeta formulário, filtros e migração. 
 Os rótulos originais ficam em `dados_extra["linhas_fomento_fapemig"]` para a curadoria.
 
+### Scraper FAPERGS: API "híbrida" JSON+HTML
+
+`scrapers/fapergs.py` descobriu um padrão diferente de todos os anteriores: a FAPERGS expõe 
+um endpoint interno (`_service/conteudo/pagedlistfilho`) que devolve **JSON** com 
+`recordcount`/`pagecount`, mas o conteúdo em si vem como um **fragmento HTML bruto** dentro 
+do campo `body` (um `<article class="conteudo-lista__item">` por edital) — nem API 
+estruturada pura como a FAPEMIG/FAPESC (campos já tipados), nem HTML de página completa como 
+CNPq/FAPESP/Araucária (sem envelope JSON nenhum). Precisa dos dois passos: `resp.json()` para 
+tirar o `body`, depois `BeautifulSoup` no fragmento para tirar os itens.
+
+Descoberto via inspeção manual do Network tab do navegador (filtro por domínio próprio) — 
+mesmo processo usado para achar a API da FAPEMIG. Vale sempre esse caminho antes de partir 
+para parsing de HTML de página completa, mesmo em sites que não parecem SPA moderna.
+
 ## Moderação — ainda não existe interface
 
 Não há tela de moderação (aprovar/rejeitar/editar pendentes). Hoje o fluxo é manual via shell:
