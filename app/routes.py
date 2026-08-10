@@ -149,3 +149,58 @@ def nova_oportunidade():
         return redirect(url_for("main.listar_oportunidades"))
 
     return render_template("oportunidades/nova.html")
+
+
+# PENDÊNCIA DE SEGURANÇA: rotas de moderação sem controle de acesso — qualquer
+# pessoa com a URL pode editar/aprovar/rejeitar. Aceitável por ora (não há dado
+# sensível), mas precisa exigir login de colaborador/admin quando esse sistema existir.
+@main.route("/moderacao")
+def listar_pendentes():
+    pendentes = Oportunidade.query.filter_by(status="pendente").order_by(
+        Oportunidade.criado_em.desc()
+    ).all()
+    return render_template("moderacao/listar.html", pendentes=pendentes)
+
+
+@main.route("/moderacao/<int:id>", methods=["GET", "POST"])
+def moderar_oportunidade(id):
+    oportunidade = Oportunidade.query.get_or_404(id)
+
+    if request.method == "POST":
+        acao = request.form.get("acao")  # "salvar", "aprovar" ou "rejeitar"
+
+        oportunidade.titulo = request.form["titulo"]
+        oportunidade.descricao = request.form.get("descricao") or None
+        oportunidade.link = request.form["link"]
+        oportunidade.instituicao_financiadora = request.form["instituicao_financiadora"]
+        oportunidade.instituicao_executora = request.form.get("instituicao_executora") or None
+        oportunidade.instituicao_beneficiaria = request.form.get("instituicao_beneficiaria") or None
+        oportunidade.linha_de_fomento = request.form["linha_de_fomento"]
+        oportunidade.tipo_instrumento = request.form["tipo_instrumento"]
+        oportunidade.tipo_parceria = request.form.get("tipo_parceria") or None
+        oportunidade.modalidade_pessoa = request.form.get("modalidade_pessoa") or None
+        oportunidade.nivel_formacao = request.form.get("nivel_formacao") or None
+        oportunidade.abrangencia = request.form.get("abrangencia") or None
+        oportunidade.uf = request.form.get("uf") or None
+        oportunidade.cidade = request.form.get("cidade") or None
+        oportunidade.area_principal = request.form.get("area_principal") or None
+
+        palavras_raw = request.form.get("palavras_chave") or ""
+        oportunidade.palavras_chave = [p.strip() for p in palavras_raw.split(",") if p.strip()] or None
+
+        oportunidade.natureza_recurso = request.form.getlist("natureza_recurso")
+        oportunidade.publico_alvo = request.form.getlist("publico_alvo")
+
+        if acao == "aprovar":
+            oportunidade.status = "aprovado"
+        elif acao == "rejeitar":
+            oportunidade.status = "rejeitado"
+        # "salvar" mantém o status atual (pendente), só grava as edições
+
+        db.session.commit()
+
+        if acao in ("aprovar", "rejeitar"):
+            return redirect(url_for("main.listar_pendentes"))
+        return redirect(url_for("main.moderar_oportunidade", id=id))
+
+    return render_template("moderacao/editar.html", o=oportunidade)
