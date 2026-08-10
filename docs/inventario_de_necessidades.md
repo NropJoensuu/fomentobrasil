@@ -25,6 +25,49 @@ Decisões e ideias já discutidas, mas que não entram no MVP imediato. Registra
 
 - PDFs de editais (comuns em FAPs) vão exigir `pdfplumber` ou similar — não é parte do MVP inicial de scraper (que cobre HTML via `requests`+`BeautifulSoup`).
 
+### Primeiro scraper: CNPq (chamadas abertas)
+
+`scrapers/cnpq.py` coleta https://www.gov.br/cnpq/pt-br/chamadas/abertas-para-submissao 
+(server-rendered, sem JavaScript). Roda manualmente:
+
+```bash
+python -m scrapers.cnpq     # ou: python scrapers/cnpq.py
+```
+
+Insere tudo como `status="pendente"`, para curadoria antes de aparecer publicamente. 
+Deduplica por `link`, então rodar de novo não gera cópias — só reporta "já existentes". 
+Ainda não há agendamento (cron/scheduler): a execução é manual por ora.
+
+Detalhes de parsing que não são óbvios e já quebraram uma versão anterior:
+
+- A descrição e as datas **não** são irmãs diretas do `<h2>` — ficam aninhadas em `<div>`s 
+  irmãos (`#parent-fieldname-text`). Procurar um `<p>` irmão do `<h2>` não encontra nada.
+- O rótulo antes das datas varia ("Inscrições:", "INSCRIÇÕES:", "Recebimento das propostas:", 
+  "Inscrições 2ª Rodada:"), então o regex casa só o par de datas, ignorando o rótulo.
+- Há datas com espaço no meio (`18/09 /2026`, resquício de `\xa0`) e anos de 2 dígitos 
+  (`30/06/26`). O parser tolera ambos.
+- `data_publicacao` vem do "Publicado em" da página, **não** do início das inscrições — são 
+  conceitos distintos e divergem na prática (ex.: CNPq/ERC 21/2026, publicada 04/08 com 
+  inscrições desde 03/08; CNPq/SETEC 13/2026, publicada 28/04 com 2ª rodada em 04/08).
+
+## Moderação — ainda não existe interface
+
+Não há tela de moderação (aprovar/rejeitar/editar pendentes). Hoje o fluxo é manual via shell:
+
+```bash
+flask --app run.py shell
+>>> from app.models import Oportunidade
+>>> from app import db
+>>> o = Oportunidade.query.filter_by(status="pendente").first()
+>>> o.status = "aprovado"
+>>> o.linha_de_fomento = "auxilio_pesquisa"   # corrigir conforme o caso real
+>>> db.session.commit()
+```
+
+Uma tela de moderação é candidata natural para a próxima etapa, especialmente quando o 
+sistema de usuários/papéis (admin/colaborador) for implementado — ver "Autenticação e 
+submissão pública de vagas" acima.
+
 
 ## Vocabulário:
 Instituições com papéis jurídicos e financeiros distintos:
@@ -71,3 +114,35 @@ Sandbox foi pausado por decisão consciente de foco.
 Implicação prática: o valor do MVP agora depende de **volume de conteúdo real** (scrapers e/ou 
 cadastro manual em escala), não de autenticação. Priorizar frentes que aumentam quantidade e 
 qualidade de oportunidades cadastradas.
+
+## Pendência de segurança — `?status=` sem controle de acesso
+
+A listagem pública (`/oportunidades`) passou a filtrar por `status == "aprovado"` na base da 
+query, para que registros coletados por scraper (gravados como `pendente`) não apareçam antes 
+da curadoria. Para permitir a revisão manual desses pendentes existe o parâmetro 
+`/oportunidades?status=pendente`, aceito também para `aprovado`, `rejeitado` e `rascunho`.
+
+**Esse parâmetro não tem controle de acesso**: qualquer visitante pode usá-lo. É aceitável por 
+ora porque não há dado sensível (tudo vem de editais públicos) e não existe sistema de 
+usuários, mas precisa virar rota restrita a curador/admin quando os papéis forem implementados 
+(ver "Autenticação e submissão pública de vagas" acima).
+
+Na mesma linha: a página de detalhe (`/oportunidades/<id>`) responde 200 para registros 
+pendentes. Isso é intencional por enquanto — o curador precisa abrir o registro para revisá-lo 
+—, mas significa que um pendente é acessível por URL direta para quem souber o id. Deve ser 
+fechado junto com o `?status=`.
+
+## Curadoria de dados vindos de scraper
+
+Registros coletados por scraper entram com `status="pendente"` e com campos que a página de 
+origem não permite inferir com confiança:
+
+- `linha_de_fomento` — recebe um **placeholder** (`apoio_formacao_capacitacao`), pois não é 
+  dedutível do título/descrição. **Sempre revisar.**
+- `natureza_recurso` e `publico_alvo` — são `NOT NULL` no schema, mas não são extraíveis da 
+  página de listagem. Entram como **lista vazia** (`[]`), representando "ainda não determinado", 
+  em vez de um chute que viraria dado errado no banco.
+- `area_principal` — fica `None`, a preencher na curadoria.
+- `dados_extra.inscricao_inicio` — data de início do período de inscrição, que não tem coluna 
+  própria no modelo (`data_publicacao` é a data de publicação do edital, conceito distinto). 
+  Guardada aí para não se perder; promover a coluna se virar necessidade recorrente de filtro.

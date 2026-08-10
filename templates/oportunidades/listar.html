@@ -12,6 +12,16 @@
       <a href="{{ url_for('main.nova_oportunidade') }}" class="btn btn-primary">Nova Oportunidade</a>
     </div>
     <form method="GET" class="row g-2 mb-4 bg-white p-3 rounded border">
+      {% if filtros.status %}
+      <input type="hidden" name="status" value="{{ filtros.status }}">
+      <div class="col-12">
+        <div class="alert alert-warning py-2 mb-0 small">
+          Exibindo registros com status <strong>{{ filtros.status }}</strong> (visão de curadoria).
+          <a href="{{ url_for('main.listar_oportunidades') }}">Voltar à listagem pública</a>
+        </div>
+      </div>
+      {% endif %}
+
       <div class="col-12">
         <label class="form-label small mb-1">Pesquisar</label>
         <input type="text" name="busca" class="form-control form-control-sm" placeholder="Buscar por título, descrição ou palavras-chave" value="{{ filtros.busca }}">

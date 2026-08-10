@@ -17,7 +17,18 @@ def index():
 
 @main.route("/oportunidades")
 def listar_oportunidades():
-    query = Oportunidade.query
+    # Filtro de moderação: a listagem pública só mostra registros aprovados.
+    # `?status=` permite revisar o que os scrapers coletaram (ex: pendentes) e é
+    # aplicado na base da query, antes dos filtros opcionais do usuário.
+    # PENDÊNCIA DE SEGURANÇA: sem controle de acesso — qualquer visitante pode usar
+    # `?status=pendente`. Aceitável por ora (não há dado sensível), mas precisa virar
+    # rota restrita quando o sistema de usuários/papéis existir.
+    status_filtro = request.args.get("status")
+    if status_filtro in ("pendente", "aprovado", "rejeitado", "rascunho"):
+        query = Oportunidade.query.filter(Oportunidade.status == status_filtro)
+    else:
+        status_filtro = ""
+        query = Oportunidade.query.filter(Oportunidade.status == "aprovado")
 
     busca = request.args.get("busca") or ""
     regiao = request.args.get("regiao") or ""
@@ -53,6 +64,7 @@ def listar_oportunidades():
     oportunidades = query.order_by(Oportunidade.criado_em.desc()).all()
 
     filtros = {
+        "status": status_filtro,
         "busca": busca,
         "regiao": regiao,
         "linha_de_fomento": linha_de_fomento,
