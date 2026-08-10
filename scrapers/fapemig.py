@@ -37,6 +37,42 @@ MAX_PAGINAS = 100
 # em `status_oficial`; "encerrada" não tem (no nosso modelo isso vem de data_prazo).
 STATUS_OFICIAL_POR_STATUS_CHAMADA = {"resultados": "resultado_divulgado"}
 
+# A FAPEMIG classifica público-alvo com 5 slugs; 4 são idênticos aos nossos.
+# `ambiente-de-inovacao` (incubadora, parque tecnológico, aceleradora) fica de fora
+# de propósito: não temos equivalente e NÃO é sinônimo de `startups`. Ele continua
+# visível em dados_extra["publico_alvo_fapemig"] para o curador decidir.
+MAPA_PUBLICO_ALVO = {
+    "pesquisadores": "pesquisadores",
+    "empresas": "empresas",
+    "governo": "governo",
+    "ict": "ict",
+}
+
+
+def _slugs_selecionados(campo):
+    """Slugs marcados numa taxonomia da API."""
+    if not isinstance(campo, dict):
+        return []
+    return [
+        s["slug"]
+        for s in (campo.get("selected") or [])
+        if isinstance(s, dict) and s.get("slug")
+    ]
+
+
+def mapear_publico_alvo(campo):
+    """Converte o público-alvo da FAPEMIG para o nosso vocabulário.
+
+    Só converte o que tem equivalente exato — o resto é descartado aqui (e preservado
+    em dados_extra). Preserva a ordem e não repete valores.
+    """
+    mapeados = []
+    for slug in _slugs_selecionados(campo):
+        nosso = MAPA_PUBLICO_ALVO.get(slug)
+        if nosso and nosso not in mapeados:
+            mapeados.append(nosso)
+    return mapeados
+
 
 def limpar_html(texto):
     """Remove tags HTML de um campo de texto rico, retornando texto puro."""
@@ -133,6 +169,7 @@ def coletar_chamadas_fapemig(apenas_abertas=True):
                     "data_resultado_previsto": resultado_previsto,
                     "orcamento_total_chamada": orcamento,
                     "status_oficial": STATUS_OFICIAL_POR_STATUS_CHAMADA.get(status_chamada),
+                    "publico_alvo": mapear_publico_alvo(item.get("publico_alvo")),
                     "dados_extra": {
                         "numero_chamada": item.get("numero"),
                         "status_chamada_fapemig": status_chamada,
@@ -189,8 +226,10 @@ def salvar_no_banco(registros):
             # Placeholder: a FAPEMIG marca várias linhas de fomento por chamada, e o
             # nosso campo é de valor único. Ver dados_extra["linhas_fomento_fapemig"].
             linha_de_fomento="apoio_formacao_capacitacao",
+            # natureza_recurso a API não informa; publico_alvo vem da taxonomia da FAPEMIG
+            # (só os valores com equivalente exato — ver MAPA_PUBLICO_ALVO).
             natureza_recurso=[],
-            publico_alvo=[],
+            publico_alvo=r["publico_alvo"],
             origem="institucional",
             status="pendente",
             dados_extra=r["dados_extra"],

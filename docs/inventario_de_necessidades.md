@@ -120,22 +120,36 @@ Pontos de atenção:
   (`status_oficial="resultado_divulgado"`). `encerrada` não tem — no nosso modelo isso 
   deriva de `data_prazo`.
 - **A API já classifica linha de fomento, público-alvo e área de conhecimento** 
-  (`linhas_fomento`, `publico_alvo`, `areas_conhecimento`, cada um com `selected`). Esses 
-  valores vão para `dados_extra` em vez de irem direto para as colunas, porque o vocabulário 
-  não é idêntico ao nosso e a FAPEMIG marca **várias** linhas de fomento por chamada, 
-  enquanto `linha_de_fomento` é de valor único. Ver "Decisão pendente" abaixo.
+  (`linhas_fomento`, `publico_alvo`, `areas_conhecimento`, cada um com `selected`). Todos os 
+  rótulos brutos vão para `dados_extra`; além disso, `publico_alvo` é convertido para a nossa 
+  coluna (ver abaixo). Este é o único scraper que chega com público-alvo já preenchido — 
+  CNPq e FAPESP não expõem essa informação na listagem.
 
-### Decisão pendente: aproveitar a taxonomia da FAPEMIG
+#### Público-alvo: mapeado automaticamente
 
-Diferente de CNPq e FAPESP, aqui há classificação estruturada na fonte — ex.: a chamada 
-013/2026 vem com `linhas_fomento = ["Auxílio à Inovação", "Auxílio à Pesquisa", "Capacitação 
-de Pessoas"]` e `publico_alvo = ["Empresas", "Pesquisadores"]`. Hoje isso só alimenta 
-`dados_extra`; as colunas seguem com placeholder e listas vazias, como nos outros scrapers.
+O vocabulário de público-alvo da FAPEMIG tem 5 valores, e 4 são idênticos aos nossos, então 
+são convertidos direto (`MAPA_PUBLICO_ALVO` em `scrapers/fapemig.py`):
 
-`publico_alvo` mapearia quase 1:1 para o nosso vocabulário e poderia ser preenchido 
-automaticamente. `linha_de_fomento` esbarra no fato de ser valor único aqui e múltiplo lá — 
-resolver isso provavelmente exige decidir se o campo vira lista (o que afeta o formulário, 
-os filtros e uma migração).
+| FAPEMIG | nosso |
+|---|---|
+| `pesquisadores` | `pesquisadores` |
+| `empresas` | `empresas` |
+| `governo` | `governo` |
+| `ict` | `ict` |
+| `ambiente-de-inovacao` | *(sem equivalente — descartado)* |
+
+`ambiente-de-inovacao` (incubadora, parque tecnológico, aceleradora) fica de fora de 
+propósito: **não é sinônimo de `startups`**, que é o valor mais próximo que temos. Ele 
+continua visível em `dados_extra["publico_alvo_fapemig"]` para o curador decidir caso a caso. 
+Se aparecer com frequência, é candidato a virar valor novo do nosso vocabulário.
+
+### Decisão pendente: `linha_de_fomento` da FAPEMIG
+
+`linha_de_fomento` continua com placeholder mesmo com a API informando o valor, porque a 
+FAPEMIG marca **várias** linhas por chamada (ex.: a 013/2026 vem com "Auxílio à Inovação", 
+"Auxílio à Pesquisa" e "Capacitação de Pessoas") e o nosso campo é de valor único. Resolver 
+de verdade exige decidir se o campo vira lista — o que afeta formulário, filtros e migração. 
+Os rótulos originais ficam em `dados_extra["linhas_fomento_fapemig"]` para a curadoria.
 
 ## Moderação — ainda não existe interface
 
