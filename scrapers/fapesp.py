@@ -179,6 +179,8 @@ def salvar_no_banco(registros):
             data_prazo=r["data_prazo"],
             instituicao_financiadora=r["instituicao_financiadora"][:200],
             tipo_instrumento="chamada_publica_edital",
+            uf="SP",
+            abrangencia="estadual",
             # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
             linha_de_fomento="apoio_formacao_capacitacao",
             # NOT NULL no schema, mas não extraíveis da listagem: lista vazia significa

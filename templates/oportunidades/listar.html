@@ -31,6 +31,15 @@
       </select>
     </div>
 
+    <div class="col-md-2">
+      <select name="uf" class="form-select form-select-sm">
+        <option value="">UF (todas)</option>
+        {% for uf_opcao in ufs_disponiveis %}
+        <option value="{{ uf_opcao }}" {{ "selected" if filtros.uf == uf_opcao else "" }}>{{ uf_opcao }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
     <div class="col-md-3">
       <select name="linha_de_fomento" class="form-select form-select-sm">
         <option value="">Linha de Fomento (todas)</option>
@@ -81,7 +90,7 @@
       <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
     </div>
 
-    {% if filtros.busca or filtros.regiao or filtros.linha_de_fomento or filtros.area_principal or filtros.publico_alvo or filtros.apenas_abertas %}
+    {% if filtros.busca or filtros.regiao or filtros.uf or filtros.linha_de_fomento or filtros.area_principal or filtros.publico_alvo or filtros.apenas_abertas %}
     <div class="col-12">
       <a href="{{ url_for('main.listar_oportunidades') }}" class="small">Limpar filtros</a>
     </div>

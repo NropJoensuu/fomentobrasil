@@ -286,6 +286,36 @@ origem não permite inferir com confiança:
   própria no modelo (`data_publicacao` é a data de publicação do edital, conceito distinto). 
   Guardada aí para não se perder; promover a coluna se virar necessidade recorrente de filtro.
 
+### Bug corrigido (2026-08-10): `uf`/`abrangencia` não eram preenchidos pelos scrapers
+
+Os 4 scrapers gravavam os registros sem `uf`/`abrangencia`, o que quebrava silenciosamente o 
+filtro de região da listagem (`?regiao=`) — nenhum registro de agência estadual (FAPESP, 
+FAPEMIG, FAPES) aparecia ao filtrar por região, porque a query depende de `uf`. Corrigido nos 
+4 scrapers (cada um agora fixa `uf`/`abrangencia` de acordo com a agência que representa) e 
+retroativamente nos 81 registros existentes via `scripts/backfill_uf.py`.
+
+Nota sobre o backfill: a classificação foi feita pelo **domínio do link**, não por 
+`instituicao_financiadora` — esse campo frequentemente vem composto (ex.: "CNPq/MCTI", 
+"FAPESP e JSPS"), então um match exato contra "CNPq"/"FAPESP" cobriria só uma fração dos 
+registros (checado: ~42 dos 81, e nenhum do CNPq). O domínio do link identifica a origem com 
+confiabilidade.
+
+### Assistente de importação por link (`/oportunidades/importar`)
+
+Extração **genérica e best-effort**, bem diferente dos scrapers dedicados: funciona para 
+qualquer link (HTML ou PDF), mas só aproxima título e descrição — nenhuma classificação 
+estruturada (linha de fomento, público-alvo, área etc.). Serve para acelerar o preenchimento 
+manual, nunca para pular a curadoria; o curador sempre revisa e completa antes de salvar. 
+PDFs muito grandes ou com texto em imagem escaneada (sem camada de texto extraível) não serão 
+lidos corretamente — ficaria para uma fase de OCR, mais adiante do que a extração de PDF já 
+prevista.
+
+**Pendência de segurança:** a rota faz `requests.get()` para a URL que o visitante informar, 
+sem controle de acesso nem validação de host/IP — um SSRF em potencial (ver comentário em 
+`app/routes.py`). O risco é parcialmente mitigado por só devolver título/trecho de texto, mas 
+precisa ser revisitado junto com o sistema de usuários/papéis, e é candidato a bloquear 
+IPs privados/loopback antes disso.
+
 ### Decisão pendente: qual data importa na listagem
 
 Hoje o scraper grava `data_publicacao` com a data de publicação do edital (o "Publicado em" 

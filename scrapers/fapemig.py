@@ -223,6 +223,8 @@ def salvar_no_banco(registros):
             status_oficial=r["status_oficial"],
             instituicao_financiadora="FAPEMIG",
             tipo_instrumento="chamada_publica_edital",
+            uf="MG",
+            abrangencia="estadual",
             # Placeholder: a FAPEMIG marca várias linhas de fomento por chamada, e o
             # nosso campo é de valor único. Ver dados_extra["linhas_fomento_fapemig"].
             linha_de_fomento="apoio_formacao_capacitacao",

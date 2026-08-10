@@ -2,11 +2,19 @@
 {% block title %}Nova Oportunidade — Fomento Brasil{% endblock %}
 
 {% block content %}
+  <a href="{{ url_for('main.importar_oportunidade') }}" class="btn btn-outline-secondary btn-sm mb-3">
+    Importar por link em vez de digitar manualmente
+  </a>
   <h1 class="mb-4">Nova Oportunidade</h1>
+
+  {% if erro %}
+  <div class="alert alert-warning">{{ erro }}</div>
+  {% endif %}
+
   <form method="POST">
     <div class="mb-3">
       <label class="form-label">Título <span class="text-danger">*</span></label>
-      <input type="text" name="titulo" class="form-control" required>
+      <input type="text" name="titulo" class="form-control" value="{{ prefill.titulo if prefill else '' }}" required>
     </div>
 
     <div class="mb-3">
@@ -276,12 +284,12 @@
 
     <div class="mb-3">
       <label class="form-label">Link do Edital <span class="text-danger">*</span></label>
-      <input type="url" name="link" class="form-control" required>
+      <input type="url" name="link" class="form-control" value="{{ prefill.link if prefill else (link_importado or '') }}" required>
     </div>
 
     <div class="mb-3">
       <label class="form-label">Descrição</label>
-      <textarea name="descricao" class="form-control" rows="3"></textarea>
+      <textarea name="descricao" class="form-control" rows="3">{{ (prefill.descricao or '') if prefill else '' }}</textarea>
     </div>
 
     <button type="submit" class="btn btn-primary">Salvar</button>

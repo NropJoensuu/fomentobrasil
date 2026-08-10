@@ -180,6 +180,7 @@ def salvar_no_banco(registros):
             data_prazo=r["data_prazo"],
             instituicao_financiadora=r["instituicao_financiadora"][:200],
             tipo_instrumento=r["tipo_instrumento"],
+            abrangencia="nacional",
             # Placeholder: não dá para inferir a linha de fomento do título/descrição
             # com confiança. Um humano corrige na curadoria, junto com area_principal.
             linha_de_fomento="apoio_formacao_capacitacao",

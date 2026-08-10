@@ -1,11 +1,15 @@
+import io
 from datetime import datetime
 
+import pdfplumber
+import requests
+from bs4 import BeautifulSoup
 from flask import Blueprint, render_template, request, redirect, url_for
 from sqlalchemy import or_, func
 
 from app import db
 from app.models import Oportunidade
-from app.utils import get_regiao, get_ufs_por_regiao, REGIOES
+from app.utils import get_regiao, get_ufs_por_regiao, REGIAO_POR_UF, REGIOES
 
 main = Blueprint("main", __name__)
 
@@ -34,6 +38,7 @@ def listar_oportunidades():
 
     busca = request.args.get("busca") or ""
     regiao = request.args.get("regiao") or ""
+    uf_filtro = request.args.get("uf") or ""
     linha_de_fomento = request.args.get("linha_de_fomento") or ""
     area_principal = request.args.get("area_principal") or ""
     publico_alvo = request.args.get("publico_alvo") or ""
@@ -51,6 +56,8 @@ def listar_oportunidades():
     if regiao:
         ufs = get_ufs_por_regiao(regiao)
         query = query.filter(Oportunidade.uf.in_(ufs))
+    if uf_filtro:
+        query = query.filter(Oportunidade.uf == uf_filtro)
     if linha_de_fomento:
         query = query.filter(Oportunidade.linha_de_fomento == linha_de_fomento)
     if area_principal:
@@ -69,6 +76,7 @@ def listar_oportunidades():
         "status": status_filtro,
         "busca": busca,
         "regiao": regiao,
+        "uf": uf_filtro,
         "linha_de_fomento": linha_de_fomento,
         "area_principal": area_principal,
         "publico_alvo": publico_alvo,
@@ -80,6 +88,7 @@ def listar_oportunidades():
         oportunidades=oportunidades,
         filtros=filtros,
         regioes=REGIOES,
+        ufs_disponiveis=sorted(REGIAO_POR_UF.keys()),
     )
 
 
@@ -95,6 +104,15 @@ def detalhe_oportunidade(id):
 @main.route("/oportunidades/nova", methods=["GET", "POST"])
 def nova_oportunidade():
     if request.method == "POST":
+        # Reforço de dedup: cobre o caso de alguém editar o link manualmente durante a
+        # revisão (ex: vindo de /oportunidades/importar) para um que já existe.
+        if Oportunidade.query.filter_by(link=request.form["link"]).first():
+            return render_template(
+                "oportunidades/nova.html",
+                erro="Este link já está cadastrado.",
+                prefill=request.form,
+            )
+
         palavras_chave_raw = request.form.get("palavras_chave") or ""
         palavras_chave = [p.strip() for p in palavras_chave_raw.split(",") if p.strip()]
 
@@ -151,6 +169,76 @@ def nova_oportunidade():
         return redirect(url_for("main.listar_oportunidades"))
 
     return render_template("oportunidades/nova.html")
+
+
+# PENDÊNCIA DE SEGURANÇA: esta rota faz requests.get() para uma URL fornecida pelo
+# visitante (SSRF) — sem controle de acesso, qualquer pessoa pode usar o servidor para
+# sondar endereços internos/metadados de nuvem. Risco parcialmente mitigado por só
+# devolver título e um trecho de texto (sem repassar a resposta bruta), mas não há
+# validação de host/IP. Aceitável por ora (assistente interno, mesma pendência de
+# controle de acesso já documentada para /moderacao), mas revisitar junto com o
+# sistema de usuários/papéis — e considerar bloquear IPs privados/loopback antes disso.
+@main.route("/oportunidades/importar", methods=["GET", "POST"])
+def importar_oportunidade():
+    if request.method == "POST":
+        link = request.form.get("link", "").strip()
+        if not link:
+            return render_template("oportunidades/importar.html", erro="Informe um link.")
+
+        existe = Oportunidade.query.filter_by(link=link).first()
+        if existe:
+            return render_template(
+                "oportunidades/importar.html",
+                erro="Este link já está cadastrado.",
+                oportunidade_existente=existe,
+            )
+
+        try:
+            extraido = extrair_dados_de_link(link)
+        except Exception as e:
+            return render_template(
+                "oportunidades/importar.html",
+                erro=f"Não foi possível extrair dados automaticamente deste link ({e}). "
+                     f"Você pode cadastrar manualmente pela tela de Cadastrar.",
+            )
+
+        # Não salva ainda — mostra formulário de revisão pré-preenchido
+        return render_template("oportunidades/nova.html", prefill=extraido, link_importado=link)
+
+    return render_template("oportunidades/importar.html")
+
+
+def extrair_dados_de_link(link):
+    """Extração genérica best-effort: HTML (título/meta description) ou PDF (texto bruto).
+
+    Bem mais fraca que os scrapers dedicados (CNPq, FAPESP, FAPEMIG, FAPES) — não
+    classifica nada, só aproxima título/descrição para acelerar o preenchimento manual.
+    """
+    resp = requests.get(link, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+    resp.raise_for_status()
+
+    content_type = resp.headers.get("Content-Type", "")
+
+    if "pdf" in content_type.lower() or link.lower().endswith(".pdf"):
+        with pdfplumber.open(io.BytesIO(resp.content)) as pdf:
+            texto_completo = "\n".join(
+                (pagina.extract_text() or "") for pagina in pdf.pages[:5]  # só as 5 primeiras páginas
+            )
+        linhas = [l.strip() for l in texto_completo.split("\n") if l.strip()]
+        titulo = linhas[0] if linhas else "Título não identificado"
+        descricao = " ".join(linhas[1:30])  # próximas ~30 linhas como aproximação de descrição
+        return {"titulo": titulo[:300], "descricao": descricao[:2000], "link": link}
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    titulo_tag = soup.find("title")
+    titulo = titulo_tag.get_text(strip=True) if titulo_tag else "Título não identificado"
+
+    meta_desc = soup.find("meta", attrs={"name": "description"}) or soup.find(
+        "meta", attrs={"property": "og:description"}
+    )
+    descricao = meta_desc.get("content", "").strip() if meta_desc else None
+
+    return {"titulo": titulo[:300], "descricao": descricao, "link": link}
 
 
 # PENDÊNCIA DE SEGURANÇA: rotas de moderação sem controle de acesso — qualquer
