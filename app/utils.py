@@ -8,8 +8,11 @@ REGIAO_POR_UF = {
 }
 
 
-def get_regiao(uf):
-    return REGIAO_POR_UF.get(uf) if uf else None
+def get_regioes(ufs):
+    """Recebe lista de UFs, retorna lista de regiões únicas (ordenada)."""
+    if not ufs:
+        return []
+    return sorted({REGIAO_POR_UF[uf] for uf in ufs if uf in REGIAO_POR_UF})
 
 
 def get_ufs_por_regiao(regiao):

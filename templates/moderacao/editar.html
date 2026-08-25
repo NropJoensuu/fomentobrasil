@@ -19,164 +19,251 @@
   {% endif %}
 
   <form method="POST">
-    <div class="mb-3">
-      <label class="form-label">Título <span class="text-danger">*</span></label>
-      <input type="text" name="titulo" class="form-control" value="{{ o.titulo }}" required>
-    </div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Identificação</h2>
 
-    <div class="mb-3">
-      <label class="form-label">Link <span class="text-danger">*</span></label>
-      <input type="url" name="link" class="form-control" value="{{ o.link }}" required>
-    </div>
+        <div class="mb-3">
+          <label class="form-label">Título <span class="text-danger">*</span></label>
+          <input type="text" name="titulo" class="form-control" value="{{ o.titulo }}" required>
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">Instituição Financiadora <span class="text-danger">*</span></label>
-      <input type="text" name="instituicao_financiadora" class="form-control" value="{{ o.instituicao_financiadora }}" required>
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Instituição Executora</label>
-      <input type="text" name="instituicao_executora" class="form-control" value="{{ o.instituicao_executora or '' }}">
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Instituição Beneficiária</label>
-      <input type="text" name="instituicao_beneficiaria" class="form-control" value="{{ o.instituicao_beneficiaria or '' }}">
-    </div>
+        <div class="mb-3">
+          <label class="form-label">Link <span class="text-danger">*</span></label>
+          <input type="url" name="link" class="form-control" value="{{ o.link }}" required>
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">Linha de Fomento <span class="text-danger">*</span></label>
-      {% for valor, rotulo in [
-        ("auxilio_pesquisa", "Auxílio à Pesquisa"),
-        ("auxilio_inovacao", "Auxílio à Inovação"),
-        ("auxilio_divulgacao_cientifica", "Auxílio à Divulgação Científica"),
-        ("apoio_formacao_capacitacao", "Apoio à Formação/Capacitação"),
-        ("apoio_redes_grupos_pesquisa", "Apoio a Redes e Grupos de Pesquisa"),
-      ] %}
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="{{ valor }}" id="linha_{{ valor }}" {{ "checked" if valor in (o.linha_de_fomento or []) else "" }}>
-        <label class="form-check-label" for="linha_{{ valor }}">{{ rotulo }}</label>
-      </div>
-      {% endfor %}
-    </div>
+        <div class="mb-3">
+          <label class="form-label">Descrição</label>
+          <textarea name="descricao" class="form-control" rows="4">{{ o.descricao or '' }}</textarea>
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">Tipo de Instrumento <span class="text-danger">*</span></label>
-      <select name="tipo_instrumento" class="form-select" required>
-        {% for valor, rotulo in [
-          ("chamada_publica_edital", "Chamada Pública/Edital"),
-          ("chamamento_publico", "Chamamento Público"),
-          ("premio", "Prêmio"),
-        ] %}
-        <option value="{{ valor }}" {{ "selected" if o.tipo_instrumento == valor else "" }}>{{ rotulo }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Natureza do Recurso <span class="text-danger">*</span></label>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="natureza_recurso" value="custeio" id="natureza_custeio" {{ "checked" if "custeio" in (o.natureza_recurso or []) else "" }}>
-        <label class="form-check-label" for="natureza_custeio">Custeio</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="natureza_recurso" value="capital" id="natureza_capital" {{ "checked" if "capital" in (o.natureza_recurso or []) else "" }}>
-        <label class="form-check-label" for="natureza_capital">Capital</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="natureza_recurso" value="bolsa" id="natureza_bolsa" {{ "checked" if "bolsa" in (o.natureza_recurso or []) else "" }}>
-        <label class="form-check-label" for="natureza_bolsa">Bolsa</label>
+        <div class="mb-3">
+          <label class="form-label">Tipo de Instrumento <span class="text-danger">*</span></label>
+          <select name="tipo_instrumento" class="form-select" required>
+            {% for valor, rotulo in [
+              ("chamada_publica_edital", "Chamada Pública/Edital"),
+              ("chamamento_publico", "Chamamento Público"),
+              ("premio", "Prêmio"),
+            ] %}
+            <option value="{{ valor }}" {{ "selected" if o.tipo_instrumento == valor else "" }}>{{ rotulo }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">Público-Alvo <span class="text-danger">*</span></label>
-      {% for valor, rotulo in [
-        ("pesquisadores", "Pesquisadores"),
-        ("empresas", "Empresas"),
-        ("startups", "Startups"),
-        ("ict", "ICT"),
-        ("mestrandos", "Mestrandos"),
-        ("doutorandos", "Doutorandos"),
-        ("ies", "IES"),
-        ("governo", "Governo"),
-      ] %}
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="publico_alvo" value="{{ valor }}" id="publico_{{ valor }}" {{ "checked" if valor in (o.publico_alvo or []) else "" }}>
-        <label class="form-check-label" for="publico_{{ valor }}">{{ rotulo }}</label>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Classificação</h2>
+
+        <div class="mb-3">
+          <label class="form-label">Linha de Fomento <span class="text-danger">*</span></label>
+          {% for valor, rotulo in [
+            ("auxilio_pesquisa", "Auxílio à Pesquisa"),
+            ("auxilio_inovacao", "Auxílio à Inovação"),
+            ("auxilio_divulgacao_cientifica", "Auxílio à Divulgação Científica"),
+            ("apoio_formacao_capacitacao", "Apoio à Formação/Capacitação"),
+            ("apoio_redes_grupos_pesquisa", "Apoio a Redes e Grupos de Pesquisa"),
+          ] %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="{{ valor }}" id="linha_{{ valor }}" {{ "checked" if valor in (o.linha_de_fomento or []) else "" }}>
+            <label class="form-check-label" for="linha_{{ valor }}">{{ rotulo }}</label>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Natureza do Recurso <span class="text-danger">*</span></label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="custeio" id="natureza_custeio" {{ "checked" if "custeio" in (o.natureza_recurso or []) else "" }}>
+            <label class="form-check-label" for="natureza_custeio">Custeio</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="capital" id="natureza_capital" {{ "checked" if "capital" in (o.natureza_recurso or []) else "" }}>
+            <label class="form-check-label" for="natureza_capital">Capital</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="bolsa" id="natureza_bolsa" {{ "checked" if "bolsa" in (o.natureza_recurso or []) else "" }}>
+            <label class="form-check-label" for="natureza_bolsa">Bolsa</label>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Público-Alvo <span class="text-danger">*</span></label>
+          {% for valor, rotulo in [
+            ("pesquisadores", "Pesquisadores"),
+            ("empresas", "Empresas"),
+            ("startups", "Startups"),
+            ("ict", "ICT"),
+            ("mestrandos", "Mestrandos"),
+            ("doutorandos", "Doutorandos"),
+            ("ies", "IES"),
+            ("governo", "Governo"),
+          ] %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="publico_alvo" value="{{ valor }}" id="publico_{{ valor }}" {{ "checked" if valor in (o.publico_alvo or []) else "" }}>
+            <label class="form-check-label" for="publico_{{ valor }}">{{ rotulo }}</label>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Área Principal</label>
+          <select name="area_principal" class="form-select">
+            <option value="" {{ "selected" if not o.area_principal else "" }}>— Selecione —</option>
+            {% for area in [
+              "Ciências Exatas e da Terra", "Ciências Biológicas", "Engenharias",
+              "Ciências da Saúde", "Ciências Agrárias", "Ciências Sociais Aplicadas",
+              "Ciências Humanas", "Linguística, Letras e Artes"
+            ] %}
+            <option value="{{ area }}" {{ "selected" if o.area_principal == area else "" }}>{{ area }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Palavras-chave
+            <span data-bs-toggle="tooltip" title="Digite uma palavra-chave e aperte Enter para adicionar.">ℹ️</span>
+          </label>
+          <div id="tags-palavras_chave" class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center">
+            <input type="text" class="border-0 flex-grow-1" style="outline:none;min-width:150px;" placeholder="Digite e aperte Enter" data-campo="palavras_chave">
+          </div>
+        </div>
       </div>
-      {% endfor %}
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">Tipo de Parceria</label>
-      <select name="tipo_parceria" class="form-select">
-        <option value="" {{ "selected" if not o.tipo_parceria else "" }}>Não se aplica</option>
-        {% for valor in ["nacional", "regional", "internacional"] %}
-        <option value="{{ valor }}" {{ "selected" if o.tipo_parceria == valor else "" }}>{{ valor|capitalize }}</option>
-        {% endfor %}
-      </select>
+    <div class="card mb-4" id="secao-formacao">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Formação de Pessoas</h2>
+        <p class="text-muted small">Só relevante quando a Linha de Fomento inclui Apoio à Formação/Capacitação.</p>
+
+        <div class="mb-3">
+          <label class="form-label">Nível de Formação</label>
+          <select name="nivel_formacao" class="form-select">
+            <option value="" {{ "selected" if not o.nivel_formacao else "" }}>— Não aplicável —</option>
+            <option value="mestrado" {{ "selected" if o.nivel_formacao == "mestrado" else "" }}>Mestrado</option>
+            <option value="doutorado" {{ "selected" if o.nivel_formacao == "doutorado" else "" }}>Doutorado</option>
+            <option value="pos_doutorado" {{ "selected" if o.nivel_formacao == "pos_doutorado" else "" }}>Pós-Doutorado</option>
+            <option value="iniciacao_cientifica" {{ "selected" if o.nivel_formacao == "iniciacao_cientifica" else "" }}>Iniciação Científica</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Modalidade de Pessoa</label>
+          <select name="modalidade_pessoa" class="form-select">
+            <option value="" {{ "selected" if not o.modalidade_pessoa else "" }}>Não se aplica</option>
+            <option value="atracao" {{ "selected" if o.modalidade_pessoa == "atracao" else "" }}>Atração</option>
+            <option value="fixacao" {{ "selected" if o.modalidade_pessoa == "fixacao" else "" }}>Fixação</option>
+            <option value="capacitacao_exterior" {{ "selected" if o.modalidade_pessoa == "capacitacao_exterior" else "" }}>Capacitação no Exterior</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">Modalidade de Pessoa</label>
-      <select name="modalidade_pessoa" class="form-select">
-        <option value="" {{ "selected" if not o.modalidade_pessoa else "" }}>Não se aplica</option>
-        <option value="atracao" {{ "selected" if o.modalidade_pessoa == "atracao" else "" }}>Atração</option>
-        <option value="fixacao" {{ "selected" if o.modalidade_pessoa == "fixacao" else "" }}>Fixação</option>
-        <option value="capacitacao_exterior" {{ "selected" if o.modalidade_pessoa == "capacitacao_exterior" else "" }}>Capacitação no Exterior</option>
-      </select>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Instituições</h2>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Instituição(ões) Financiadora(s) <span class="text-danger">*</span>
+            <span data-bs-toggle="tooltip" title="Digite e aperte Enter — pode adicionar mais de uma quando o edital for cofinanciado.">ℹ️</span>
+          </label>
+          <div id="tags-instituicao_financiadora" class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center">
+            <input type="text" class="border-0 flex-grow-1" style="outline:none;min-width:150px;" placeholder="Digite e aperte Enter" data-campo="instituicao_financiadora">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Instituição Executora</label>
+          <input type="text" name="instituicao_executora" class="form-control" value="{{ o.instituicao_executora or '' }}">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Instituição Beneficiária</label>
+          <input type="text" name="instituicao_beneficiaria" class="form-control" value="{{ o.instituicao_beneficiaria or '' }}">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Tipo de Parceria</label>
+          <select name="tipo_parceria" class="form-select">
+            <option value="" {{ "selected" if not o.tipo_parceria else "" }}>Não se aplica</option>
+            {% for valor in ["nacional", "regional", "internacional"] %}
+            <option value="{{ valor }}" {{ "selected" if o.tipo_parceria == valor else "" }}>{{ valor|capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">Nível de Formação</label>
-      <select name="nivel_formacao" class="form-select">
-        <option value="" {{ "selected" if not o.nivel_formacao else "" }}>— Não aplicável —</option>
-        <option value="mestrado" {{ "selected" if o.nivel_formacao == "mestrado" else "" }}>Mestrado</option>
-        <option value="doutorado" {{ "selected" if o.nivel_formacao == "doutorado" else "" }}>Doutorado</option>
-        <option value="pos_doutorado" {{ "selected" if o.nivel_formacao == "pos_doutorado" else "" }}>Pós-Doutorado</option>
-        <option value="iniciacao_cientifica" {{ "selected" if o.nivel_formacao == "iniciacao_cientifica" else "" }}>Iniciação Científica</option>
-      </select>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Localização</h2>
+
+        <div class="mb-3">
+          <label class="form-label">Abrangência</label>
+          <select name="abrangencia" class="form-select" id="abrangencia-select">
+            <option value="" {{ "selected" if not o.abrangencia else "" }}>— Selecione —</option>
+            {% for valor in ["nacional", "estadual", "regional", "internacional"] %}
+            <option value="{{ valor }}" {{ "selected" if o.abrangencia == valor else "" }}>{{ valor|capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mb-3" id="secao-uf">
+          <label class="form-label">
+            UF <small class="text-muted">(preencher quando abrangência = estadual ou regional; pode selecionar mais de uma)</small>
+          </label>
+          <select name="uf" class="form-select" multiple size="8">
+            {% for valor in ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"] %}
+            <option value="{{ valor }}" {{ "selected" if valor in (o.uf or []) else "" }}>{{ valor }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Cidade</label>
+          <input type="text" name="cidade" class="form-control" value="{{ o.cidade or '' }}">
+        </div>
+      </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">Abrangência</label>
-      <select name="abrangencia" class="form-select">
-        <option value="" {{ "selected" if not o.abrangencia else "" }}>— Selecione —</option>
-        {% for valor in ["nacional", "estadual", "regional", "internacional"] %}
-        <option value="{{ valor }}" {{ "selected" if o.abrangencia == valor else "" }}>{{ valor|capitalize }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="mb-3">
-      <label class="form-label">UF</label>
-      <input type="text" name="uf" class="form-control" maxlength="2" value="{{ o.uf or '' }}">
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Cidade</label>
-      <input type="text" name="cidade" class="form-control" value="{{ o.cidade or '' }}">
-    </div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Datas e Valores</h2>
 
-    <div class="mb-3">
-      <label class="form-label">Área Principal</label>
-      <select name="area_principal" class="form-select">
-        <option value="" {{ "selected" if not o.area_principal else "" }}>— Selecione —</option>
-        {% for area in [
-          "Ciências Exatas e da Terra", "Ciências Biológicas", "Engenharias",
-          "Ciências da Saúde", "Ciências Agrárias", "Ciências Sociais Aplicadas",
-          "Ciências Humanas", "Linguística, Letras e Artes"
-        ] %}
-        <option value="{{ area }}" {{ "selected" if o.area_principal == area else "" }}>{{ area }}</option>
-        {% endfor %}
-      </select>
-    </div>
+        <div class="mb-3">
+          <label class="form-label">Data de Publicação</label>
+          <input type="date" name="data_publicacao" class="form-control" value="{{ o.data_publicacao.isoformat() if o.data_publicacao else '' }}">
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">Palavras-chave <small class="text-muted">(separadas por vírgula)</small></label>
-      <input type="text" name="palavras_chave" class="form-control" value="{{ (o.palavras_chave or []) | join(', ') }}">
-    </div>
+        <div class="mb-3">
+          <label class="form-label">Data Final de Submissão</label>
+          <input type="date" name="data_prazo" class="form-control" value="{{ o.data_prazo.isoformat() if o.data_prazo else '' }}">
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">Descrição</label>
-      <textarea name="descricao" class="form-control" rows="4">{{ o.descricao or '' }}</textarea>
+        <div class="mb-3">
+          <label class="form-label">Data Prevista do Resultado</label>
+          <input type="date" name="data_resultado_previsto" class="form-control" value="{{ o.data_resultado_previsto.isoformat() if o.data_resultado_previsto else '' }}">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Orçamento Total da Chamada</label>
+          <input type="number" step="0.01" name="orcamento_total_chamada" class="form-control" value="{{ o.orcamento_total_chamada or '' }}">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Valor Mínimo da Proposta</label>
+          <input type="number" step="0.01" name="valor_minimo_proposta" class="form-control" value="{{ o.valor_minimo_proposta or '' }}">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Valor Máximo da Proposta</label>
+          <input type="number" step="0.01" name="valor_maximo_proposta" class="form-control" value="{{ o.valor_maximo_proposta or '' }}">
+        </div>
+      </div>
     </div>
 
     <div class="d-flex gap-2 mt-4">
@@ -185,4 +272,64 @@
       <button type="submit" name="acao" value="rejeitar" class="btn btn-danger">Rejeitar</button>
     </div>
   </form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function atualizarSecoesCondicionais() {
+    const formacaoMarcada = document.querySelector(
+      'input[name="linha_de_fomento"][value="apoio_formacao_capacitacao"]'
+    )?.checked;
+    document.getElementById('secao-formacao').style.display = formacaoMarcada ? '' : 'none';
+
+    const abrangencia = document.querySelector('select[name="abrangencia"]')?.value;
+    const mostrarUf = abrangencia === 'estadual' || abrangencia === 'regional';
+    document.getElementById('secao-uf').style.display = mostrarUf ? '' : 'none';
+  }
+
+  document.querySelectorAll('input[name="linha_de_fomento"], select[name="abrangencia"]')
+    .forEach(el => el.addEventListener('change', atualizarSecoesCondicionais));
+  atualizarSecoesCondicionais();
+
+  function inicializarTags(campo, valoresIniciais) {
+    const container = document.getElementById(`tags-${campo}`);
+    const input = container.querySelector('input[type="text"]');
+
+    function adicionar(valor) {
+      valor = valor.trim();
+      if (!valor) return;
+      const pilula = document.createElement('span');
+      pilula.className = 'badge bg-secondary d-flex align-items-center gap-1';
+      pilula.textContent = valor;
+
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = campo;
+      hidden.value = valor;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-close btn-close-white';
+      btn.style.fontSize = '0.6rem';
+      btn.onclick = () => { pilula.remove(); hidden.remove(); };
+
+      pilula.appendChild(btn);
+      container.insertBefore(pilula, input);
+      container.appendChild(hidden);
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        adicionar(input.value);
+        input.value = '';
+      }
+    });
+
+    (valoresIniciais || []).forEach(adicionar);
+  }
+
+  inicializarTags('palavras_chave', {{ (o.palavras_chave or []) | tojson }});
+  inicializarTags('instituicao_financiadora', {{ (o.instituicao_financiadora or []) | tojson }});
+</script>
 {% endblock %}

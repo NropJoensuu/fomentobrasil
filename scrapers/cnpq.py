@@ -179,7 +179,7 @@ def salvar_no_banco(registros):
             campos_extras_fixos={
                 "descricao": r["descricao"],
                 "data_publicacao": r["data_publicacao"],
-                "instituicao_financiadora": r["instituicao_financiadora"][:200],
+                "instituicao_financiadora": [r["instituicao_financiadora"][:200]],
                 "tipo_instrumento": r["tipo_instrumento"],
                 "abrangencia": "nacional",
                 # Placeholder: não dá para inferir a linha de fomento do título/descrição

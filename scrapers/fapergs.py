@@ -87,7 +87,7 @@ def salvar_no_banco(registros):
             },
             campos_extras_fixos={
                 "descricao": r["descricao"],
-                "instituicao_financiadora": "FAPERGS",
+                "instituicao_financiadora": ["FAPERGS"],
                 "tipo_instrumento": "chamada_publica_edital",
                 # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
@@ -95,7 +95,7 @@ def salvar_no_banco(registros):
                 # lista vazia significa "ainda não determinado", em vez de um chute.
                 "natureza_recurso": [],
                 "publico_alvo": [],
-                "uf": "RS",
+                "uf": ["RS"],
                 "abrangencia": "estadual",
                 "origem": "institucional",
                 "status": "pendente",

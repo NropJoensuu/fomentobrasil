@@ -21,7 +21,7 @@
       {% for o in pendentes %}
       <tr>
         <td>{{ o.titulo }}</td>
-        <td>{{ o.instituicao_financiadora }}</td>
+        <td>{{ (o.instituicao_financiadora or []) | join(', ') }}</td>
         <td><small class="text-muted">{{ (o.dados_extra or {}).get('categoria_fapes') or (o.dados_extra or {}).get('fonte') or '' }}</small></td>
         <td><a href="{{ url_for('main.moderar_oportunidade', id=o.id) }}" class="btn btn-sm btn-primary">Revisar</a></td>
       </tr>

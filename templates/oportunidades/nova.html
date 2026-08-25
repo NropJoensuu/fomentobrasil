@@ -12,299 +12,395 @@
   {% endif %}
 
   <form method="POST">
-    <div class="mb-3">
-      <label class="form-label">Título <span class="text-danger">*</span></label>
-      <input type="text" name="titulo" class="form-control" value="{{ prefill.titulo if prefill else '' }}" required>
-    </div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Identificação</h2>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Instituição Financiadora <span class="text-danger">*</span>
-        <span data-bs-toggle="tooltip" title="Quem origina o recurso financeiro (ex: CNPq, FAPESP, FACEPE).">ℹ️</span>
-      </label>
-      <input type="text" name="instituicao_financiadora" class="form-control" required>
-    </div>
+        <div class="mb-3">
+          <label class="form-label">Título <span class="text-danger">*</span></label>
+          <input type="text" name="titulo" class="form-control" value="{{ prefill.titulo if prefill else '' }}" required>
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Instituição Executora
-        <span data-bs-toggle="tooltip" title="Quem usa o recurso na prática, executando o projeto (ex: uma universidade ou laboratório). Deixe em branco se não especificado no edital.">ℹ️</span>
-      </label>
-      <input type="text" name="instituicao_executora" class="form-control">
-    </div>
+        <div class="mb-3">
+          <label class="form-label">Link do Edital <span class="text-danger">*</span></label>
+          <input type="url" name="link" class="form-control" value="{{ prefill.link if prefill else (link_importado or '') }}" required>
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Instituição Beneficiária
-        <span data-bs-toggle="tooltip" title="Intermediária que recebe o recurso da financiadora e repassa para a executora (comum em fundações de apoio, ex: FAPEU, FUNDEP). Deixe em branco quando não houver.">ℹ️</span>
-      </label>
-      <input type="text" name="instituicao_beneficiaria" class="form-control">
-    </div>
+        <div class="mb-3">
+          <label class="form-label">Descrição</label>
+          <textarea name="descricao" class="form-control" rows="3">{{ (prefill.descricao or '') if prefill else '' }}</textarea>
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Nível de Formação
-        <span data-bs-toggle="tooltip" title="Só relevante quando a natureza do recurso inclui bolsa.">ℹ️</span>
-      </label>
-      <select name="nivel_formacao" class="form-select">
-        <option value="">— Não aplicável —</option>
-        <option value="mestrado">Mestrado</option>
-        <option value="doutorado">Doutorado</option>
-        <option value="pos_doutorado">Pós-Doutorado</option>
-        <option value="iniciacao_cientifica">Iniciação Científica</option>
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Abrangência</label>
-      <select name="abrangencia" class="form-select" id="abrangencia-select">
-        <option value="">— Selecione —</option>
-        <option value="nacional">Nacional</option>
-        <option value="estadual">Estadual</option>
-        <option value="regional">Regional</option>
-        <option value="internacional">Internacional</option>
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">UF <small class="text-muted">(preencher quando abrangência = estadual)</small></label>
-      <select name="uf" class="form-select">
-        <option value="">— N/A —</option>
-        <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option>
-        <option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option>
-        <option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option>
-        <option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
-        <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option>
-        <option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option>
-        <option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option>
-        <option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
-        <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Cidade <small class="text-muted">(opcional, quando vaga ligada a instituição física)</small></label>
-      <input type="text" name="cidade" class="form-control">
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Data de Publicação</label>
-      <input type="date" name="data_publicacao" class="form-control">
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">
-        Linha de Fomento <span class="text-danger">*</span>
-        <span data-bs-toggle="tooltip" title="Finalidade do fomento: o que a chamada se propõe a apoiar.">ℹ️</span>
-      </label>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="auxilio_pesquisa" id="linha_auxilio_pesquisa">
-        <label class="form-check-label" for="linha_auxilio_pesquisa">Auxílio à Pesquisa</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="auxilio_inovacao" id="linha_auxilio_inovacao">
-        <label class="form-check-label" for="linha_auxilio_inovacao">Auxílio à Inovação</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="auxilio_divulgacao_cientifica" id="linha_auxilio_divulgacao_cientifica">
-        <label class="form-check-label" for="linha_auxilio_divulgacao_cientifica">Auxílio à Divulgação Científica</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="apoio_formacao_capacitacao" id="linha_apoio_formacao_capacitacao">
-        <label class="form-check-label" for="linha_apoio_formacao_capacitacao">Apoio à Formação/Capacitação</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="apoio_redes_grupos_pesquisa" id="linha_apoio_redes_grupos_pesquisa">
-        <label class="form-check-label" for="linha_apoio_redes_grupos_pesquisa">Apoio a Redes e Grupos de Pesquisa</label>
+        <div class="mb-3">
+          <label class="form-label">
+            Tipo de Instrumento <span class="text-danger">*</span>
+            <span data-bs-toggle="tooltip" title="Instrumento administrativo/legal usado para veicular a chamada, distinto da linha de fomento.">ℹ️</span>
+          </label>
+          <select name="tipo_instrumento" class="form-select" required>
+            <option value="chamada_publica_edital">Chamada Pública/Edital</option>
+            <option value="chamamento_publico">Chamamento Público</option>
+            <option value="premio">Prêmio</option>
+          </select>
+        </div>
       </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Tipo de Instrumento <span class="text-danger">*</span>
-        <span data-bs-toggle="tooltip" title="Instrumento administrativo/legal usado para veicular a chamada, distinto da linha de fomento.">ℹ️</span>
-      </label>
-      <select name="tipo_instrumento" class="form-select" required>
-        <option value="chamada_publica_edital">Chamada Pública/Edital</option>
-        <option value="chamamento_publico">Chamamento Público</option>
-        <option value="premio">Prêmio</option>
-      </select>
-    </div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Classificação</h2>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Natureza do Recurso <span class="text-danger">*</span>
-        <span data-bs-toggle="tooltip" title="O que a linha de fomento concede na prática. Pode marcar mais de um valor.">ℹ️</span>
-      </label>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="natureza_recurso" value="custeio" id="natureza_custeio">
-        <label class="form-check-label" for="natureza_custeio">Custeio</label>
+        <div class="mb-3">
+          <label class="form-label">
+            Linha de Fomento <span class="text-danger">*</span>
+            <span data-bs-toggle="tooltip" title="Finalidade do fomento: o que a chamada se propõe a apoiar. Pode marcar mais de uma.">ℹ️</span>
+          </label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="auxilio_pesquisa" id="linha_auxilio_pesquisa">
+            <label class="form-check-label" for="linha_auxilio_pesquisa">Auxílio à Pesquisa</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="auxilio_inovacao" id="linha_auxilio_inovacao">
+            <label class="form-check-label" for="linha_auxilio_inovacao">Auxílio à Inovação</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="auxilio_divulgacao_cientifica" id="linha_auxilio_divulgacao_cientifica">
+            <label class="form-check-label" for="linha_auxilio_divulgacao_cientifica">Auxílio à Divulgação Científica</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="apoio_formacao_capacitacao" id="linha_apoio_formacao_capacitacao">
+            <label class="form-check-label" for="linha_apoio_formacao_capacitacao">Apoio à Formação/Capacitação</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="apoio_redes_grupos_pesquisa" id="linha_apoio_redes_grupos_pesquisa">
+            <label class="form-check-label" for="linha_apoio_redes_grupos_pesquisa">Apoio a Redes e Grupos de Pesquisa</label>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Natureza do Recurso <span class="text-danger">*</span>
+            <span data-bs-toggle="tooltip" title="O que a linha de fomento concede na prática. Pode marcar mais de um valor.">ℹ️</span>
+          </label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="custeio" id="natureza_custeio">
+            <label class="form-check-label" for="natureza_custeio">Custeio</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="capital" id="natureza_capital">
+            <label class="form-check-label" for="natureza_capital">Capital</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="bolsa" id="natureza_bolsa">
+            <label class="form-check-label" for="natureza_bolsa">Bolsa</label>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Público-Alvo <span class="text-danger">*</span>
+            <span data-bs-toggle="tooltip" title="Quem pode se candidatar. Pode marcar mais de um valor. Pesquisador não é sinônimo de doutor.">ℹ️</span>
+          </label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="publico_alvo" value="pesquisadores" id="publico_pesquisadores">
+            <label class="form-check-label" for="publico_pesquisadores">Pesquisadores</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="publico_alvo" value="empresas" id="publico_empresas">
+            <label class="form-check-label" for="publico_empresas">Empresas</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="publico_alvo" value="startups" id="publico_startups">
+            <label class="form-check-label" for="publico_startups">Startups</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="publico_alvo" value="ict" id="publico_ict">
+            <label class="form-check-label" for="publico_ict">ICT</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="publico_alvo" value="mestrandos" id="publico_mestrandos">
+            <label class="form-check-label" for="publico_mestrandos">Mestrandos</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="publico_alvo" value="doutorandos" id="publico_doutorandos">
+            <label class="form-check-label" for="publico_doutorandos">Doutorandos</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="publico_alvo" value="ies" id="publico_ies">
+            <label class="form-check-label" for="publico_ies">IES</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="publico_alvo" value="governo" id="publico_governo">
+            <label class="form-check-label" for="publico_governo">Governo</label>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Área Principal
+            <span data-bs-toggle="tooltip" title="Grande Área da Tabela de Áreas do Conhecimento CNPq/CAPES.">ℹ️</span>
+          </label>
+          <select name="area_principal" class="form-select">
+            <option value="">Não especificado</option>
+            <option value="Ciências Exatas e da Terra">Ciências Exatas e da Terra</option>
+            <option value="Ciências Biológicas">Ciências Biológicas</option>
+            <option value="Engenharias">Engenharias</option>
+            <option value="Ciências da Saúde">Ciências da Saúde</option>
+            <option value="Ciências Agrárias">Ciências Agrárias</option>
+            <option value="Ciências Sociais Aplicadas">Ciências Sociais Aplicadas</option>
+            <option value="Ciências Humanas">Ciências Humanas</option>
+            <option value="Linguística, Letras e Artes">Linguística, Letras e Artes</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Palavras-chave
+            <span data-bs-toggle="tooltip" title="Digite uma palavra-chave e aperte Enter para adicionar.">ℹ️</span>
+          </label>
+          <div id="tags-palavras_chave" class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center">
+            <input type="text" class="border-0 flex-grow-1" style="outline:none;min-width:150px;" placeholder="Digite e aperte Enter" data-campo="palavras_chave">
+          </div>
+        </div>
       </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="natureza_recurso" value="capital" id="natureza_capital">
-        <label class="form-check-label" for="natureza_capital">Capital</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="natureza_recurso" value="bolsa" id="natureza_bolsa">
-        <label class="form-check-label" for="natureza_bolsa">Bolsa</label>
-      </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Público-Alvo <span class="text-danger">*</span>
-        <span data-bs-toggle="tooltip" title="Quem pode se candidatar. Pode marcar mais de um valor. Pesquisador não é sinônimo de doutor.">ℹ️</span>
-      </label>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="publico_alvo" value="pesquisadores" id="publico_pesquisadores">
-        <label class="form-check-label" for="publico_pesquisadores">Pesquisadores</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="publico_alvo" value="empresas" id="publico_empresas">
-        <label class="form-check-label" for="publico_empresas">Empresas</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="publico_alvo" value="startups" id="publico_startups">
-        <label class="form-check-label" for="publico_startups">Startups</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="publico_alvo" value="ict" id="publico_ict">
-        <label class="form-check-label" for="publico_ict">ICT</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="publico_alvo" value="mestrandos" id="publico_mestrandos">
-        <label class="form-check-label" for="publico_mestrandos">Mestrandos</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="publico_alvo" value="doutorandos" id="publico_doutorandos">
-        <label class="form-check-label" for="publico_doutorandos">Doutorandos</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="publico_alvo" value="ies" id="publico_ies">
-        <label class="form-check-label" for="publico_ies">IES</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="publico_alvo" value="governo" id="publico_governo">
-        <label class="form-check-label" for="publico_governo">Governo</label>
+    <div class="card mb-4" id="secao-formacao">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Formação de Pessoas</h2>
+        <p class="text-muted small">Só relevante quando a Linha de Fomento inclui Apoio à Formação/Capacitação.</p>
+
+        <div class="mb-3">
+          <label class="form-label">Nível de Formação</label>
+          <select name="nivel_formacao" class="form-select">
+            <option value="">— Não aplicável —</option>
+            <option value="mestrado">Mestrado</option>
+            <option value="doutorado">Doutorado</option>
+            <option value="pos_doutorado">Pós-Doutorado</option>
+            <option value="iniciacao_cientifica">Iniciação Científica</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Modalidade de Pessoa</label>
+          <select name="modalidade_pessoa" class="form-select">
+            <option value="">Não se aplica</option>
+            <option value="atracao">Atração</option>
+            <option value="fixacao">Fixação</option>
+            <option value="capacitacao_exterior">Capacitação no Exterior</option>
+          </select>
+        </div>
       </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Tipo de Parceria
-        <span data-bs-toggle="tooltip" title="Escopo da parceria entre instituições, quando houver.">ℹ️</span>
-      </label>
-      <select name="tipo_parceria" class="form-select">
-        <option value="">Não se aplica</option>
-        <option value="nacional">Nacional</option>
-        <option value="regional">Regional</option>
-        <option value="internacional">Internacional</option>
-      </select>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Instituições</h2>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Instituição(ões) Financiadora(s) <span class="text-danger">*</span>
+            <span data-bs-toggle="tooltip" title="Quem origina o recurso financeiro (ex: CNPq, FAPESP, FACEPE). Digite e aperte Enter — pode adicionar mais de uma quando o edital for cofinanciado.">ℹ️</span>
+          </label>
+          <div id="tags-instituicao_financiadora" class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center">
+            <input type="text" class="border-0 flex-grow-1" style="outline:none;min-width:150px;" placeholder="Digite e aperte Enter" data-campo="instituicao_financiadora">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Instituição Executora
+            <span data-bs-toggle="tooltip" title="Quem usa o recurso na prática, executando o projeto (ex: uma universidade ou laboratório). Deixe em branco se não especificado no edital.">ℹ️</span>
+          </label>
+          <input type="text" name="instituicao_executora" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Instituição Beneficiária
+            <span data-bs-toggle="tooltip" title="Intermediária que recebe o recurso da financiadora e repassa para a executora (comum em fundações de apoio, ex: FAPEU, FUNDEP). Deixe em branco quando não houver.">ℹ️</span>
+          </label>
+          <input type="text" name="instituicao_beneficiaria" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Tipo de Parceria
+            <span data-bs-toggle="tooltip" title="Escopo da parceria entre instituições, quando houver.">ℹ️</span>
+          </label>
+          <select name="tipo_parceria" class="form-select">
+            <option value="">Não se aplica</option>
+            <option value="nacional">Nacional</option>
+            <option value="regional">Regional</option>
+            <option value="internacional">Internacional</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Modalidade de Pessoa
-        <span data-bs-toggle="tooltip" title="Só relevante quando a linha de fomento é Apoio Formação/Capacitação.">ℹ️</span>
-      </label>
-      <select name="modalidade_pessoa" class="form-select">
-        <option value="">Não se aplica</option>
-        <option value="atracao">Atração</option>
-        <option value="fixacao">Fixação</option>
-        <option value="capacitacao_exterior">Capacitação no Exterior</option>
-      </select>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Localização</h2>
+
+        <div class="mb-3">
+          <label class="form-label">Abrangência</label>
+          <select name="abrangencia" class="form-select" id="abrangencia-select">
+            <option value="">— Selecione —</option>
+            <option value="nacional">Nacional</option>
+            <option value="estadual">Estadual</option>
+            <option value="regional">Regional</option>
+            <option value="internacional">Internacional</option>
+          </select>
+        </div>
+
+        <div class="mb-3" id="secao-uf">
+          <label class="form-label">
+            UF <small class="text-muted">(preencher quando abrangência = estadual ou regional; pode selecionar mais de uma)</small>
+          </label>
+          <select name="uf" class="form-select" multiple size="8">
+            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option>
+            <option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option>
+            <option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option>
+            <option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option>
+            <option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option>
+            <option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option>
+            <option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
+            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Cidade <small class="text-muted">(opcional, quando vaga ligada a instituição física)</small></label>
+          <input type="text" name="cidade" class="form-control">
+        </div>
+      </div>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Área Principal
-        <span data-bs-toggle="tooltip" title="Grande Área da Tabela de Áreas do Conhecimento CNPq/CAPES.">ℹ️</span>
-      </label>
-      <select name="area_principal" class="form-select">
-        <option value="">Não especificado</option>
-        <option value="Ciências Exatas e da Terra">Ciências Exatas e da Terra</option>
-        <option value="Ciências Biológicas">Ciências Biológicas</option>
-        <option value="Engenharias">Engenharias</option>
-        <option value="Ciências da Saúde">Ciências da Saúde</option>
-        <option value="Ciências Agrárias">Ciências Agrárias</option>
-        <option value="Ciências Sociais Aplicadas">Ciências Sociais Aplicadas</option>
-        <option value="Ciências Humanas">Ciências Humanas</option>
-        <option value="Linguística, Letras e Artes">Linguística, Letras e Artes</option>
-      </select>
-    </div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5 card-title mb-3">Datas e Valores</h2>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Palavras-chave
-        <span data-bs-toggle="tooltip" title="Separe múltiplas palavras-chave por vírgula. Ex: Ciência da Computação, computer science, IA">ℹ️</span>
-      </label>
-      <input type="text" name="palavras_chave" class="form-control" placeholder="Ex: Física, Química, Engenharia">
-    </div>
+        <div class="mb-3">
+          <label class="form-label">Data de Publicação</label>
+          <input type="date" name="data_publicacao" class="form-control">
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Status Oficial
-        <span data-bs-toggle="tooltip" title="Situação oficial declarada pela instituição sobre o edital. Deixe em branco para calcular Aberta/Encerrada automaticamente pela data final de submissão.">ℹ️</span>
-      </label>
-      <select name="status_oficial" class="form-select">
-        <option value="">Nenhum — calcular automaticamente</option>
-        <option value="suspensa">Suspensa</option>
-        <option value="cancelada">Cancelada</option>
-        <option value="retificada">Retificada</option>
-        <option value="resultado_divulgado">Resultado Divulgado</option>
-      </select>
-    </div>
+        <div class="mb-3">
+          <label class="form-label">
+            Data Final de Submissão
+            <span data-bs-toggle="tooltip" title="Fim do prazo de submissão da chamada, distinto da data prevista de divulgação do resultado.">ℹ️</span>
+          </label>
+          <input type="date" name="data_prazo" class="form-control">
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Orçamento Total da Chamada
-        <span data-bs-toggle="tooltip" title="Valor total disponibilizado pela chamada, quando informado no edital.">ℹ️</span>
-      </label>
-      <input type="number" step="0.01" name="orcamento_total_chamada" class="form-control">
-    </div>
+        <div class="mb-3">
+          <label class="form-label">
+            Data Prevista do Resultado
+            <span data-bs-toggle="tooltip" title="Data prevista de divulgação do resultado da chamada, distinta da data-fim de submissão.">ℹ️</span>
+          </label>
+          <input type="date" name="data_resultado_previsto" class="form-control">
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Valor Mínimo da Proposta
-        <span data-bs-toggle="tooltip" title="Valor mínimo que pode ser solicitado por proposta.">ℹ️</span>
-      </label>
-      <input type="number" step="0.01" name="valor_minimo_proposta" class="form-control">
-    </div>
+        <div class="mb-3">
+          <label class="form-label">
+            Status Oficial
+            <span data-bs-toggle="tooltip" title="Situação oficial declarada pela instituição sobre o edital. Deixe em branco para calcular Aberta/Encerrada automaticamente pela data final de submissão.">ℹ️</span>
+          </label>
+          <select name="status_oficial" class="form-select">
+            <option value="">Nenhum — calcular automaticamente</option>
+            <option value="suspensa">Suspensa</option>
+            <option value="cancelada">Cancelada</option>
+            <option value="retificada">Retificada</option>
+            <option value="resultado_divulgado">Resultado Divulgado</option>
+          </select>
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Valor Máximo da Proposta
-        <span data-bs-toggle="tooltip" title="Valor máximo que pode ser solicitado por proposta.">ℹ️</span>
-      </label>
-      <input type="number" step="0.01" name="valor_maximo_proposta" class="form-control">
-    </div>
+        <div class="mb-3">
+          <label class="form-label">
+            Orçamento Total da Chamada
+            <span data-bs-toggle="tooltip" title="Valor total disponibilizado pela chamada, quando informado no edital.">ℹ️</span>
+          </label>
+          <input type="number" step="0.01" name="orcamento_total_chamada" class="form-control">
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Data Final de Submissão
-        <span data-bs-toggle="tooltip" title="Fim do prazo de submissão da chamada, distinto da data prevista de divulgação do resultado.">ℹ️</span>
-      </label>
-      <input type="date" name="data_prazo" class="form-control">
-    </div>
+        <div class="mb-3">
+          <label class="form-label">
+            Valor Mínimo da Proposta
+            <span data-bs-toggle="tooltip" title="Valor mínimo que pode ser solicitado por proposta.">ℹ️</span>
+          </label>
+          <input type="number" step="0.01" name="valor_minimo_proposta" class="form-control">
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label">
-        Data Prevista do Resultado
-        <span data-bs-toggle="tooltip" title="Data prevista de divulgação do resultado da chamada, distinta da data-fim de submissão.">ℹ️</span>
-      </label>
-      <input type="date" name="data_resultado_previsto" class="form-control">
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Link do Edital <span class="text-danger">*</span></label>
-      <input type="url" name="link" class="form-control" value="{{ prefill.link if prefill else (link_importado or '') }}" required>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Descrição</label>
-      <textarea name="descricao" class="form-control" rows="3">{{ (prefill.descricao or '') if prefill else '' }}</textarea>
+        <div class="mb-3">
+          <label class="form-label">
+            Valor Máximo da Proposta
+            <span data-bs-toggle="tooltip" title="Valor máximo que pode ser solicitado por proposta.">ℹ️</span>
+          </label>
+          <input type="number" step="0.01" name="valor_maximo_proposta" class="form-control">
+        </div>
+      </div>
     </div>
 
     <button type="submit" class="btn btn-primary">Salvar</button>
   </form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function atualizarSecoesCondicionais() {
+    const formacaoMarcada = document.querySelector(
+      'input[name="linha_de_fomento"][value="apoio_formacao_capacitacao"]'
+    )?.checked;
+    document.getElementById('secao-formacao').style.display = formacaoMarcada ? '' : 'none';
+
+    const abrangencia = document.querySelector('select[name="abrangencia"]')?.value;
+    const mostrarUf = abrangencia === 'estadual' || abrangencia === 'regional';
+    document.getElementById('secao-uf').style.display = mostrarUf ? '' : 'none';
+  }
+
+  document.querySelectorAll('input[name="linha_de_fomento"], select[name="abrangencia"]')
+    .forEach(el => el.addEventListener('change', atualizarSecoesCondicionais));
+  atualizarSecoesCondicionais();
+
+  function inicializarTags(campo, valoresIniciais) {
+    const container = document.getElementById(`tags-${campo}`);
+    const input = container.querySelector('input[type="text"]');
+
+    function adicionar(valor) {
+      valor = valor.trim();
+      if (!valor) return;
+      const pilula = document.createElement('span');
+      pilula.className = 'badge bg-secondary d-flex align-items-center gap-1';
+      pilula.textContent = valor;
+
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = campo;
+      hidden.value = valor;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-close btn-close-white';
+      btn.style.fontSize = '0.6rem';
+      btn.onclick = () => { pilula.remove(); hidden.remove(); };
+
+      pilula.appendChild(btn);
+      container.insertBefore(pilula, input);
+      container.appendChild(hidden);
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        adicionar(input.value);
+        input.value = '';
+      }
+    });
+
+    (valoresIniciais || []).forEach(adicionar);
+  }
+
+  inicializarTags('palavras_chave', []);
+  inicializarTags('instituicao_financiadora', []);
+</script>
 {% endblock %}

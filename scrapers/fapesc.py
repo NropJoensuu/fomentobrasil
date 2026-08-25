@@ -171,7 +171,7 @@ def salvar_no_banco(registros):
             campos_extras_fixos={
                 "descricao": r["descricao"],
                 "data_publicacao": r["data_publicacao"],
-                "instituicao_financiadora": "FAPESC",
+                "instituicao_financiadora": ["FAPESC"],
                 "tipo_instrumento": "chamada_publica_edital",
                 # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
@@ -180,7 +180,7 @@ def salvar_no_banco(registros):
                 # um chute.
                 "natureza_recurso": [],
                 "publico_alvo": [],
-                "uf": "SC",
+                "uf": ["SC"],
                 "abrangencia": "estadual",
                 "origem": "institucional",
                 "status": "pendente",

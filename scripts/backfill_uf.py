@@ -1,5 +1,11 @@
-"""Backfill retroativo de uf/abrangencia para registros coletados antes da correção do bug
-nos scrapers (que não preenchiam esses campos).
+"""OBSOLETO (2026-08-25) — já cumpriu sua função, mantido só como registro histórico.
+
+Backfill retroativo de uf/abrangencia para os registros coletados antes da correção do bug
+nos scrapers (que não preenchiam esses campos). Rodou uma vez contra os 81 registros que
+existiam então; hoje os 7 scrapers já gravam `uf`/`abrangencia` desde a coleta, então o
+filtro `uf IS NULL AND abrangencia IS NULL` abaixo normalmente não encontra mais nenhum
+candidato. Ajustado para gravar `uf` como lista (`[valor]`/`None`), acompanhando a conversão
+de `uf` para ARRAY — mas não há necessidade real de rodar de novo.
 
 Classifica pelo DOMÍNIO do link, não por `instituicao_financiadora`: chamadas do CNPq e da
 FAPESP frequentemente têm financiadora composta (ex.: "CNPq/MCTI", "FAPESP e JSPS", "Finep/MCTI"),
@@ -40,7 +46,7 @@ with app.app_context():
         if valores is None:
             sem_mapeamento.append(r)
             continue
-        r.uf = valores["uf"]
+        r.uf = [valores["uf"]] if valores["uf"] else None
         r.abrangencia = valores["abrangencia"]
         total_atualizados += 1
 

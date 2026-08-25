@@ -143,9 +143,9 @@ def salvar_no_banco(registros):
             campos_extras_fixos={
                 "descricao": r["descricao"],
                 "data_prazo": None,  # não disponível na listagem, requer abrir o PDF
-                "instituicao_financiadora": "FAPES",
+                "instituicao_financiadora": ["FAPES"],
                 "tipo_instrumento": "chamada_publica_edital",
-                "uf": "ES",
+                "uf": ["ES"],
                 "abrangencia": "estadual",
                 # Placeholder: a categoria FAPES não mapeia 1:1 para linha_de_fomento;
                 # requer revisão manual na curadoria (ver dados_extra["categoria_fapes"]).

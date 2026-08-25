@@ -222,9 +222,9 @@ def salvar_no_banco(registros):
             campos_extras_fixos={
                 "descricao": r["descricao"],
                 "data_publicacao": r["data_publicacao"],
-                "instituicao_financiadora": "FAPEMIG",
+                "instituicao_financiadora": ["FAPEMIG"],
                 "tipo_instrumento": "chamada_publica_edital",
-                "uf": "MG",
+                "uf": ["MG"],
                 "abrangencia": "estadual",
                 # Placeholder: a FAPEMIG marca várias linhas de fomento por chamada, e o
                 # nosso campo é de valor único. Ver dados_extra["linhas_fomento_fapemig"].

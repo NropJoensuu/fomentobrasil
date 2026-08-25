@@ -178,9 +178,9 @@ def salvar_no_banco(registros):
             },
             campos_extras_fixos={
                 "descricao": r["descricao"],
-                "instituicao_financiadora": r["instituicao_financiadora"][:200],
+                "instituicao_financiadora": [r["instituicao_financiadora"][:200]],
                 "tipo_instrumento": "chamada_publica_edital",
-                "uf": "SP",
+                "uf": ["SP"],
                 "abrangencia": "estadual",
                 # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],

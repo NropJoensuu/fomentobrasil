@@ -55,7 +55,7 @@
         <dt class="col-sm-4">Abrangência</dt>
         <dd class="col-sm-8">
           {{ o.abrangencia }}
-          {% if o.uf %} — {{ o.uf }} ({{ regiao }}){% endif %}
+          {% if o.uf %} — {{ o.uf | join(', ') }} ({{ regioes | join(', ') }}){% endif %}
         </dd>
         {% endif %}
 
@@ -65,7 +65,7 @@
         {% endif %}
 
         <dt class="col-sm-4">Instituição Financiadora</dt>
-        <dd class="col-sm-8">{{ o.instituicao_financiadora }}</dd>
+        <dd class="col-sm-8">{{ (o.instituicao_financiadora or []) | join(', ') }}</dd>
 
         {% if o.instituicao_executora %}
         <dt class="col-sm-4">Instituição Executora</dt>

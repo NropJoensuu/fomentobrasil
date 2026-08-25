@@ -9,7 +9,7 @@ from sqlalchemy import or_, func
 
 from app import db
 from app.models import ExecucaoScraper, Oportunidade
-from app.utils import get_regiao, get_ufs_por_regiao, REGIAO_POR_UF, REGIOES
+from app.utils import get_regioes, get_ufs_por_regiao, REGIAO_POR_UF, REGIOES
 
 main = Blueprint("main", __name__)
 
@@ -55,9 +55,11 @@ def listar_oportunidades():
         )
     if regiao:
         ufs = get_ufs_por_regiao(regiao)
-        query = query.filter(Oportunidade.uf.in_(ufs))
+        # overlap (&&) testa interseção entre dois arrays — uf agora é lista, então
+        # .in_() (que compara um escalar contra vários valores) não serve mais aqui.
+        query = query.filter(Oportunidade.uf.overlap(ufs))
     if uf_filtro:
-        query = query.filter(Oportunidade.uf == uf_filtro)
+        query = query.filter(Oportunidade.uf.any(uf_filtro))
     if linha_de_fomento:
         query = query.filter(Oportunidade.linha_de_fomento.any(linha_de_fomento))
     if area_principal:
@@ -97,8 +99,8 @@ def detalhe_oportunidade(id):
     oportunidade = Oportunidade.query.get_or_404(id)
     hoje = datetime.utcnow().date()
     aberta = oportunidade.data_prazo is None or oportunidade.data_prazo >= hoje
-    regiao = get_regiao(oportunidade.uf)
-    return render_template("oportunidades/detalhe.html", o=oportunidade, aberta=aberta, regiao=regiao)
+    regioes = get_regioes(oportunidade.uf)
+    return render_template("oportunidades/detalhe.html", o=oportunidade, aberta=aberta, regioes=regioes)
 
 
 @main.route("/oportunidades/nova", methods=["GET", "POST"])
@@ -123,8 +125,17 @@ def nova_oportunidade():
                 prefill=request.form,
             )
 
-        palavras_chave_raw = request.form.get("palavras_chave") or ""
-        palavras_chave = [p.strip() for p in palavras_chave_raw.split(",") if p.strip()]
+        instituicao_financiadora = request.form.getlist("instituicao_financiadora")
+        if not instituicao_financiadora:
+            # Também NOT NULL, mesmo raciocínio: o campo de tags não garante "pelo
+            # menos um" no HTML.
+            return render_template(
+                "oportunidades/nova.html",
+                erro="Informe ao menos uma Instituição Financiadora.",
+                prefill=request.form,
+            )
+
+        palavras_chave = request.form.getlist("palavras_chave")
 
         def parse_decimal(campo):
             valor_raw = request.form.get(campo) or ""
@@ -146,7 +157,7 @@ def nova_oportunidade():
 
         oportunidade = Oportunidade(
             titulo=request.form["titulo"],
-            instituicao_financiadora=request.form["instituicao_financiadora"],
+            instituicao_financiadora=instituicao_financiadora,
             instituicao_executora=request.form.get("instituicao_executora") or None,
             instituicao_beneficiaria=request.form.get("instituicao_beneficiaria") or None,
             linha_de_fomento=linha_de_fomento,
@@ -167,7 +178,7 @@ def nova_oportunidade():
             palavras_chave=palavras_chave or None,
             nivel_formacao=request.form.get("nivel_formacao") or None,
             abrangencia=request.form.get("abrangencia") or None,
-            uf=request.form.get("uf") or None,
+            uf=request.form.getlist("uf") or None,
             cidade=request.form.get("cidade") or None,
             data_publicacao=(
                 datetime.strptime(request.form["data_publicacao"], "%Y-%m-%d").date()
@@ -300,10 +311,24 @@ def moderar_oportunidade(id):
                 "moderacao/editar.html", o=oportunidade, erro="Selecione ao menos uma Linha de Fomento."
             )
 
+        instituicao_financiadora = request.form.getlist("instituicao_financiadora")
+        if not instituicao_financiadora:
+            return render_template(
+                "moderacao/editar.html", o=oportunidade, erro="Informe ao menos uma Instituição Financiadora."
+            )
+
+        def parse_decimal(campo):
+            valor_raw = request.form.get(campo) or ""
+            return float(valor_raw) if valor_raw else None
+
+        def parse_data(campo):
+            valor_raw = request.form.get(campo) or ""
+            return datetime.strptime(valor_raw, "%Y-%m-%d").date() if valor_raw else None
+
         oportunidade.titulo = request.form["titulo"]
         oportunidade.descricao = request.form.get("descricao") or None
         oportunidade.link = request.form["link"]
-        oportunidade.instituicao_financiadora = request.form["instituicao_financiadora"]
+        oportunidade.instituicao_financiadora = instituicao_financiadora
         oportunidade.instituicao_executora = request.form.get("instituicao_executora") or None
         oportunidade.instituicao_beneficiaria = request.form.get("instituicao_beneficiaria") or None
         oportunidade.linha_de_fomento = linha_de_fomento
@@ -312,15 +337,23 @@ def moderar_oportunidade(id):
         oportunidade.modalidade_pessoa = request.form.get("modalidade_pessoa") or None
         oportunidade.nivel_formacao = request.form.get("nivel_formacao") or None
         oportunidade.abrangencia = request.form.get("abrangencia") or None
-        oportunidade.uf = request.form.get("uf") or None
+        oportunidade.uf = request.form.getlist("uf") or None
         oportunidade.cidade = request.form.get("cidade") or None
         oportunidade.area_principal = request.form.get("area_principal") or None
 
-        palavras_raw = request.form.get("palavras_chave") or ""
-        oportunidade.palavras_chave = [p.strip() for p in palavras_raw.split(",") if p.strip()] or None
+        oportunidade.palavras_chave = request.form.getlist("palavras_chave") or None
 
         oportunidade.natureza_recurso = request.form.getlist("natureza_recurso")
         oportunidade.publico_alvo = request.form.getlist("publico_alvo")
+
+        # Campos que o scraper nem sempre consegue extrair (ex: FAPES nunca traz prazo
+        # na listagem) — sem isso no formulário, a curadoria desses casos fica bloqueada.
+        oportunidade.data_publicacao = parse_data("data_publicacao")
+        oportunidade.data_prazo = parse_data("data_prazo")
+        oportunidade.data_resultado_previsto = parse_data("data_resultado_previsto")
+        oportunidade.orcamento_total_chamada = parse_decimal("orcamento_total_chamada")
+        oportunidade.valor_minimo_proposta = parse_decimal("valor_minimo_proposta")
+        oportunidade.valor_maximo_proposta = parse_decimal("valor_maximo_proposta")
 
         if acao == "aprovar":
             oportunidade.status = "aprovado"

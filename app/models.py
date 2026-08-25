@@ -35,8 +35,10 @@ class Oportunidade(db.Model):
     # Quando None (caso normal), aberta/encerrada é calculado a partir de data_prazo. Quando preenchido, tem prioridade sobre esse cálculo.
     status_oficial = db.Column(db.String(30), nullable=True)  # suspensa, cancelada, retificada, resultado_divulgado
 
-    # Quem financia vs onde a pessoa atua
-    instituicao_financiadora = db.Column(db.String(200), nullable=False)  # quem origina o recurso: ex "CNPq", "FAPESP"
+    # Quem financia vs onde a pessoa atua. Lista porque um edital pode ter mais de uma
+    # financiadora simultaneamente (ex: "INICIATIVA AMAZÔNIA+10: CONFAP-BNDES", financiado
+    # por várias FAPs + BNDES juntos).
+    instituicao_financiadora = db.Column(ARRAY(db.String(200)), nullable=False)  # quem origina o recurso: ex "CNPq", "FAPESP"
     instituicao_executora = db.Column(db.String(200), nullable=True)  # quem executa o projeto: ex "Centro Universitário FEI"
     instituicao_beneficiaria = db.Column(db.String(200), nullable=True)  # intermediária que recebe e repassa o recurso (ex: fundação de apoio)
 
@@ -51,9 +53,10 @@ class Oportunidade(db.Model):
     # Só relevante quando linha_de_fomento = apoio_formacao_capacitacao
     modalidade_pessoa = db.Column(db.String(30), nullable=True)  # atracao, fixacao, capacitacao_exterior
 
-    # Abrangência geográfica
+    # Abrangência geográfica. `uf` é lista porque uma chamada regional/multi-institucional
+    # pode valer para várias UFs ao mesmo tempo (ex: chamada CONFAP com FAPs de vários estados).
     abrangencia = db.Column(db.String(30), nullable=True)  # nacional, estadual, regional, internacional
-    uf = db.Column(db.String(2), nullable=True)  # preenchido só quando abrangencia="estadual"
+    uf = db.Column(ARRAY(db.String(2)), nullable=True)  # preenchido só quando abrangencia="estadual"/"regional"
     cidade = db.Column(db.String(150), nullable=True)
 
     orcamento_total_chamada = db.Column(db.Numeric(14, 2), nullable=True)

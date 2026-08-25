@@ -110,8 +110,8 @@
             {% endif %}
           </div>
           <div class="mt-2 mb-2">
-            <span class="badge badge-fonte me-1">{{ o.instituicao_financiadora }}</span>
-            {% if o.uf %}<span class="badge badge-fonte me-1">{{ o.uf }}</span>
+            {% for financiadora in o.instituicao_financiadora or [] %}<span class="badge badge-fonte me-1">{{ financiadora }}</span>{% endfor %}
+            {% if o.uf %}{% for uf in o.uf %}<span class="badge badge-fonte me-1">{{ uf }}</span>{% endfor %}
             {% elif o.abrangencia %}<span class="badge badge-fonte me-1">{{ o.abrangencia|capitalize }}</span>{% endif %}
             {% for linha in o.linha_de_fomento or [] %}<span class="badge badge-fonte me-1">{{ linha }}</span>{% endfor %}
           </div>

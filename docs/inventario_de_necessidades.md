@@ -415,3 +415,57 @@ candidatar. O modelo já tem `data_prazo` (fim da submissão) mas não tem o in�
 forma provável é promover `inscricao_inicio` a coluna própria (ex.: `data_inicio_submissao`), 
 formando o par início/fim, e deixar `data_publicacao` como metadado secundário. 
 Não decidido ainda se `data_publicacao` continua sendo coletada ou some.
+
+## Correções vindas da curadoria manual real (2026-08-25)
+
+As primeiras sessões de moderação de verdade (não suposição) revelaram três lacunas 
+concretas — valor prático de ter um humano revisando os dados antes de publicar, e evidência 
+de que vale continuar investindo na tela de moderação.
+
+### 1. Formulário de moderação não tinha 6 campos que existem no modelo
+
+`templates/moderacao/editar.html` não deixava editar `data_publicacao`, `data_prazo`, 
+`data_resultado_previsto`, `orcamento_total_chamada`, `valor_minimo_proposta` nem 
+`valor_maximo_proposta` — bloqueava a curadoria exatamente dos casos em que o scraper não 
+extrai isso automaticamente (ex.: FAPES nunca traz prazo na listagem, precisa abrir o PDF). 
+Adicionados os 6 campos à rota `moderar_oportunidade` e ao template, seguindo os mesmos 
+padrões de conversão já usados em `nova_oportunidade` (string vazia vira `None`).
+
+### 2. `instituicao_financiadora` e `uf` viraram ARRAY
+
+Caso real: **#152 "INICIATIVA AMAZÔNIA+10: CONFAP-BNDES"** é financiado por várias FAPs 
+estaduais + BNDES juntos — um campo de valor único não representa isso, e sem `uf` como 
+lista um pesquisador de MG não encontrava o edital filtrando por MG mesmo que o edital 
+valesse para o estado dele. Convertidos os dois campos para `ARRAY`, mesma migração 
+`postgresql_using` já usada para `linha_de_fomento` (ver seção acima) — `uf` precisou de um 
+`CASE WHEN` extra por ser nullable, senão registros com `uf IS NULL` virariam `[NULL]` em vez 
+de continuar `NULL`. Confirmado que os 118 registros preservaram os valores corretamente, 
+inclusive os 12 com `uf` genuinamente nulo (chamadas nacionais do CNPq).
+
+Filtro de UF usa `.any()` (compara array contra um valor); filtro de região usa `.overlap()` 
+(compara array contra array — testa se há interseção), diferente de `.any()` porque agora são 
+duas listas dos dois lados, não uma lista contra um escalar.
+
+`scripts/backfill_uf.py` marcado obsoleto (já cumpriu sua função nos 81 registros originais; 
+os scrapers gravam `uf`/`abrangencia` desde a coleta há muito tempo) mas ajustado para gravar 
+`uf` como lista, por segurança, caso alguém rode de novo.
+
+### 3. Formulário sem agrupamento nem exibição condicional
+
+Caso real: **#150 "Chamada FAPEMIG 004/2026"** tinha `modalidade_pessoa`/`nivel_formacao` 
+visíveis mesmo não sendo uma chamada de formação/capacitação — campos sem relação lógica 
+misturados num formulário longo e linear. `templates/moderacao/editar.html` e 
+`templates/oportunidades/nova.html` reorganizados em 6 seções (cards Bootstrap): 
+Identificação, Classificação, Formação de Pessoas, Instituições, Localização, Datas e 
+Valores. "Formação de Pessoas" e o campo UF (dentro de Localização) só aparecem 
+condicionalmente via JS puro (`atualizarSecoesCondicionais()`, sem biblioteca) — esconder 
+NÃO apaga valor já salvo, o campo continua no DOM (só oculto) e é enviado normalmente no POST.
+
+Palavras-chave e Instituição(ões) Financiadora(s) viraram campo de tags (digitar + Enter = 
+pílula removível), substituindo o texto separado por vírgula — mais claro visualmente quando 
+o valor já é, por natureza, uma lista.
+
+**Verificação da lógica condicional:** sem navegador automatizado disponível neste ambiente, 
+a lógica JS foi validada por execução isolada em Node (mock mínimo de `document`) contra os 
+três casos reais (#150, #151, #152) antes de ser dada como correta — não foi só revisão visual 
+do código.
