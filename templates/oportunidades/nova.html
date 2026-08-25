@@ -97,13 +97,26 @@
         Linha de Fomento <span class="text-danger">*</span>
         <span data-bs-toggle="tooltip" title="Finalidade do fomento: o que a chamada se propõe a apoiar.">ℹ️</span>
       </label>
-      <select name="linha_de_fomento" class="form-select" required>
-        <option value="auxilio_pesquisa">Auxílio Pesquisa</option>
-        <option value="auxilio_inovacao">Auxílio Inovação</option>
-        <option value="auxilio_divulgacao_cientifica">Auxílio Divulgação Científica</option>
-        <option value="apoio_formacao_capacitacao">Apoio Formação/Capacitação</option>
-        <option value="apoio_redes_grupos_pesquisa">Apoio a Redes/Grupos de Pesquisa</option>
-      </select>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="auxilio_pesquisa" id="linha_auxilio_pesquisa">
+        <label class="form-check-label" for="linha_auxilio_pesquisa">Auxílio à Pesquisa</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="auxilio_inovacao" id="linha_auxilio_inovacao">
+        <label class="form-check-label" for="linha_auxilio_inovacao">Auxílio à Inovação</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="auxilio_divulgacao_cientifica" id="linha_auxilio_divulgacao_cientifica">
+        <label class="form-check-label" for="linha_auxilio_divulgacao_cientifica">Auxílio à Divulgação Científica</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="apoio_formacao_capacitacao" id="linha_apoio_formacao_capacitacao">
+        <label class="form-check-label" for="linha_apoio_formacao_capacitacao">Apoio à Formação/Capacitação</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="apoio_redes_grupos_pesquisa" id="linha_apoio_redes_grupos_pesquisa">
+        <label class="form-check-label" for="linha_apoio_redes_grupos_pesquisa">Apoio a Redes e Grupos de Pesquisa</label>
+      </div>
     </div>
 
     <div class="mb-3">

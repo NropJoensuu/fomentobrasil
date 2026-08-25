@@ -228,7 +228,7 @@ def salvar_no_banco(registros):
                 "abrangencia": "estadual",
                 # Placeholder: a FAPEMIG marca várias linhas de fomento por chamada, e o
                 # nosso campo é de valor único. Ver dados_extra["linhas_fomento_fapemig"].
-                "linha_de_fomento": "apoio_formacao_capacitacao",
+                "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 # natureza_recurso a API não informa; publico_alvo vem da taxonomia da
                 # FAPEMIG (só os valores com equivalente exato — ver MAPA_PUBLICO_ALVO).
                 "natureza_recurso": [],

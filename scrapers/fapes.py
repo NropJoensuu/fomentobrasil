@@ -149,7 +149,7 @@ def salvar_no_banco(registros):
                 "abrangencia": "estadual",
                 # Placeholder: a categoria FAPES não mapeia 1:1 para linha_de_fomento;
                 # requer revisão manual na curadoria (ver dados_extra["categoria_fapes"]).
-                "linha_de_fomento": "apoio_formacao_capacitacao",
+                "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 "natureza_recurso": [],
                 "publico_alvo": [],
                 "origem": "institucional",

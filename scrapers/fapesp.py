@@ -183,7 +183,7 @@ def salvar_no_banco(registros):
                 "uf": "SP",
                 "abrangencia": "estadual",
                 # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
-                "linha_de_fomento": "apoio_formacao_capacitacao",
+                "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 # NOT NULL no schema, mas não extraíveis da listagem: lista vazia significa
                 # "ainda não determinado", em vez de um chute que viraria dado errado.
                 "natureza_recurso": [],

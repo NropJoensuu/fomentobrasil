@@ -35,7 +35,7 @@
 
       <dl class="row mb-0">
         <dt class="col-sm-4">Linha de Fomento</dt>
-        <dd class="col-sm-8">{{ o.linha_de_fomento }}</dd>
+        <dd class="col-sm-8">{{ (o.linha_de_fomento or []) | join(', ') }}</dd>
 
         <dt class="col-sm-4">Tipo de Instrumento</dt>
         <dd class="col-sm-8">{{ o.tipo_instrumento }}</dd>

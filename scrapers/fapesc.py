@@ -174,7 +174,7 @@ def salvar_no_banco(registros):
                 "instituicao_financiadora": "FAPESC",
                 "tipo_instrumento": "chamada_publica_edital",
                 # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
-                "linha_de_fomento": "apoio_formacao_capacitacao",
+                "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 # NOT NULL no schema, mas não extraíveis com confiança da listagem/
                 # conteúdo: lista vazia significa "ainda não determinado", em vez de
                 # um chute.

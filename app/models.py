@@ -14,8 +14,9 @@ class Oportunidade(db.Model):
     titulo = db.Column(db.String(300), nullable=False)
     descricao = db.Column(db.Text, nullable=True)
 
-    # Linha de fomento: o que a chamada oferece em termos de finalidade
-    linha_de_fomento = db.Column(db.String(50), nullable=False)  # auxilio_pesquisa, auxilio_inovacao, auxilio_divulgacao_cientifica, apoio_formacao_capacitacao, apoio_redes_grupos_pesquisa
+    # Linha de fomento: o que a chamada oferece em termos de finalidade. Lista porque uma
+    # chamada pode ter mais de uma simultaneamente (ex: FAPEMIG-SEDE 013/2026 tem três).
+    linha_de_fomento = db.Column(ARRAY(db.String(50)), nullable=False)  # auxilio_pesquisa, auxilio_inovacao, auxilio_divulgacao_cientifica, apoio_formacao_capacitacao, apoio_redes_grupos_pesquisa
 
     # Instrumento administrativo/legal usado para veicular a linha de fomento
     tipo_instrumento = db.Column(db.String(50), nullable=False)  # chamada_publica_edital, chamamento_publico, premio
@@ -82,7 +83,8 @@ class Oportunidade(db.Model):
     )
 
     def __repr__(self):
-        return f"<Oportunidade {self.titulo} ({self.linha_de_fomento})>"
+        linhas = ", ".join(self.linha_de_fomento or [])
+        return f"<Oportunidade {self.titulo} ({linhas})>"
 
 
 class ExecucaoScraper(db.Model):

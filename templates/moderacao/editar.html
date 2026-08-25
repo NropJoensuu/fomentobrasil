@@ -5,6 +5,10 @@
   <a href="{{ url_for('main.listar_pendentes') }}" class="text-decoration-none mb-3 d-inline-block">&larr; Voltar para Moderação</a>
   <h1 class="mb-4">Revisar Oportunidade</h1>
 
+  {% if erro %}
+  <div class="alert alert-warning">{{ erro }}</div>
+  {% endif %}
+
   {% if o.dados_extra %}
   <div class="card mb-4">
     <div class="card-body">
@@ -40,17 +44,18 @@
 
     <div class="mb-3">
       <label class="form-label">Linha de Fomento <span class="text-danger">*</span></label>
-      <select name="linha_de_fomento" class="form-select" required>
-        {% for valor, rotulo in [
-          ("auxilio_pesquisa", "Auxílio à Pesquisa"),
-          ("auxilio_inovacao", "Auxílio à Inovação"),
-          ("auxilio_divulgacao_cientifica", "Auxílio à Divulgação Científica"),
-          ("apoio_formacao_capacitacao", "Apoio à Formação/Capacitação"),
-          ("apoio_redes_grupos_pesquisa", "Apoio a Redes e Grupos de Pesquisa"),
-        ] %}
-        <option value="{{ valor }}" {{ "selected" if o.linha_de_fomento == valor else "" }}>{{ rotulo }}</option>
-        {% endfor %}
-      </select>
+      {% for valor, rotulo in [
+        ("auxilio_pesquisa", "Auxílio à Pesquisa"),
+        ("auxilio_inovacao", "Auxílio à Inovação"),
+        ("auxilio_divulgacao_cientifica", "Auxílio à Divulgação Científica"),
+        ("apoio_formacao_capacitacao", "Apoio à Formação/Capacitação"),
+        ("apoio_redes_grupos_pesquisa", "Apoio a Redes e Grupos de Pesquisa"),
+      ] %}
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="linha_de_fomento" value="{{ valor }}" id="linha_{{ valor }}" {{ "checked" if valor in (o.linha_de_fomento or []) else "" }}>
+        <label class="form-check-label" for="linha_{{ valor }}">{{ rotulo }}</label>
+      </div>
+      {% endfor %}
     </div>
 
     <div class="mb-3">

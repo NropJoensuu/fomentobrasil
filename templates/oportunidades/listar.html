@@ -113,7 +113,7 @@
             <span class="badge badge-fonte me-1">{{ o.instituicao_financiadora }}</span>
             {% if o.uf %}<span class="badge badge-fonte me-1">{{ o.uf }}</span>
             {% elif o.abrangencia %}<span class="badge badge-fonte me-1">{{ o.abrangencia|capitalize }}</span>{% endif %}
-            {% if o.linha_de_fomento %}<span class="badge badge-fonte">{{ o.linha_de_fomento }}</span>{% endif %}
+            {% for linha in o.linha_de_fomento or [] %}<span class="badge badge-fonte me-1">{{ linha }}</span>{% endfor %}
           </div>
           {% if o.descricao %}
           <p class="text-muted small mb-0">{{ o.descricao[:200] }}{% if o.descricao|length > 200 %}...{% endif %}</p>

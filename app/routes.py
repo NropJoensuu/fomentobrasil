@@ -59,7 +59,7 @@ def listar_oportunidades():
     if uf_filtro:
         query = query.filter(Oportunidade.uf == uf_filtro)
     if linha_de_fomento:
-        query = query.filter(Oportunidade.linha_de_fomento == linha_de_fomento)
+        query = query.filter(Oportunidade.linha_de_fomento.any(linha_de_fomento))
     if area_principal:
         query = query.filter(Oportunidade.area_principal == area_principal)
     if publico_alvo:
@@ -113,6 +113,16 @@ def nova_oportunidade():
                 prefill=request.form,
             )
 
+        linha_de_fomento = request.form.getlist("linha_de_fomento")
+        if not linha_de_fomento:
+            # linha_de_fomento é NOT NULL; checkbox não garante "pelo menos um" no HTML,
+            # então valida aqui para não estourar IntegrityError na cara do curador.
+            return render_template(
+                "oportunidades/nova.html",
+                erro="Selecione ao menos uma Linha de Fomento.",
+                prefill=request.form,
+            )
+
         palavras_chave_raw = request.form.get("palavras_chave") or ""
         palavras_chave = [p.strip() for p in palavras_chave_raw.split(",") if p.strip()]
 
@@ -139,7 +149,7 @@ def nova_oportunidade():
             instituicao_financiadora=request.form["instituicao_financiadora"],
             instituicao_executora=request.form.get("instituicao_executora") or None,
             instituicao_beneficiaria=request.form.get("instituicao_beneficiaria") or None,
-            linha_de_fomento=request.form["linha_de_fomento"],
+            linha_de_fomento=linha_de_fomento,
             tipo_instrumento=request.form["tipo_instrumento"],
             natureza_recurso=request.form.getlist("natureza_recurso"),
             publico_alvo=request.form.getlist("publico_alvo"),
@@ -281,13 +291,22 @@ def moderar_oportunidade(id):
     if request.method == "POST":
         acao = request.form.get("acao")  # "salvar", "aprovar" ou "rejeitar"
 
+        linha_de_fomento = request.form.getlist("linha_de_fomento")
+        if not linha_de_fomento:
+            # linha_de_fomento é NOT NULL; checkbox não garante "pelo menos um" no HTML,
+            # então valida ANTES de tocar em `oportunidade` — evita estourar
+            # IntegrityError e evita deixar mudanças parciais penduradas na sessão.
+            return render_template(
+                "moderacao/editar.html", o=oportunidade, erro="Selecione ao menos uma Linha de Fomento."
+            )
+
         oportunidade.titulo = request.form["titulo"]
         oportunidade.descricao = request.form.get("descricao") or None
         oportunidade.link = request.form["link"]
         oportunidade.instituicao_financiadora = request.form["instituicao_financiadora"]
         oportunidade.instituicao_executora = request.form.get("instituicao_executora") or None
         oportunidade.instituicao_beneficiaria = request.form.get("instituicao_beneficiaria") or None
-        oportunidade.linha_de_fomento = request.form["linha_de_fomento"]
+        oportunidade.linha_de_fomento = linha_de_fomento
         oportunidade.tipo_instrumento = request.form["tipo_instrumento"]
         oportunidade.tipo_parceria = request.form.get("tipo_parceria") or None
         oportunidade.modalidade_pessoa = request.form.get("modalidade_pessoa") or None

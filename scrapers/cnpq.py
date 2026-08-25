@@ -184,7 +184,7 @@ def salvar_no_banco(registros):
                 "abrangencia": "nacional",
                 # Placeholder: não dá para inferir a linha de fomento do título/descrição
                 # com confiança. Um humano corrige na curadoria, junto com area_principal.
-                "linha_de_fomento": "apoio_formacao_capacitacao",
+                "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 # natureza_recurso e publico_alvo são NOT NULL no schema, mas não são
                 # extraíveis da página de listagem. Ficam como lista vazia — "ainda não
                 # determinado" — em vez de um chute que viraria dado errado no banco.

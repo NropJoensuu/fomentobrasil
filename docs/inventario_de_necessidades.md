@@ -170,13 +170,24 @@ da FAPES; a data do PDF vai só para `dados_extra["documento_atualizado_em"]`, c
 referência. Um curador precisa abrir cada PDF pendente da FAPES para preencher `data_prazo` 
 manualmente até que a extração de PDF seja implementada.
 
-### Decisão pendente: `linha_de_fomento` da FAPEMIG
+### RESOLVIDA (2026-08-25): `linha_de_fomento` virou lista (ARRAY)
 
-`linha_de_fomento` continua com placeholder mesmo com a API informando o valor, porque a 
-FAPEMIG marca **várias** linhas por chamada (ex.: a 013/2026 vem com "Auxílio à Inovação", 
-"Auxílio à Pesquisa" e "Capacitação de Pessoas") e o nosso campo é de valor único. Resolver 
-de verdade exige decidir se o campo vira lista — o que afeta formulário, filtros e migração. 
-Os rótulos originais ficam em `dados_extra["linhas_fomento_fapemig"]` para a curadoria.
+Era `db.Column(db.String(50))` (valor único); virou `db.Column(ARRAY(db.String(50)))`, mesmo 
+padrão de `natureza_recurso`/`publico_alvo`/`palavras_chave`. Motivo concreto que motivou a 
+conversão: a chamada FAPEMIG-SEDE 013/2026 tem **três** linhas de fomento simultâneas na 
+taxonomia da própria FAPEMIG ("Auxílio à Inovação", "Auxílio à Pesquisa" e "Capacitação de 
+Pessoas") — um campo de valor único não tinha como representar isso; ficava só o placeholder, 
+e os rótulos reais iam parar em `dados_extra["linhas_fomento_fapemig"]` sem afetar filtro nem 
+formulário.
+
+Migração (`52ffc42f67d1`) escrita à mão — autogenerate do Alembic não detecta mudança 
+varchar→varchar[] (limitação conhecida, nem chegou a gerar um `alter_column` errado, 
+simplesmente não percebeu a mudança nenhuma). Usa `postgresql_using` para empacotar cada 
+valor existente numa lista de um elemento; confirmado que os 118 registros existentes 
+(inclusive os 3 já curados manualmente) preservaram o valor exatamente, sem nenhum NULL ou 
+lista vazia. Os 7 scrapers passam `["apoio_formacao_capacitacao"]` (lista de um elemento) — 
+a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
+valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
 ### Scraper FAPERGS: API "híbrida" JSON+HTML
 
