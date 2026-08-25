@@ -192,6 +192,69 @@ Descoberto via inspeção manual do Network tab do navegador (filtro por domíni
 mesmo processo usado para achar a API da FAPEMIG. Vale sempre esse caminho antes de partir 
 para parsing de HTML de página completa, mesmo em sites que não parecem SPA moderna.
 
+## Detecção de atualizações em registros já curados + painel admin de scrapers (2026-08-25)
+
+### O que mudou
+
+- `Oportunidade.revisao_pendente` (booleano): marca um registro já curado em que um 
+  re-scrape detectou mudança num campo monitorado (`app/scraper_utils.CAMPOS_MONITORADOS`: 
+  `data_prazo`, `data_resultado_previsto`, `orcamento_total_chamada`, 
+  `valor_minimo_proposta`, `valor_maximo_proposta`, `status_oficial`) desde a última 
+  revisão. Não afeta `status`/visibilidade — só sinaliza. Fica em `/moderacao/atualizacoes`, 
+  com o histórico de mudanças em `dados_extra["mudancas_detectadas"]`.
+- `app/scraper_utils.processar_registro()` substitui o padrão antigo de salvamento em todos 
+  os 7 scrapers: insere se for novo, atualiza+flagga se algo monitorado mudou, ignora se 
+  nada mudou.
+- `ExecucaoScraper`: histórico de execuções dos scrapers (manual via `/admin/scrapers` ou 
+  agendado), com resumo por fonte (`novos`/`atualizados`/`ja_existentes`/`erro`).
+- `scripts/rodar_todos_scrapers.py`: roda as 7 fontes em sequência, isolando falha de uma 
+  fonte das demais (try/except por fonte — ver caso real abaixo).
+- Agendador diário (APScheduler, 20h `America/Sao_Paulo`), opt-in via 
+  `create_app(iniciar_agendador=True)` — só `run.py` passa isso.
+
+### ⚠️ Limitação real do agendador — documentar sempre que alguém perguntar por que não rodou
+
+O agendador só dispara de verdade às 20h se o processo Flask estiver rodando NAQUELE 
+MOMENTO. Durante o desenvolvimento (Codespace, ligado manualmente), isso só funciona se o 
+`python run.py` ficar ativo às 20h. Quando o projeto for hospedado num servidor sempre 
+ligado (Render/Railway), passa a funcionar de forma confiável todos os dias, sem depender de 
+ninguém deixar nada aberto.
+
+### Três bugs pegos na validação, antes de virar produção (nenhum estava no briefing original)
+
+1. **Guard do agendador contra duplicação do reloader estava invertido.** A ideia (comum em 
+   projetos Flask) é: `python run.py` com `debug=True` sobe DOIS processos — um "monitor" 
+   que reinicia o worker a cada mudança de arquivo, e o worker de verdade, que serve as 
+   requisições. Só o worker deve iniciar o agendador. A variável de ambiente 
+   `WERKZEUG_RUN_MAIN` diferencia os dois: fica **ausente** no monitor e `"true"` no worker 
+   — confirmado empiricamente com um probe script. A condição óbvia (`!= "false"`) é 
+   verdadeira nos dois processos (`None != "false"` também é `True`), então o agendador 
+   subiria duas vezes e o job das 20h disparava em dobro todo santo dia. A condição certa é 
+   `== "true"`.
+2. **`create_app()` sempre chamou o agendador incondicionalmente no briefing original** — 
+   mas `create_app()` é chamado por todo scraper avulso (`python -m scrapers.x`), por 
+   `scripts/backfill_uf.py`, por `flask shell`, por qualquer teste. Se o agendador subisse 
+   ali dentro sem controle, cada um desses viraria um processo com uma thread de background 
+   esperando dar 20h. Corrigido com um parâmetro opt-in (`iniciar_agendador=False` por 
+   padrão) — só `run.py` passa `True`.
+3. **`processar_registro` não estava persistindo `dados_extra["mudancas_detectadas"]`.** 
+   Clássica pegadinha do SQLAlchemy com colunas JSON/JSONB: mutar o dict *in place* e depois 
+   reatribuir o mesmo objeto (`existente.dados_extra = dados_extra_atual`, sendo 
+   `dados_extra_atual` o mesmo objeto que já estava em `existente.dados_extra`) faz o 
+   SQLAlchemy comparar "valor antigo" com "valor novo" e achar que são o mesmo objeto — 
+   então a coluna simplesmente não entra no UPDATE. `data_prazo`/`revisao_pendente` 
+   persistiam normalmente (são escalares), só `dados_extra` voltava ao valor de antes depois 
+   do commit. Corrigido criando um dict novo (`dict(existente.dados_extra or {})`) em vez de 
+   mutar o existente. Pego só porque a validação conferiu o valor DEPOIS de um commit de 
+   verdade, não só em memória.
+
+Também pego na validação (não é bug, mas documentado para não assustar quem revisar o 
+histórico de execuções): rodando o painel admin de verdade, a FAPERGS falhou uma vez com 
+`ConnectionResetError` — rede instável do lado do host (mesmo padrão intermitente já visto 
+com a FAPESC), não erro de parsing. Isso é exatamente o cenário que o isolamento por fonte 
+em `rodar_todos()` existe para tratar: as outras 6 fontes rodaram normalmente na mesma 
+execução, e o histórico registrou `sucesso=False` com o erro específico da FAPERGS visível.
+
 ## Moderação — ainda não existe interface
 
 Não há tela de moderação (aprovar/rejeitar/editar pendentes). Hoje o fluxo é manual via shell:

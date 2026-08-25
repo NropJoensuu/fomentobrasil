@@ -8,7 +8,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 from sqlalchemy import or_, func
 
 from app import db
-from app.models import Oportunidade
+from app.models import ExecucaoScraper, Oportunidade
 from app.utils import get_regiao, get_ufs_por_regiao, REGIAO_POR_UF, REGIOES
 
 main = Blueprint("main", __name__)
@@ -249,7 +249,29 @@ def listar_pendentes():
     pendentes = Oportunidade.query.filter_by(status="pendente").order_by(
         Oportunidade.criado_em.desc()
     ).all()
-    return render_template("moderacao/listar.html", pendentes=pendentes)
+    total_atualizacoes = Oportunidade.query.filter_by(revisao_pendente=True).count()
+    return render_template(
+        "moderacao/listar.html", pendentes=pendentes, total_atualizacoes=total_atualizacoes
+    )
+
+
+@main.route("/moderacao/atualizacoes")
+def listar_atualizacoes():
+    itens = Oportunidade.query.filter_by(revisao_pendente=True).order_by(
+        Oportunidade.atualizado_em.desc()
+    ).all()
+    return render_template("moderacao/atualizacoes.html", itens=itens)
+
+
+@main.route("/moderacao/atualizacoes/<int:id>/revisar", methods=["POST"])
+def marcar_atualizacao_revisada(id):
+    # Só zera revisao_pendente — o item continua com o `status` que já tinha (aprovado
+    # na prática, na maioria dos casos), sem regredir para pendente e sumir da listagem
+    # pública por causa de uma correção de data/valor detectada automaticamente.
+    oportunidade = Oportunidade.query.get_or_404(id)
+    oportunidade.revisao_pendente = False
+    db.session.commit()
+    return redirect(url_for("main.listar_atualizacoes"))
 
 
 @main.route("/moderacao/<int:id>", methods=["GET", "POST"])
@@ -294,3 +316,26 @@ def moderar_oportunidade(id):
         return redirect(url_for("main.moderar_oportunidade", id=id))
 
     return render_template("moderacao/editar.html", o=oportunidade)
+
+
+# PENDÊNCIA DE SEGURANÇA: painel admin sem controle de acesso — qualquer pessoa com a
+# URL pode disparar os 7 scrapers a qualquer momento. Mesma dívida já documentada para
+# /moderacao e /oportunidades/importar; precisa virar rota restrita a admin quando o
+# sistema de usuários/papéis existir.
+@main.route("/admin/scrapers", methods=["GET"])
+def painel_scrapers():
+    historico = ExecucaoScraper.query.order_by(
+        ExecucaoScraper.executado_em.desc()
+    ).limit(20).all()
+    return render_template("admin/scrapers.html", historico=historico)
+
+
+@main.route("/admin/scrapers/rodar", methods=["POST"])
+def rodar_scrapers_agora():
+    # Roda os 7 scrapers de forma síncrona — a página fica "carregando" até terminar.
+    # Aceitável agora (poucos segundos por fonte); evoluir para background/assíncrono
+    # se um dia demorar muito (sites lentos, muitas fontes novas).
+    from scripts.rodar_todos_scrapers import rodar_e_registrar
+
+    rodar_e_registrar(disparado_por="manual")
+    return redirect(url_for("main.painel_scrapers"))

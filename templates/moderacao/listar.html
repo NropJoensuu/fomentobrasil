@@ -2,7 +2,12 @@
 {% block title %}Moderação — Fomento Brasil{% endblock %}
 
 {% block content %}
-  <h1 class="mb-4">Moderação — {{ pendentes|length }} pendente(s)</h1>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Moderação — {{ pendentes|length }} pendente(s)</h1>
+    <a href="{{ url_for('main.listar_atualizacoes') }}" class="btn btn-outline-warning btn-sm">
+      Atualizações ({{ total_atualizacoes }})
+    </a>
+  </div>
 
   {% if not pendentes %}
   <p class="text-muted">Nenhum item pendente no momento.</p>

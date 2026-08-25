@@ -76,8 +76,15 @@ def processar_registro(dados_novos, campos_extras_fixos):
 
     if mudancas:
         existente.revisao_pendente = True
-        dados_extra_atual = existente.dados_extra or {}
-        historico = dados_extra_atual.get("mudancas_detectadas", [])
+        # dict(...) novo de propósito, não mutação in-place do dict existente: sem
+        # isso, "valor antigo" e "valor novo" que o SQLAlchemy compara na hora do
+        # flush seriam o MESMO objeto (JSONB não rastreia mutação in-place por
+        # padrão, só reassignment) — o UPDATE simplesmente não incluiria a coluna
+        # dados_extra, e a mudança sumiria silenciosamente no commit. Confirmado na
+        # prática: sem a cópia, data_prazo/revisao_pendente persistiam mas
+        # dados_extra voltava ao valor de antes depois do commit.
+        dados_extra_atual = dict(existente.dados_extra or {})
+        historico = list(dados_extra_atual.get("mudancas_detectadas", []))
         historico.extend(mudancas)
         dados_extra_atual["mudancas_detectadas"] = historico
         existente.dados_extra = dados_extra_atual

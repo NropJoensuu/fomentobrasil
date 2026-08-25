@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Painel de Scrapers — Fomento Brasil{% endblock %}
+{% block content %}
+  <h1 class="mb-4">Painel de Scrapers</h1>
+
+  <form method="POST" action="{{ url_for('main.rodar_scrapers_agora') }}"
+        onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Rodando...';">
+    <button type="submit" class="btn btn-primary mb-4">Rodar Scrapers Agora</button>
+  </form>
+
+  <h2 class="h5">Histórico de Execuções</h2>
+  <table class="table bg-white">
+    <thead>
+      <tr><th>Data/Hora</th><th>Disparado por</th><th>Novos</th><th>Atualizados</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for e in historico %}
+      <tr>
+        <td>{{ e.executado_em.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td>{{ "Manual" if e.disparado_por == "manual" else "Agendado (20h)" }}</td>
+        <td>{{ e.resumo_json | sum(attribute='novos') }}</td>
+        <td>{{ e.resumo_json | sum(attribute='atualizados') }}</td>
+        <td>
+          {% if e.sucesso %}
+          <span class="badge bg-success">OK</span>
+          {% else %}
+          <span class="badge bg-danger">Com erros</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% if not e.sucesso %}
+      <tr>
+        <td></td>
+        <td colspan="4" class="small text-danger">
+          {% for r in e.resumo_json %}
+          {% if r.erro %}<div>{{ r.fonte }}: {{ r.erro }}</div>{% endif %}
+          {% endfor %}
+        </td>
+      </tr>
+      {% endif %}
+      {% else %}
+      <tr><td colspan="5" class="text-center text-muted">Nenhuma execução registrada ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
