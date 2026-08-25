@@ -26,7 +26,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.models import Oportunidade
+from app.scraper_utils import processar_registro
 
 URL_CHAMADAS_ABERTAS = "https://www.gov.br/cnpq/pt-br/chamadas/abertas-para-submissao"
 
@@ -157,47 +157,53 @@ def coletar_chamadas_cnpq(html=None):
 
 
 def salvar_no_banco(registros):
-    """Insere registros novos (dedup por link), como pendentes de curadoria."""
+    """Insere registros novos, atualiza existentes se um campo monitorado mudou
+    (ver app.scraper_utils), ou ignora quando nada mudou. Dedup/match por link."""
     novos = 0
+    atualizados = 0
     ja_existentes = 0
 
     for r in registros:
-        if Oportunidade.query.filter_by(link=r["link"]).first():
-            ja_existentes += 1
-            continue
-
         # O início do período de inscrição não tem coluna própria no modelo; fica em
         # dados_extra para não se perder até que exista (ou seja descartado na curadoria).
         dados_extra = None
         if r["inscricao_inicio"]:
             dados_extra = {"inscricao_inicio": r["inscricao_inicio"].isoformat()}
 
-        oportunidade = Oportunidade(
-            titulo=r["titulo"][:300],
-            link=r["link"][:500],
-            descricao=r["descricao"],
-            data_publicacao=r["data_publicacao"],
-            data_prazo=r["data_prazo"],
-            instituicao_financiadora=r["instituicao_financiadora"][:200],
-            tipo_instrumento=r["tipo_instrumento"],
-            abrangencia="nacional",
-            # Placeholder: não dá para inferir a linha de fomento do título/descrição
-            # com confiança. Um humano corrige na curadoria, junto com area_principal.
-            linha_de_fomento="apoio_formacao_capacitacao",
-            # natureza_recurso e publico_alvo são NOT NULL no schema, mas não são
-            # extraíveis da página de listagem. Ficam como lista vazia — "ainda não
-            # determinado" — em vez de um chute que viraria dado errado no banco.
-            natureza_recurso=[],
-            publico_alvo=[],
-            dados_extra=dados_extra,
-            origem="institucional",
-            status="pendente",  # aguarda curadoria antes de aparecer publicamente
+        resultado = processar_registro(
+            dados_novos={
+                "link": r["link"][:500],
+                "titulo": r["titulo"][:300],
+                "data_prazo": r["data_prazo"],
+            },
+            campos_extras_fixos={
+                "descricao": r["descricao"],
+                "data_publicacao": r["data_publicacao"],
+                "instituicao_financiadora": r["instituicao_financiadora"][:200],
+                "tipo_instrumento": r["tipo_instrumento"],
+                "abrangencia": "nacional",
+                # Placeholder: não dá para inferir a linha de fomento do título/descrição
+                # com confiança. Um humano corrige na curadoria, junto com area_principal.
+                "linha_de_fomento": "apoio_formacao_capacitacao",
+                # natureza_recurso e publico_alvo são NOT NULL no schema, mas não são
+                # extraíveis da página de listagem. Ficam como lista vazia — "ainda não
+                # determinado" — em vez de um chute que viraria dado errado no banco.
+                "natureza_recurso": [],
+                "publico_alvo": [],
+                "dados_extra": dados_extra,
+                "origem": "institucional",
+                "status": "pendente",  # aguarda curadoria antes de aparecer publicamente
+            },
         )
-        db.session.add(oportunidade)
-        novos += 1
+        if resultado == "novo":
+            novos += 1
+        elif resultado == "atualizado":
+            atualizados += 1
+        else:
+            ja_existentes += 1
 
     db.session.commit()
-    return {"novos": novos, "ja_existentes": ja_existentes}
+    return {"novos": novos, "atualizados": atualizados, "ja_existentes": ja_existentes}
 
 
 if __name__ == "__main__":
@@ -210,5 +216,6 @@ if __name__ == "__main__":
         resultado = salvar_no_banco(registros)
         print(
             f"Novos: {resultado['novos']} | "
+            f"Atualizados: {resultado['atualizados']} | "
             f"Já existentes (ignorados): {resultado['ja_existentes']}"
         )

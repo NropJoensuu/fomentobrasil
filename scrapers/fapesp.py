@@ -26,7 +26,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.models import Oportunidade
+from app.scraper_utils import processar_registro
 
 URL_FAPESP_CHAMADAS = "https://fapesp.br/2185/chamadas-de-propostas-2026"
 
@@ -157,45 +157,51 @@ def coletar_chamadas_fapesp(html=None):
 
 
 def salvar_no_banco(registros):
-    """Insere registros novos (dedup por link), como pendentes de curadoria."""
+    """Insere registros novos, atualiza existentes se um campo monitorado mudou
+    (ver app.scraper_utils), ou ignora quando nada mudou. Dedup/match por link."""
     novos = 0
+    atualizados = 0
     ja_existentes = 0
 
     for r in registros:
-        if Oportunidade.query.filter_by(link=r["link"]).first():
-            ja_existentes += 1
-            continue
-
         dados_extra = {}
         if r.get("chamada_numero"):
             dados_extra["chamada_numero"] = r["chamada_numero"]
         if r.get("prazo_bruto"):
             dados_extra["prazo_bruto"] = r["prazo_bruto"]
 
-        oportunidade = Oportunidade(
-            titulo=r["titulo"][:300],
-            link=r["link"][:500],
-            descricao=r["descricao"],
-            data_prazo=r["data_prazo"],
-            instituicao_financiadora=r["instituicao_financiadora"][:200],
-            tipo_instrumento="chamada_publica_edital",
-            uf="SP",
-            abrangencia="estadual",
-            # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
-            linha_de_fomento="apoio_formacao_capacitacao",
-            # NOT NULL no schema, mas não extraíveis da listagem: lista vazia significa
-            # "ainda não determinado", em vez de um chute que viraria dado errado.
-            natureza_recurso=[],
-            publico_alvo=[],
-            origem="institucional",
-            status="pendente",
-            dados_extra=dados_extra or None,
+        resultado = processar_registro(
+            dados_novos={
+                "link": r["link"][:500],
+                "titulo": r["titulo"][:300],
+                "data_prazo": r["data_prazo"],
+            },
+            campos_extras_fixos={
+                "descricao": r["descricao"],
+                "instituicao_financiadora": r["instituicao_financiadora"][:200],
+                "tipo_instrumento": "chamada_publica_edital",
+                "uf": "SP",
+                "abrangencia": "estadual",
+                # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
+                "linha_de_fomento": "apoio_formacao_capacitacao",
+                # NOT NULL no schema, mas não extraíveis da listagem: lista vazia significa
+                # "ainda não determinado", em vez de um chute que viraria dado errado.
+                "natureza_recurso": [],
+                "publico_alvo": [],
+                "origem": "institucional",
+                "status": "pendente",
+                "dados_extra": dados_extra or None,
+            },
         )
-        db.session.add(oportunidade)
-        novos += 1
+        if resultado == "novo":
+            novos += 1
+        elif resultado == "atualizado":
+            atualizados += 1
+        else:
+            ja_existentes += 1
 
     db.session.commit()
-    return {"novos": novos, "ja_existentes": ja_existentes}
+    return {"novos": novos, "atualizados": atualizados, "ja_existentes": ja_existentes}
 
 
 if __name__ == "__main__":
@@ -208,5 +214,6 @@ if __name__ == "__main__":
         resultado = salvar_no_banco(registros)
         print(
             f"Novos: {resultado['novos']} | "
+            f"Atualizados: {resultado['atualizados']} | "
             f"Já existentes (ignorados): {resultado['ja_existentes']}"
         )

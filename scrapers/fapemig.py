@@ -21,7 +21,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.models import Oportunidade
+from app.scraper_utils import processar_registro
 
 API_BASE = "https://api.site.fapemig.br/wp-json/fapemig-chamadas-e-editais/v1/chamadas"
 
@@ -203,44 +203,50 @@ def coletar_chamadas_fapemig(apenas_abertas=True):
 
 
 def salvar_no_banco(registros):
-    """Insere registros novos (dedup por link), como pendentes de curadoria."""
+    """Insere registros novos, atualiza existentes se um campo monitorado mudou
+    (ver app.scraper_utils), ou ignora quando nada mudou. Dedup/match por link."""
     novos = 0
+    atualizados = 0
     ja_existentes = 0
 
     for r in registros:
-        if Oportunidade.query.filter_by(link=r["link"]).first():
-            ja_existentes += 1
-            continue
-
-        oportunidade = Oportunidade(
-            titulo=r["titulo"][:300],
-            link=r["link"][:500],
-            descricao=r["descricao"],
-            data_publicacao=r["data_publicacao"],
-            data_prazo=r["data_prazo"],
-            data_resultado_previsto=r["data_resultado_previsto"],
-            orcamento_total_chamada=r["orcamento_total_chamada"],
-            status_oficial=r["status_oficial"],
-            instituicao_financiadora="FAPEMIG",
-            tipo_instrumento="chamada_publica_edital",
-            uf="MG",
-            abrangencia="estadual",
-            # Placeholder: a FAPEMIG marca várias linhas de fomento por chamada, e o
-            # nosso campo é de valor único. Ver dados_extra["linhas_fomento_fapemig"].
-            linha_de_fomento="apoio_formacao_capacitacao",
-            # natureza_recurso a API não informa; publico_alvo vem da taxonomia da FAPEMIG
-            # (só os valores com equivalente exato — ver MAPA_PUBLICO_ALVO).
-            natureza_recurso=[],
-            publico_alvo=r["publico_alvo"],
-            origem="institucional",
-            status="pendente",
-            dados_extra=r["dados_extra"],
+        resultado = processar_registro(
+            dados_novos={
+                "link": r["link"][:500],
+                "titulo": r["titulo"][:300],
+                "data_prazo": r["data_prazo"],
+                "data_resultado_previsto": r["data_resultado_previsto"],
+                "orcamento_total_chamada": r["orcamento_total_chamada"],
+                "status_oficial": r["status_oficial"],
+            },
+            campos_extras_fixos={
+                "descricao": r["descricao"],
+                "data_publicacao": r["data_publicacao"],
+                "instituicao_financiadora": "FAPEMIG",
+                "tipo_instrumento": "chamada_publica_edital",
+                "uf": "MG",
+                "abrangencia": "estadual",
+                # Placeholder: a FAPEMIG marca várias linhas de fomento por chamada, e o
+                # nosso campo é de valor único. Ver dados_extra["linhas_fomento_fapemig"].
+                "linha_de_fomento": "apoio_formacao_capacitacao",
+                # natureza_recurso a API não informa; publico_alvo vem da taxonomia da
+                # FAPEMIG (só os valores com equivalente exato — ver MAPA_PUBLICO_ALVO).
+                "natureza_recurso": [],
+                "publico_alvo": r["publico_alvo"],
+                "origem": "institucional",
+                "status": "pendente",
+                "dados_extra": r["dados_extra"],
+            },
         )
-        db.session.add(oportunidade)
-        novos += 1
+        if resultado == "novo":
+            novos += 1
+        elif resultado == "atualizado":
+            atualizados += 1
+        else:
+            ja_existentes += 1
 
     db.session.commit()
-    return {"novos": novos, "ja_existentes": ja_existentes}
+    return {"novos": novos, "atualizados": atualizados, "ja_existentes": ja_existentes}
 
 
 if __name__ == "__main__":
@@ -256,5 +262,6 @@ if __name__ == "__main__":
         resultado = salvar_no_banco(registros)
         print(
             f"Novos: {resultado['novos']} | "
+            f"Atualizados: {resultado['atualizados']} | "
             f"Já existentes (ignorados): {resultado['ja_existentes']}"
         )

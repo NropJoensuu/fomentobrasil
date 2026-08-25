@@ -70,6 +70,11 @@ class Oportunidade(db.Model):
     # Particularidades por tipo (faixas de valor, modalidade, requisitos, público-alvo detalhado)
     dados_extra = db.Column(JSONB, nullable=True)
 
+    # Marca registros já aprovados em que um re-scrape detectou mudança num campo
+    # monitorado (ver app/scraper_utils.CAMPOS_MONITORADOS) desde a última curadoria.
+    # Não afeta `status`/visibilidade pública — só sinaliza que precisa de nova revisão.
+    revisao_pendente = db.Column(db.Boolean, default=False, nullable=False)
+
     # Auditoria
     criado_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     atualizado_em = db.Column(
@@ -78,3 +83,16 @@ class Oportunidade(db.Model):
 
     def __repr__(self):
         return f"<Oportunidade {self.titulo} ({self.linha_de_fomento})>"
+
+
+class ExecucaoScraper(db.Model):
+    __tablename__ = "execucoes_scraper"
+
+    id = db.Column(db.Integer, primary_key=True)
+    executado_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    disparado_por = db.Column(db.String(30), nullable=False)  # "manual" ou "agendado"
+    resumo_json = db.Column(JSONB, nullable=False)
+    sucesso = db.Column(db.Boolean, nullable=False)
+
+    def __repr__(self):
+        return f"<ExecucaoScraper {self.executado_em} ({self.disparado_por})>"

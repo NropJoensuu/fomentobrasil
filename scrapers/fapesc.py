@@ -36,7 +36,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.models import Oportunidade
+from app.scraper_utils import processar_registro
 
 API_BASE = "https://fapesc.sc.gov.br/wp-json/wp/v2/posts"
 
@@ -155,40 +155,47 @@ def coletar_chamadas_fapesc():
 
 
 def salvar_no_banco(registros):
-    """Insere registros novos (dedup por link), como pendentes de curadoria."""
+    """Insere registros novos, atualiza existentes se um campo monitorado mudou
+    (ver app.scraper_utils), ou ignora quando nada mudou. Dedup/match por link."""
     novos = 0
+    atualizados = 0
     ja_existentes = 0
 
     for r in registros:
-        if Oportunidade.query.filter_by(link=r["link"]).first():
-            ja_existentes += 1
-            continue
-
-        oportunidade = Oportunidade(
-            titulo=r["titulo"][:300],
-            link=r["link"][:500],
-            descricao=r["descricao"],
-            data_publicacao=r["data_publicacao"],
-            data_prazo=r["data_prazo"],
-            instituicao_financiadora="FAPESC",
-            tipo_instrumento="chamada_publica_edital",
-            # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
-            linha_de_fomento="apoio_formacao_capacitacao",
-            # NOT NULL no schema, mas não extraíveis com confiança da listagem/conteúdo:
-            # lista vazia significa "ainda não determinado", em vez de um chute.
-            natureza_recurso=[],
-            publico_alvo=[],
-            uf="SC",
-            abrangencia="estadual",
-            origem="institucional",
-            status="pendente",
-            dados_extra=r["dados_extra"],
+        resultado = processar_registro(
+            dados_novos={
+                "link": r["link"][:500],
+                "titulo": r["titulo"][:300],
+                "data_prazo": r["data_prazo"],
+            },
+            campos_extras_fixos={
+                "descricao": r["descricao"],
+                "data_publicacao": r["data_publicacao"],
+                "instituicao_financiadora": "FAPESC",
+                "tipo_instrumento": "chamada_publica_edital",
+                # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
+                "linha_de_fomento": "apoio_formacao_capacitacao",
+                # NOT NULL no schema, mas não extraíveis com confiança da listagem/
+                # conteúdo: lista vazia significa "ainda não determinado", em vez de
+                # um chute.
+                "natureza_recurso": [],
+                "publico_alvo": [],
+                "uf": "SC",
+                "abrangencia": "estadual",
+                "origem": "institucional",
+                "status": "pendente",
+                "dados_extra": r["dados_extra"],
+            },
         )
-        db.session.add(oportunidade)
-        novos += 1
+        if resultado == "novo":
+            novos += 1
+        elif resultado == "atualizado":
+            atualizados += 1
+        else:
+            ja_existentes += 1
 
     db.session.commit()
-    return {"novos": novos, "ja_existentes": ja_existentes}
+    return {"novos": novos, "atualizados": atualizados, "ja_existentes": ja_existentes}
 
 
 if __name__ == "__main__":
@@ -201,5 +208,6 @@ if __name__ == "__main__":
         resultado = salvar_no_banco(registros)
         print(
             f"Novos: {resultado['novos']} | "
+            f"Atualizados: {resultado['atualizados']} | "
             f"Já existentes (ignorados): {resultado['ja_existentes']}"
         )

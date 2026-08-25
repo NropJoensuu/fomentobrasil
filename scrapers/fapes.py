@@ -40,7 +40,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.models import Oportunidade
+from app.scraper_utils import processar_registro
 
 URLS_FAPES = {
     "Carreira Científica": "https://fapes.es.gov.br/edital-aberto-forma%C3%A7%C3%A3o-cient%C3%ADfica",
@@ -122,42 +122,50 @@ def coletar_todos_editais_fapes():
 
 
 def salvar_no_banco(registros):
-    """Insere registros novos (dedup por link), como pendentes de curadoria."""
+    """Insere registros novos, atualiza existentes se um campo monitorado mudou
+    (ver app.scraper_utils), ou ignora quando nada mudou. Dedup/match por link."""
     novos = 0
+    atualizados = 0
     ja_existentes = 0
 
     for r in registros:
-        if Oportunidade.query.filter_by(link=r["link"]).first():
-            ja_existentes += 1
-            continue
-
         dados_extra = {"categoria_fapes": r["categoria"]}
         if r["documento_atualizado_em"]:
             dados_extra["documento_atualizado_em"] = r["documento_atualizado_em"].isoformat()
 
-        oportunidade = Oportunidade(
-            titulo=r["titulo"][:300],
-            link=r["link"][:500],
-            descricao=r["descricao"],
-            data_prazo=None,  # não disponível na listagem, requer abrir o PDF
-            instituicao_financiadora="FAPES",
-            tipo_instrumento="chamada_publica_edital",
-            uf="ES",
-            abrangencia="estadual",
-            # Placeholder: a categoria FAPES não mapeia 1:1 para linha_de_fomento;
-            # requer revisão manual na curadoria (ver dados_extra["categoria_fapes"]).
-            linha_de_fomento="apoio_formacao_capacitacao",
-            natureza_recurso=[],
-            publico_alvo=[],
-            origem="institucional",
-            status="pendente",
-            dados_extra=dados_extra,
+        resultado = processar_registro(
+            dados_novos={
+                "link": r["link"][:500],
+                "titulo": r["titulo"][:300],
+                # data_prazo não é campo monitorado aqui: nunca vem da listagem (ver
+                # docstring do módulo), então nunca há um valor novo real pra comparar.
+            },
+            campos_extras_fixos={
+                "descricao": r["descricao"],
+                "data_prazo": None,  # não disponível na listagem, requer abrir o PDF
+                "instituicao_financiadora": "FAPES",
+                "tipo_instrumento": "chamada_publica_edital",
+                "uf": "ES",
+                "abrangencia": "estadual",
+                # Placeholder: a categoria FAPES não mapeia 1:1 para linha_de_fomento;
+                # requer revisão manual na curadoria (ver dados_extra["categoria_fapes"]).
+                "linha_de_fomento": "apoio_formacao_capacitacao",
+                "natureza_recurso": [],
+                "publico_alvo": [],
+                "origem": "institucional",
+                "status": "pendente",
+                "dados_extra": dados_extra,
+            },
         )
-        db.session.add(oportunidade)
-        novos += 1
+        if resultado == "novo":
+            novos += 1
+        elif resultado == "atualizado":
+            atualizados += 1
+        else:
+            ja_existentes += 1
 
     db.session.commit()
-    return {"novos": novos, "ja_existentes": ja_existentes}
+    return {"novos": novos, "atualizados": atualizados, "ja_existentes": ja_existentes}
 
 
 if __name__ == "__main__":
@@ -170,5 +178,6 @@ if __name__ == "__main__":
         resultado = salvar_no_banco(registros)
         print(
             f"Novos: {resultado['novos']} | "
+            f"Atualizados: {resultado['atualizados']} | "
             f"Já existentes (ignorados): {resultado['ja_existentes']}"
         )
