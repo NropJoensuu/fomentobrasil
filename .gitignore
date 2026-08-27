@@ -16,6 +16,12 @@ ENV/
 
 # Environment variables
 .env
+.env.*
+# Swap de editor: um ..env.swp guarda o conteudo do .env em texto puro,
+# incluindo a senha do banco. Nunca pode ser versionado.
+*.swp
+*.swo
+*~
 
 # Flask
 instance/
