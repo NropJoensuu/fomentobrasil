@@ -48,7 +48,7 @@
 
         {% if o.nivel_formacao %}
         <dt class="col-sm-4">Nível de Formação</dt>
-        <dd class="col-sm-8">{{ o.nivel_formacao }}</dd>
+        <dd class="col-sm-8">{{ o.nivel_formacao | join(', ') }}</dd>
         {% endif %}
 
         {% if o.abrangencia %}

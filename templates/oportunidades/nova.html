@@ -170,14 +170,22 @@
         <p class="text-muted small">Só relevante quando a Linha de Fomento inclui Apoio à Formação/Capacitação.</p>
 
         <div class="mb-3">
-          <label class="form-label">Nível de Formação</label>
-          <select name="nivel_formacao" class="form-select">
-            <option value="">— Não aplicável —</option>
-            <option value="mestrado">Mestrado</option>
-            <option value="doutorado">Doutorado</option>
-            <option value="pos_doutorado">Pós-Doutorado</option>
-            <option value="iniciacao_cientifica">Iniciação Científica</option>
-          </select>
+          <label class="form-label">
+            Nível de Formação
+            <small class="text-muted">(pode marcar mais de um)</small>
+          </label>
+          {% for valor, rotulo in [
+              ("iniciacao_cientifica", "Iniciação Científica"),
+              ("mestrado", "Mestrado"),
+              ("doutorado", "Doutorado"),
+              ("pos_doutorado", "Pós-Doutorado"),
+              ("nao_aplicavel", "Não aplicável"),
+          ] %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="nivel_formacao" value="{{ valor }}" id="novo_nivel_{{ valor }}">
+            <label class="form-check-label" for="novo_nivel_{{ valor }}">{{ rotulo }}</label>
+          </div>
+          {% endfor %}
         </div>
 
         <div class="mb-3">
@@ -186,6 +194,7 @@
             <option value="">Não se aplica</option>
             <option value="atracao">Atração</option>
             <option value="fixacao">Fixação</option>
+            <option value="capacitacao">Capacitação</option>
             <option value="capacitacao_exterior">Capacitação no Exterior</option>
           </select>
         </div>
@@ -254,19 +263,16 @@
 
         <div class="mb-3" id="secao-uf">
           <label class="form-label">
-            UF <small class="text-muted">(preencher quando abrangência = estadual ou regional; pode selecionar mais de uma)</small>
+            UF <small class="text-muted" id="uf-ajuda"></small>
           </label>
-          <select name="uf" class="form-select" multiple size="8">
-            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option>
-            <option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option>
-            <option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option>
-            <option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
-            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option>
-            <option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option>
-            <option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option>
-            <option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
-            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
-          </select>
+          <div class="d-flex flex-wrap gap-2">
+            {% for valor in ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"] %}
+            <div class="form-check" style="min-width: 4.2rem;">
+              <input class="form-check-input uf-check" type="checkbox" name="uf" value="{{ valor }}" id="novo_uf_{{ valor }}">
+              <label class="form-check-label" for="novo_uf_{{ valor }}">{{ valor }}</label>
+            </div>
+            {% endfor %}
+          </div>
         </div>
 
         <div class="mb-3">
@@ -356,7 +362,28 @@
     const abrangencia = document.querySelector('select[name="abrangencia"]')?.value;
     const mostrarUf = abrangencia === 'estadual' || abrangencia === 'regional';
     document.getElementById('secao-uf').style.display = mostrarUf ? '' : 'none';
+
+    // Estadual é de um estado só; regional abrange vários.
+    const soUma = abrangencia === 'estadual';
+    const ajuda = document.getElementById('uf-ajuda');
+    if (ajuda) {
+      ajuda.textContent = soUma
+        ? '(estadual: marque apenas uma UF)'
+        : '(regional: marque quantas quiser)';
+    }
+    if (soUma) {
+      document.querySelectorAll('.uf-check:checked').forEach((el, i) => { if (i > 0) el.checked = false; });
+    }
   }
+
+  function aplicarRegraUf(evento) {
+    const abrangencia = document.querySelector('select[name="abrangencia"]')?.value;
+    if (abrangencia !== 'estadual' || !evento.target.checked) return;
+    document.querySelectorAll('.uf-check').forEach(el => {
+      if (el !== evento.target) el.checked = false;
+    });
+  }
+  document.querySelectorAll('.uf-check').forEach(el => el.addEventListener('change', aplicarRegraUf));
 
   document.querySelectorAll('input[name="linha_de_fomento"], select[name="abrangencia"]')
     .forEach(el => el.addEventListener('change', atualizarSecoesCondicionais));

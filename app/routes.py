@@ -176,7 +176,7 @@ def nova_oportunidade():
             descricao=request.form.get("descricao") or None,
             area_principal=request.form.get("area_principal") or None,
             palavras_chave=palavras_chave or None,
-            nivel_formacao=request.form.get("nivel_formacao") or None,
+            nivel_formacao=request.form.getlist("nivel_formacao") or None,
             abrangencia=request.form.get("abrangencia") or None,
             uf=request.form.getlist("uf") or None,
             cidade=request.form.get("cidade") or None,
@@ -335,7 +335,7 @@ def moderar_oportunidade(id):
         oportunidade.tipo_instrumento = request.form["tipo_instrumento"]
         oportunidade.tipo_parceria = request.form.get("tipo_parceria") or None
         oportunidade.modalidade_pessoa = request.form.get("modalidade_pessoa") or None
-        oportunidade.nivel_formacao = request.form.get("nivel_formacao") or None
+        oportunidade.nivel_formacao = request.form.getlist("nivel_formacao") or None
         oportunidade.abrangencia = request.form.get("abrangencia") or None
         oportunidade.uf = request.form.getlist("uf") or None
         oportunidade.cidade = request.form.get("cidade") or None

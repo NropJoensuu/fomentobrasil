@@ -42,7 +42,10 @@ class Oportunidade(db.Model):
     instituicao_executora = db.Column(db.String(200), nullable=True)  # quem executa o projeto: ex "Centro Universitário FEI"
     instituicao_beneficiaria = db.Column(db.String(200), nullable=True)  # intermediária que recebe e repassa o recurso (ex: fundação de apoio)
 
-    nivel_formacao = db.Column(db.String(50), nullable=True)  # mestrado, doutorado, pos_doutorado, iniciacao_cientifica, nao_aplicavel; só relevante quando natureza_recurso inclui bolsa
+    # Lista porque uma mesma chamada costuma conceder bolsa para mais de um nível
+    # (ex: mestrado e doutorado na mesma chamada). Só relevante quando
+    # natureza_recurso inclui bolsa.
+    nivel_formacao = db.Column(ARRAY(db.String(50)), nullable=True)  # mestrado, doutorado, pos_doutorado, iniciacao_cientifica, nao_aplicavel
 
     area_principal = db.Column(db.String(100), nullable=True)  # Grande Área da Tabela CNPq/CAPES (lista fechada, ver formulário)
     palavras_chave = db.Column(ARRAY(db.String(150)), nullable=True)  # livre, suporta múltiplos valores
@@ -51,7 +54,7 @@ class Oportunidade(db.Model):
     tipo_parceria = db.Column(db.String(30), nullable=True)  # nacional, regional, internacional
 
     # Só relevante quando linha_de_fomento = apoio_formacao_capacitacao
-    modalidade_pessoa = db.Column(db.String(30), nullable=True)  # atracao, fixacao, capacitacao_exterior
+    modalidade_pessoa = db.Column(db.String(30), nullable=True)  # atracao, fixacao, capacitacao, capacitacao_exterior
 
     # Abrangência geográfica. `uf` é lista porque uma chamada regional/multi-institucional
     # pode valer para várias UFs ao mesmo tempo (ex: chamada CONFAP com FAPs de vários estados).

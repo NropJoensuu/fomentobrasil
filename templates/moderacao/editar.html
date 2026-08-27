@@ -140,14 +140,22 @@
         <p class="text-muted small">Só relevante quando a Linha de Fomento inclui Apoio à Formação/Capacitação.</p>
 
         <div class="mb-3">
-          <label class="form-label">Nível de Formação</label>
-          <select name="nivel_formacao" class="form-select">
-            <option value="" {{ "selected" if not o.nivel_formacao else "" }}>— Não aplicável —</option>
-            <option value="mestrado" {{ "selected" if o.nivel_formacao == "mestrado" else "" }}>Mestrado</option>
-            <option value="doutorado" {{ "selected" if o.nivel_formacao == "doutorado" else "" }}>Doutorado</option>
-            <option value="pos_doutorado" {{ "selected" if o.nivel_formacao == "pos_doutorado" else "" }}>Pós-Doutorado</option>
-            <option value="iniciacao_cientifica" {{ "selected" if o.nivel_formacao == "iniciacao_cientifica" else "" }}>Iniciação Científica</option>
-          </select>
+          <label class="form-label">
+            Nível de Formação
+            <small class="text-muted">(pode marcar mais de um — é comum a mesma chamada conceder bolsa para vários níveis)</small>
+          </label>
+          {% for valor, rotulo in [
+              ("iniciacao_cientifica", "Iniciação Científica"),
+              ("mestrado", "Mestrado"),
+              ("doutorado", "Doutorado"),
+              ("pos_doutorado", "Pós-Doutorado"),
+              ("nao_aplicavel", "Não aplicável"),
+          ] %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="nivel_formacao" value="{{ valor }}" id="nivel_{{ valor }}" {{ "checked" if valor in (o.nivel_formacao or []) else "" }}>
+            <label class="form-check-label" for="nivel_{{ valor }}">{{ rotulo }}</label>
+          </div>
+          {% endfor %}
         </div>
 
         <div class="mb-3">
@@ -156,6 +164,7 @@
             <option value="" {{ "selected" if not o.modalidade_pessoa else "" }}>Não se aplica</option>
             <option value="atracao" {{ "selected" if o.modalidade_pessoa == "atracao" else "" }}>Atração</option>
             <option value="fixacao" {{ "selected" if o.modalidade_pessoa == "fixacao" else "" }}>Fixação</option>
+            <option value="capacitacao" {{ "selected" if o.modalidade_pessoa == "capacitacao" else "" }}>Capacitação</option>
             <option value="capacitacao_exterior" {{ "selected" if o.modalidade_pessoa == "capacitacao_exterior" else "" }}>Capacitação no Exterior</option>
           </select>
         </div>
@@ -214,13 +223,16 @@
 
         <div class="mb-3" id="secao-uf">
           <label class="form-label">
-            UF <small class="text-muted">(preencher quando abrangência = estadual ou regional; pode selecionar mais de uma)</small>
+            UF <small class="text-muted" id="uf-ajuda"></small>
           </label>
-          <select name="uf" class="form-select" multiple size="8">
+          <div class="d-flex flex-wrap gap-2">
             {% for valor in ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"] %}
-            <option value="{{ valor }}" {{ "selected" if valor in (o.uf or []) else "" }}>{{ valor }}</option>
+            <div class="form-check" style="min-width: 4.2rem;">
+              <input class="form-check-input uf-check" type="checkbox" name="uf" value="{{ valor }}" id="uf_{{ valor }}" {{ "checked" if valor in (o.uf or []) else "" }}>
+              <label class="form-check-label" for="uf_{{ valor }}">{{ valor }}</label>
+            </div>
             {% endfor %}
-          </select>
+          </div>
         </div>
 
         <div class="mb-3">
@@ -285,7 +297,31 @@
     const abrangencia = document.querySelector('select[name="abrangencia"]')?.value;
     const mostrarUf = abrangencia === 'estadual' || abrangencia === 'regional';
     document.getElementById('secao-uf').style.display = mostrarUf ? '' : 'none';
+
+    // Estadual é de um estado só; regional abrange vários. A dica muda junto para
+    // o curador não ficar adivinhando por que o clique desmarcou a UF anterior.
+    const soUma = abrangencia === 'estadual';
+    const ajuda = document.getElementById('uf-ajuda');
+    if (ajuda) {
+      ajuda.textContent = soUma
+        ? '(estadual: marque apenas uma UF)'
+        : '(regional: marque quantas quiser)';
+    }
+    if (soUma) {
+      const marcadas = document.querySelectorAll('.uf-check:checked');
+      // Ao trocar de regional para estadual sobrando várias marcadas, mantém a primeira.
+      marcadas.forEach((el, i) => { if (i > 0) el.checked = false; });
+    }
   }
+
+  function aplicarRegraUf(evento) {
+    const abrangencia = document.querySelector('select[name="abrangencia"]')?.value;
+    if (abrangencia !== 'estadual' || !evento.target.checked) return;
+    document.querySelectorAll('.uf-check').forEach(el => {
+      if (el !== evento.target) el.checked = false;
+    });
+  }
+  document.querySelectorAll('.uf-check').forEach(el => el.addEventListener('change', aplicarRegraUf));
 
   document.querySelectorAll('input[name="linha_de_fomento"], select[name="abrangencia"]')
     .forEach(el => el.addEventListener('change', atualizarSecoesCondicionais));

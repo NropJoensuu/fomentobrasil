@@ -47,7 +47,7 @@ VOCAB_NIVEL_FORMACAO = [
 ]
 VOCAB_ABRANGENCIA = ["nacional", "estadual", "regional", "internacional"]
 VOCAB_TIPO_PARCERIA = ["nacional", "regional", "internacional"]
-VOCAB_MODALIDADE_PESSOA = ["atracao", "fixacao", "capacitacao_exterior"]
+VOCAB_MODALIDADE_PESSOA = ["atracao", "fixacao", "capacitacao", "capacitacao_exterior"]
 VOCAB_STATUS_OFICIAL = ["suspensa", "cancelada", "retificada", "resultado_divulgado"]
 
 UFS = [
@@ -70,7 +70,7 @@ CAMPOS_EDITAVEIS = [
     ("instituicao_beneficiaria","Instituição beneficiária",   "texto",       None),
     ("area_principal",          "Área principal",             "escolha",     VOCAB_AREA_PRINCIPAL),
     ("palavras_chave",          "Palavras-chave",             "lista_livre", None),
-    ("nivel_formacao",          "Nível de formação",          "escolha",     VOCAB_NIVEL_FORMACAO),
+    ("nivel_formacao",          "Nível de formação",          "lista",       VOCAB_NIVEL_FORMACAO),
     ("abrangencia",             "Abrangência",                "escolha",     VOCAB_ABRANGENCIA),
     ("uf",                      "UF",                         "lista",       UFS),
     ("cidade",                  "Cidade",                     "texto",       None),
