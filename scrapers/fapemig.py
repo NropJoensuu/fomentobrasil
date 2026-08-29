@@ -21,7 +21,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import processar_registro
+from app.scraper_utils import detectar_tipo_parceria, processar_registro
 
 API_BASE = "https://api.site.fapemig.br/wp-json/fapemig-chamadas-e-editais/v1/chamadas"
 
@@ -224,6 +224,7 @@ def salvar_no_banco(registros):
                 "data_publicacao": r["data_publicacao"],
                 "instituicao_financiadora": ["FAPEMIG"],
                 "tipo_instrumento": "chamada_publica_edital",
+                "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["MG"],
                 "abrangencia": "estadual",
                 # Placeholder: a FAPEMIG marca várias linhas de fomento por chamada, e o

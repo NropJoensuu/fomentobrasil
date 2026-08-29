@@ -40,7 +40,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import processar_registro
+from app.scraper_utils import detectar_tipo_parceria, processar_registro
 
 URLS_FAPES = {
     "Carreira Científica": "https://fapes.es.gov.br/edital-aberto-forma%C3%A7%C3%A3o-cient%C3%ADfica",
@@ -145,6 +145,7 @@ def salvar_no_banco(registros):
                 "data_prazo": None,  # não disponível na listagem, requer abrir o PDF
                 "instituicao_financiadora": ["FAPES"],
                 "tipo_instrumento": "chamada_publica_edital",
+                "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["ES"],
                 "abrangencia": "estadual",
                 # Placeholder: a categoria FAPES não mapeia 1:1 para linha_de_fomento;

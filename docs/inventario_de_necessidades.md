@@ -189,6 +189,43 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### `tipo_parceria`: detecção unificada em `scraper_utils`
+
+`detectar_tipo_parceria()` em `app/scraper_utils.py` é usada pelos **12 scrapers**. Antes só
+FAPEAL e FAPESB preenchiam o campo, e o resultado era incoerente: "Mobility Confap Italy
+2026" vinha marcado como internacional em AL e BA, e vazio em PR e GO — o mesmo programa,
+classificado de dois jeitos dependendo de qual FAP o scraper leu.
+
+O padrão só marca o que é inequívoco: nomes de programa (ERC, MSCA/Sklodowska-Curie, DAAD,
+CDTI, GCUB, RAMP, Water4All, Biodiversa, Horizonte Europa), países/blocos e termos como
+"internacional", "mobilidade internacional", "exterior". **"confap" sozinho NÃO marca** —
+existe chamada CONFAP puramente nacional (ex.: "CONFAP - Desafios da Amazônia"), e marcá-la
+como internacional seria erro.
+
+A função aceita vários textos, porque a pista nem sempre está no título: a chamada ERC da
+FAPEAL se chama "Mobilidade de pesquisadores, para a Europa" e quem denuncia a cooperação
+são as categorias do post.
+
+Os 27 registros CONFAP **já existentes no banco não foram corrigidos** — a uniformização
+vale da próxima coleta em diante, para os novos. `tipo_parceria` não é campo monitorado,
+então re-rodar um scraper não sobrescreve o que já está lá.
+
+### Decisão pendente: chamadas CONFAP deveriam ser "regional"?
+
+Levantado em 2026-08-29: 27 registros mencionam CONFAP, em 6 programas que se repetem entre
+FAPs (ERC em 5 estados, Mobility Italy em 4, RAMP em 3, CDTI/WBI/DAAD em 2 cada). Hoje cada
+um entra como `abrangencia="estadual"` com a UF da FAP que publicou.
+
+A observação (do usuário, na curadoria): o certo seria indicar esses casos como **regional**,
+já que é o mesmo programa operado por vários estados. **Mantido como está por ora**, a
+decidir depois. Ao retomar, os pontos em aberto são:
+
+- Em qual campo: `abrangencia` (alcance da chamada) ou `tipo_parceria` (escopo da parceria)?
+  O segundo aceita só um valor e já está ocupado por `internacional` nesses casos.
+- Ressalva prática: cada edital de FAP costuma financiar só pesquisadores do próprio estado,
+  então quem filtra por "estadual" deixaria de achá-los se virarem "regional".
+- Se mudar, decidir também o que fazer com os registros já no banco.
+
 ### Scrapers FAPEAL e FAPESB: dois casos de "a API sabe mais que o HTML"
 
 **FAPEAL (`scrapers/fapeal.py`)** — só API, sem HTML. A página `/pesquisador/editais/` usa

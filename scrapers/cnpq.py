@@ -26,7 +26,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import processar_registro
+from app.scraper_utils import detectar_tipo_parceria, processar_registro
 
 URL_CHAMADAS_ABERTAS = "https://www.gov.br/cnpq/pt-br/chamadas/abertas-para-submissao"
 
@@ -181,6 +181,7 @@ def salvar_no_banco(registros):
                 "data_publicacao": r["data_publicacao"],
                 "instituicao_financiadora": [r["instituicao_financiadora"][:200]],
                 "tipo_instrumento": r["tipo_instrumento"],
+                "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "abrangencia": "nacional",
                 # Placeholder: não dá para inferir a linha de fomento do título/descrição
                 # com confiança. Um humano corrige na curadoria, junto com area_principal.

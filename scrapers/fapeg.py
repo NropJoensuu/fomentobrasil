@@ -36,7 +36,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import processar_registro
+from app.scraper_utils import detectar_tipo_parceria, processar_registro
 
 URL_INSCRICOES_ABERTAS = "https://goias.gov.br/fapeg/editais/inscricoes-abertas/"
 API_POSTS = "https://goias.gov.br/fapeg/wp-json/wp/v2/posts"
@@ -213,6 +213,7 @@ def salvar_no_banco(registros):
                 "data_prazo": None,  # só existe dentro do PDF do edital
                 "instituicao_financiadora": [i[:200] for i in r["instituicao_financiadora"]],
                 "tipo_instrumento": "chamada_publica_edital",
+                "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["GO"],
                 "abrangencia": "estadual",
                 # Placeholder: não é inferível do título. Corrigido na curadoria.

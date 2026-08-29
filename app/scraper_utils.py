@@ -8,11 +8,46 @@ para reaparecer em `/moderacao/atualizacoes`, sem regredir `status` (fica visív
 normalmente até alguém revisar de novo).
 """
 
+import re
 from datetime import datetime, date
 from decimal import Decimal
 
 from app import db
 from app.models import Oportunidade
+
+# Cooperação internacional detectada pelo título. Vale para todos os scrapers: o mesmo
+# programa CONFAP é operado por várias FAPs, e antes só FAPEAL e FAPESB preenchiam
+# `tipo_parceria` — a mesma chamada ficava marcada numa FAP e vazia noutra.
+#
+# Só marca o que é inequívoco. Nomes de programa (ERC, MSCA, DAAD, CDTI, GCUB, RAMP,
+# Water4All, Biodiversa) e países/blocos entram; "confap" sozinho NÃO entra, porque
+# há chamada CONFAP puramente nacional. Casos sem nenhuma dessas pistas ficam None e
+# são resolvidos na curadoria.
+PADRAO_COOPERACAO_INTERNACIONAL = re.compile(
+    r"\b("
+    r"internacional|international"
+    r"|erc\b|msca|sklodowska|curie|daad|cdti|gcub|ramp\b|water4all|biodiversa|horizon|horizonte\s+europa"
+    r"|mobility|mobilidade\s+internacional"
+    r"|brasillinois|wbi\b|wallonie"
+    r"|alemanha|it[áa]lia|espanha|b[ée]lgica|fran[çc]a|portugal|reino\s+unido|europa|exterior"
+    r"|jsps|japão|japao|nwo|pa[íi]ses\s+baixos|su[íi][çc]a|noruega|su[ée]cia"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def detectar_tipo_parceria(*textos):
+    """Devolve "internacional" se algum dos textos indicar cooperação internacional.
+
+    Recebe vários textos porque a pista nem sempre está no título: a chamada ERC da
+    FAPEAL se chama "Mobilidade de pesquisadores, para a Europa", e quem denuncia a
+    cooperação são as categorias do post. Passar título + o que mais houver.
+    """
+    for texto in textos:
+        if texto and PADRAO_COOPERACAO_INTERNACIONAL.search(str(texto)):
+            return "internacional"
+    return None
+
 
 CAMPOS_MONITORADOS = [
     "data_prazo",

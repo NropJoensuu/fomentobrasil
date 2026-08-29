@@ -26,7 +26,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import processar_registro
+from app.scraper_utils import detectar_tipo_parceria, processar_registro
 
 URL_FAPESP_CHAMADAS = "https://fapesp.br/2185/chamadas-de-propostas-2026"
 
@@ -180,6 +180,7 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "instituicao_financiadora": [r["instituicao_financiadora"][:200]],
                 "tipo_instrumento": "chamada_publica_edital",
+                "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["SP"],
                 "abrangencia": "estadual",
                 # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.

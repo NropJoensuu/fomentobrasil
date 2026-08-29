@@ -39,7 +39,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import processar_registro
+from app.scraper_utils import detectar_tipo_parceria, processar_registro
 
 URL_ARAUCARIA = "https://www.fappr.pr.gov.br/Programas-Abertos"
 
@@ -202,6 +202,7 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "instituicao_financiadora": ["Fundação Araucária"],
                 "tipo_instrumento": "chamada_publica_edital",
+                "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 # NOT NULL no schema, mas não extraíveis com confiança da listagem:

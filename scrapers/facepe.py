@@ -35,7 +35,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import processar_registro
+from app.scraper_utils import detectar_tipo_parceria, processar_registro
 
 # `?c=aberto` é o filtro de editais abertos. Sem ele a página devolve o mesmo
 # conjunto (é a visão padrão), mas explicitar protege contra mudança de default —
@@ -168,6 +168,7 @@ def salvar_no_banco(registros):
                 "data_prazo": None,  # só existe dentro do PDF
                 "instituicao_financiadora": ["FACEPE"],
                 "tipo_instrumento": r["tipo_instrumento"],
+                "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["PE"],
                 "abrangencia": "estadual",
                 # Placeholder: não é inferível do título. Corrigido na curadoria.
