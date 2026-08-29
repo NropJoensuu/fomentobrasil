@@ -189,6 +189,39 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### Scraper FAPESPA: os `count` das categorias do WordPress mentem
+
+`scrapers/fapespa.py`, via REST API (WordPress padrão, a API funciona bem e evita parsear a
+data quebrada em duas linhas do HTML: "25 ago" / "2026").
+
+**Achado que muda a expectativa de volume.** A soma dos `count` das categorias sugeria ~38
+registros (`chamadas` 11 + `editais` 27). O real é **11**: a categoria `editais` está
+vazia — `/wp-json/wp/v2/posts?categories=60` devolve `X-WP-Total: 0` e
+`/category/editais/` mostra "Nothing Found". O `count` é metadado desatualizado.
+
+E não é caso isolado neste site: varri as 8 categorias e **só `chamadas` tem posts reais**.
+`publicacoes` diz 64, `sustentabilidade` diz 5, `videos` diz 4 — todas devolvem 0. Lição
+para as próximas fontes: **o `count` do endpoint de categorias não é confiável como
+estimativa de volume**; conferir com `X-WP-Total` do endpoint de posts, que é o número de
+verdade.
+
+O scraper consulta as duas categorias mesmo assim — se a FAPESPA repovoar `editais`, os
+posts entram sozinhos.
+
+**Uma categoria por requisição, de propósito.** `?categories=134,60` numa chamada só é
+tentador, mas não deu para confirmar que faz união neste WordPress: devolveu 11, que é
+exatamente o total da primeira categoria — indistinguível de "ignorou a segunda", já que a
+segunda está vazia. Consultar separadamente e unir por link é inequívoco.
+
+**O excerpt precisa de limpeza estrutural, não de string.** Ele termina com
+`<a class="button">Continue reading <span>TÍTULO</span></a>`, então extrair o texto direto
+deixaria `... Continue reading "CHAMADA PÚBLICA Nº 014/2026"` na descrição pública. O
+parser remove o `<a>` do DOM antes de extrair — mais robusto que cortar a string, já que o
+rótulo muda com o idioma e o título entra no meio dele.
+
+A distinção editorial entre "chamada" e "edital" não é semântica: a categoria `chamadas`
+inclui um "Edital nº 002/2026 Programa Centelha".
+
 ### Scraper FAPEPI: sem status e sem data, corte por ano no título
 
 `scrapers/fapepi.py`, de `https://www.fapepi.pi.gov.br/editais/`. WordPress + Elementor com
