@@ -189,6 +189,36 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### Scraper FAPESQ: Plone, e mais rico do que a listagem aparenta
+
+`scrapers/fapesq.py`. Primeiro CMS Plone entre as fontes. **Não há API JSON**:
+`Accept: application/json` devolve HTML (é Plone Classic, sem `plone.restapi`), e
+`/RSS`, `/atom.xml`, `?format=rss` e `/@@search?format=json` também. Parsing de HTML.
+
+**Usar a coleção, não a página resumida.** `/editais/2026/editais-2026` mostra 5 itens;
+`/editais/2026/colecao-de-editais-2026` traz **62** (em 2026-08-29), em 3 páginas — o Plone
+pagina por offset (`?b_start:int=30`, `60`), não por número de página.
+
+Ao contrário do que a listagem sugere à primeira vista, cada `<article>` traz mais que
+título e link:
+
+- `data_publicacao` sai do `.documentByLine` (`<i class="icon-day"></i> 11/08/2026`) — 62/62
+- `descricao` sai de `p.tileBody span.description` — 60/62
+
+Só `data_prazo` fica indisponível; esse existe apenas dentro do edital.
+
+**Nem tudo na seção é fomento à pesquisa.** A FAPESQ publica junto editais de contratação
+de pessoal e seleção de oficineiros. Eles são coletados assim mesmo (quem decide é o
+curador), mas recebem `dados_extra["possivel_nao_fomento"]` para priorizar a revisão — 12
+dos 62. **É sinalizador, não filtro**, e de propósito: há "PROCESSO SELETIVO DE
+PESQUISADORES PÓS-GRADUADOS" e "PROCESSO SELETIVO DE ESTUDANTES PARA AÇÕES AFIRMATIVAS"
+que são fomento legítimo e caem na mesma expressão.
+
+**MANUTENÇÃO ANUAL:** a coleção é organizada por ano e a constante `ANO` no topo de
+`scrapers/fapesq.py` precisa ser atualizada quando virar 2027 (a URL passa a
+`/editais/2027/colecao-de-editais-2027`). Sem isso o scraper continua coletando 2026 e
+para de trazer novidade — falha silenciosa, sem erro no painel.
+
 ### Scraper FAPEMA: primeira fonte do Nordeste com prazo na listagem
 
 `scrapers/fapema.py`, via REST API (categoria `editais-em-aberto`, 42 posts numa requisição
