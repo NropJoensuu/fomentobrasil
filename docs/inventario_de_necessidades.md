@@ -189,6 +189,46 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### Scraper FAPITEC: API bloqueada, data no atributo `datetime`
+
+`scrapers/fapitec.py`, de `/editais-abertos/` — página dedicada aos abertos, sem nada a
+filtrar. A REST API **não serve**: `/wp-json/wp/v2/posts` devolve HTTP 401
+`rest_not_logged_in` (restrita a autenticados). Primeira fonte que barra a API assim.
+
+Cada edital é um `<li class="wp-block-post">` com o link do título e um `<time>`. Dois
+detalhes que evitam erro:
+
+- **Ancorar em `li.wp-block-post`**, não numa busca solta por data por extenso: a página
+  tem "Última atualização: 3 de julho de ..." no rodapé, que casaria com o padrão. Testado
+  que não entra.
+- **A data sai do atributo `datetime`** (`2026-08-21T11:25:52-03:00`), não do texto em
+  português — mais confiável que mapear nome de mês, que fica só como plano B.
+
+Volume baixo é esperado: 3 editais abertos em 2026-08-29. FAP pequena, não é scraper
+quebrado.
+
+Se um dia agregar: `/editais-em-andamento/`, `/editais-encerrados/` e
+`/editais-e-ou-chamadas-de-instituicoes-parceiras/` — esta última pode trazer chamadas
+CONFAP que já vêm de outras FAPs, então precisa de análise de duplicação antes.
+
+### `possivel_nao_fomento`: sinalizador compartilhado, aplicado por fonte
+
+`detectar_possivel_nao_fomento()` em `app/scraper_utils.py` marca editais que provavelmente
+não são fomento à pesquisa — contratação de pessoal, credenciamento de avaliadores,
+consultoria ad hoc. Usado por **FAPESQ e FAPITEC**, as duas fontes que publicam esse tipo
+de edital junto com as chamadas.
+
+Duas escolhas deliberadas:
+
+- **É sinalizador, não filtro.** O registro é coletado igual e só recebe
+  `dados_extra["possivel_nao_fomento"]` para o curador priorizar. Há falso positivo
+  legítimo: "PROCESSO SELETIVO DE PESQUISADORES PÓS-GRADUADOS" (FAPESQ) é fomento de
+  verdade e casa com a expressão. Como filtro, sumiria.
+- **É aplicado por fonte, não em todos os scrapers.** "Credenciamento" é fomento legítimo
+  na FAPESP e na FAPEMIG ("Edital de credenciamento para incubação de startups",
+  "credenciamento de empresas do PIPE") — 5 registros no banco. Ligar isso globalmente
+  marcaria esses como suspeitos sem motivo.
+
 ### Scraper FAPESQ: Plone, e mais rico do que a listagem aparenta
 
 `scrapers/fapesq.py`. Primeiro CMS Plone entre as fontes. **Não há API JSON**:

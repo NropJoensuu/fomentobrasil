@@ -49,6 +49,32 @@ def detectar_tipo_parceria(*textos):
     return None
 
 
+# Editais que provavelmente NÃO são fomento à pesquisa — contratação de pessoal,
+# credenciamento de avaliadores, consultoria. Algumas FAPs publicam isso na mesma seção
+# das chamadas (FAPESQ e FAPITEC, hoje).
+#
+# É SINALIZADOR, não filtro: o registro é coletado do mesmo jeito e recebe
+# `dados_extra["possivel_nao_fomento"]` só para o curador priorizar a revisão. Há falso
+# positivo legítimo — "PROCESSO SELETIVO DE PESQUISADORES PÓS-GRADUADOS" (FAPESQ) é
+# fomento de verdade e casa com a expressão.
+#
+# E é aplicado POR FONTE, de propósito, não em todos os scrapers: "credenciamento" é
+# fomento legítimo na FAPESP e na FAPEMIG ("Edital de credenciamento para incubação de
+# startups", "credenciamento de empresas do PIPE"), onde marcá-lo seria ruído.
+PADRAO_POSSIVEL_NAO_FOMENTO = re.compile(
+    r"processo\s+seletivo|contrata[çc][ãa]o|cadastro\s+de\s+reserva"
+    r"|sele[çc][ãa]o\s+de\s+oficineiros|credenciamento|consultoria|\bad\s*hoc\b",
+    re.IGNORECASE,
+)
+
+
+def detectar_possivel_nao_fomento(*textos):
+    """True se algum texto sugerir que o edital não é fomento à pesquisa."""
+    return any(
+        texto and PADRAO_POSSIVEL_NAO_FOMENTO.search(str(texto)) for texto in textos
+    )
+
+
 CAMPOS_MONITORADOS = [
     "data_prazo",
     "data_resultado_previsto",

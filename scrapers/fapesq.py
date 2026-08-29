@@ -31,7 +31,8 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import detectar_tipo_parceria, processar_registro
+from app.scraper_utils import (detectar_possivel_nao_fomento, detectar_tipo_parceria,
+                               processar_registro)
 
 # >>> Atualizar quando virar o ano (ver "MANUTENÇÃO ANUAL" na docstring). <<<
 ANO = 2026
@@ -45,18 +46,6 @@ ITENS_POR_PAGINA = 30
 MAX_PAGINAS = 30  # trava contra laço infinito se a paginação passar a repetir a página
 
 PADRAO_DATA = re.compile(r"\b(\d{2})/(\d{2})/(\d{4})\b")
-
-# A FAPESQ publica na mesma seção editais que NÃO são fomento à pesquisa: contratação de
-# pessoal, seleção de oficineiros, cadastro de reserva. São coletados assim mesmo — quem
-# decide é o curador —, mas ficam marcados para ele priorizar a revisão.
-# ATENÇÃO: é só um sinalizador, não um filtro. Há "PROCESSO SELETIVO DE PESQUISADORES
-# PÓS-GRADUADOS" e "PROCESSO SELETIVO DE ESTUDANTES PARA AÇÕES AFIRMATIVAS" que são
-# fomento legítimo e caem na mesma expressão.
-PADRAO_POSSIVEL_NAO_FOMENTO = re.compile(
-    r"processo\s+seletivo|contrata[çc][ãa]o|cadastro\s+de\s+reserva"
-    r"|sele[çc][ãa]o\s+de\s+oficineiros",
-    re.IGNORECASE,
-)
 
 
 def _limpar(texto):
@@ -133,9 +122,7 @@ def coletar_chamadas_fapesq(paginas_html=None):
             resultados.append(
                 {
                     **item,
-                    "possivel_nao_fomento": bool(
-                        PADRAO_POSSIVEL_NAO_FOMENTO.search(item["titulo"])
-                    ),
+                    "possivel_nao_fomento": detectar_possivel_nao_fomento(item["titulo"]),
                     "tipo_parceria": detectar_tipo_parceria(
                         item["titulo"], item["descricao"]
                     ),
