@@ -189,6 +189,33 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### Scraper FAPEPI: sem status e sem data, corte por ano no título
+
+`scrapers/fapepi.py`, de `https://www.fapepi.pi.gov.br/editais/`. WordPress + Elementor com
+post type customizado do plugin Pods. A **API não serve**: `edital` não aparece em
+`/wp-json/wp/v2/types` e `/wp-json/wp/v2/edital` devolve 404 `rest_no_route` — o Pods não
+expôs o tipo na REST API. Por isso `data_publicacao` fica `None`: a listagem não mostra data
+em lugar nenhum, e não há API para compensar (diferente de FAPEG e FAPESB, onde a API
+resolveu essa mesma lacuna).
+
+**A fonte não separa abertos de encerrados**, e a paginação vai fundo no histórico (2022 já
+aparece na página 3). O corte é pelo ano no título, calculado com `datetime.now().year`
+para não exigir edição em janeiro — ao contrário da FAPESQ, cuja URL tem o ano embutido e
+precisa de manutenção anual manual.
+
+A lista é ordenada do mais recente para o mais antigo, então a paginação para na primeira
+página sem nenhum item do ano corrente. Em 2026-08-29: 9 itens de 2026, todos na primeira
+página. Testado que forçar `ano=2025` atravessa páginas corretamente (7 itens, 1 na página
+1 e 6 na 2, parando na 3).
+
+**Limitação assumida:** chamadas de anos anteriores que continuem abertas ficam de fora —
+ex.: "Chamada Pública nº 07/2025 – NIT", que ainda está na primeira página. É o preço de a
+fonte não expor status, e é preferível a inundar a curadoria com anos de histórico
+encerrado. Se algum dia a FAPEPI publicar status, vale trocar o critério.
+
+O resumo do WordPress termina com `[…]`, removido para a descrição não acabar num símbolo
+solto.
+
 ### Scraper FAPITEC: API bloqueada, data no atributo `datetime`
 
 `scrapers/fapitec.py`, de `/editais-abertos/` — página dedicada aos abertos, sem nada a
