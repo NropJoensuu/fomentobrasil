@@ -189,6 +189,51 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### Scraper FUNDECT: status explícito na origem (primeira fonte com isso)
+
+`scrapers/fundect.py`, de `https://www.fundect.ms.gov.br/informativos/consultas/`
+(2 páginas, 11 chamadas em 2026-08-26).
+
+Tem REST API, mas ela **não serve**: o post type `lista` está vazio (`X-WP-Total: 0`) e as
+categorias (`chamadas-abertas`, `chamadas-em-andamento`, `chamadas-encerradas`) não expõem
+a coluna Tramitação nem o histórico de documentos — justamente o que esta fonte tem de
+melhor. Aqui o HTML é mais rico que a API.
+
+**Cada chamada ocupa DUAS linhas** de `table.consultas-table`: a principal (Nome, Assunto,
+Tramitação com o link "Acessar proposta") e a seguinte, iniciada por `*Observação:`, com o
+histórico cronológico de documentos. O parser consome as duas como um registro só.
+
+O diferencial: a coluna **Tramitação** dá status explícito, que vira `status_oficial`:
+
+| Origem | `status_oficial` |
+|---|---|
+| "Em andamento" | `None` (deixa o cálculo por data agir) |
+| "Finalizado" | `resultado_divulgado` (aproximação; o curador refina) |
+| histórico menciona cancelamento | `cancelada` — **tem prioridade** sobre a coluna |
+
+A prioridade do cancelamento não é teórica: 3 das 11 (Fundect/CONFAP 31/2025, 32/2025 e
+18/2025) aparecem como "Finalizado" na coluna, mas foram canceladas — sem essa regra
+entrariam como "resultado divulgado", dizendo que saiu resultado de uma chamada que nunca
+chegou a existir.
+
+Consequência boa de ter status na origem: como `status_oficial` tem prioridade sobre o
+cálculo por `data_prazo` na exibição, chamadas finalizadas **não** aparecem como "Aberta"
+mesmo sem prazo. O problema que obrigou a FAPEMIG a importar só as abertas não existe aqui,
+então as 11 entram — as 5 encerradas/canceladas já chegam com o selo certo.
+
+Detalhes:
+
+- **`data_publicacao` é a data mais ANTIGA do bloco Observação, não a primeira.** As
+  entradas vêm da mais recente para a mais antiga ("14/07 Resultado Final ... 03/07
+  Chamada ..."), e a publicação original é a última da lista. Pegar a primeira daria a data
+  do último documento (um resultado, uma retificação), não da chamada.
+- Parcerias (Fundect/CNPq/CAPES, Fundect/CONFAP) aparecem no título, mas
+  `instituicao_financiadora` fica `["FUNDECT"]`: extrair as instituições do título seria
+  chute. O curador completa a lista — que é ARRAY justamente para isso.
+- `tipo_instrumento="premio"` quando o título começa com "Prêmio" (1 das 11).
+
+LIMITAÇÃO: `data_prazo` não está na listagem (só no PDF), como em FAPES, FACEPE e FAPEG.
+
 ### Scraper FAPEG: tabela curada + REST API do WordPress (híbrido)
 
 `scrapers/fapeg.py`. **Não usar o SparkX** (`sparkx.fapeg.go.gov.br`): plataforma
