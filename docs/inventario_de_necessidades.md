@@ -185,9 +185,47 @@ varchar→varchar[] (limitação conhecida, nem chegou a gerar um `alter_column`
 simplesmente não percebeu a mudança nenhuma). Usa `postgresql_using` para empacotar cada 
 valor existente numa lista de um elemento; confirmado que os 118 registros existentes 
 (inclusive os 3 já curados manualmente) preservaram o valor exatamente, sem nenhum NULL ou 
-lista vazia. Os 7 scrapers passam `["apoio_formacao_capacitacao"]` (lista de um elemento) — 
+lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de um elemento) — 
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
+
+### Scraper FACEPE: dois filtros para separar edital de sub-documento
+
+`scrapers/facepe.py` coleta `https://www.facepe.br/editais/todos/?c=aberto`. WordPress 3.8.x,
+server-rendered — **não há REST API** (`/wp-json/wp/v2/posts` devolve 404 com página de erro
+em HTML, não JSON, ao contrário da FAPESC).
+
+Sobre o filtro `?c=aberto`: em 2026-08-26 a página sem filtro devolve exatamente o mesmo
+conjunto (195 blocos) — a visão padrão já é a de abertos. Ainda assim vale explicitar o
+parâmetro, porque `?c=encerrados` traz 1003 blocos e `?c=resultados` 878, e uma mudança de
+default do site inundaria a fila de curadoria.
+
+**A parte que exige atenção: a listagem mistura editais e sub-documentos** (erratas,
+prorrogações, resultados, adendos), todos no mesmo `div.edital-conteudo`. São necessárias
+**duas camadas** de filtro, e a primeira sozinha não basta:
+
+1. O primeiro `<a>` do bloco precisa começar com o número (`"28/2026 - "`). No sub-documento
+   esse `<span>` vem **vazio** e o título é prefixado com `•` (`&bull;&nbsp;`). Isso elimina
+   130 dos 195 blocos.
+2. O título não pode ser de um tipo de documento (resultado, homologação, enquadramento,
+   adendo, prorrogação, errata, retificação, cronograma, comunicado, convocação,
+   classificação, "lista/relação de", "Nª fase/rodada"). **Sem esta segunda camada entram 16
+   registros falsos**, porque resultados e adendos repetem o número do edital-mãe no prefixo
+   — quase todos do Programa Cientista Arretado (nº 40/2024), do tipo "Resultado Preliminar
+   6.ª rodada" ou "Homologação de Resultado 13ª rodada". O edital-mãe é coletado
+   separadamente, então nada se perde ao descartá-los.
+
+Resultado: 195 blocos → 65 numerados → **49 editais** de fato.
+
+Fluxo contínuo: a âncora `<span id="fluxo-continuo">` fica **dentro** do div do edital (não
+delimita uma seção, e o id se repete no HTML), então serve para marcar o registro, não para
+cortar a página. Quem tem a âncora ou "fluxo contínuo" no título recebe
+`dados_extra["fluxo_continuo"] = True`, avisando o curador de que não há data-limite a
+procurar no PDF.
+
+Datas vêm por extenso ("25 de agosto de 2026"), fora do `<h5>` e soltas no mesmo div.
+
+LIMITAÇÃO: `data_prazo` não aparece na listagem (está no PDF) — mesma situação de FAPES.
 
 ### Scraper FAPERGS: API "híbrida" JSON+HTML
 
@@ -214,7 +252,7 @@ para parsing de HTML de página completa, mesmo em sites que não parecem SPA mo
   revisão. Não afeta `status`/visibilidade — só sinaliza. Fica em `/moderacao/atualizacoes`, 
   com o histórico de mudanças em `dados_extra["mudancas_detectadas"]`.
 - `app/scraper_utils.processar_registro()` substitui o padrão antigo de salvamento em todos 
-  os 7 scrapers: insere se for novo, atualiza+flagga se algo monitorado mudou, ignora se 
+  todos os scrapers: insere se for novo, atualiza+flagga se algo monitorado mudou, ignora se 
   nada mudou.
 - `ExecucaoScraper`: histórico de execuções dos scrapers (manual via `/admin/scrapers` ou 
   agendado), com resumo por fonte (`novos`/`atualizados`/`ja_existentes`/`erro`).

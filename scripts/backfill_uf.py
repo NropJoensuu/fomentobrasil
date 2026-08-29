@@ -2,7 +2,7 @@
 
 Backfill retroativo de uf/abrangencia para os registros coletados antes da correção do bug
 nos scrapers (que não preenchiam esses campos). Rodou uma vez contra os 81 registros que
-existiam então; hoje os 7 scrapers já gravam `uf`/`abrangencia` desde a coleta, então o
+existiam então; hoje todos os scrapers já gravam `uf`/`abrangencia` desde a coleta, então o
 filtro `uf IS NULL AND abrangencia IS NULL` abaixo normalmente não encontra mais nenhum
 candidato. Ajustado para gravar `uf` como lista (`[valor]`/`None`), acompanhando a conversão
 de `uf` para ARRAY — mas não há necessidade real de rodar de novo.

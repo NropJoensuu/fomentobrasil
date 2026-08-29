@@ -371,7 +371,7 @@ def moderar_oportunidade(id):
 
 
 # PENDÊNCIA DE SEGURANÇA: painel admin sem controle de acesso — qualquer pessoa com a
-# URL pode disparar os 7 scrapers a qualquer momento. Mesma dívida já documentada para
+# URL pode disparar todos os scrapers a qualquer momento. Mesma dívida já documentada para
 # /moderacao e /oportunidades/importar; precisa virar rota restrita a admin quando o
 # sistema de usuários/papéis existir.
 @main.route("/admin/scrapers", methods=["GET"])
@@ -384,7 +384,7 @@ def painel_scrapers():
 
 @main.route("/admin/scrapers/rodar", methods=["POST"])
 def rodar_scrapers_agora():
-    # Roda os 7 scrapers de forma síncrona — a página fica "carregando" até terminar.
+    # Roda todos os scrapers de forma síncrona — a página fica "carregando" até terminar.
     # Aceitável agora (poucos segundos por fonte); evoluir para background/assíncrono
     # se um dia demorar muito (sites lentos, muitas fontes novas).
     from scripts.rodar_todos_scrapers import rodar_e_registrar
