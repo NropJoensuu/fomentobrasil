@@ -189,6 +189,43 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### Scraper FAPERO: uma `<section>` a mais que engana o parser
+
+`scrapers/fapero.py`, de `/fapero/publicacoes/{ANO}-2/`. Como a Fundação Araucária, a página
+é um bloco de conteúdo escrito à mão: cada chamada é um `<h2>` + parágrafos + N links de PDF
+(edital, retificações, resultados, cancelamento). **Os links não são itens** — são
+documentos da mesma chamada.
+
+Cada chamada está dentro da própria `<section>`, âncora melhor que percorrer irmãos entre
+`<h2>`s. Mas há uma **armadilha**: `find_all("section")` devolve **5**, não 4. Existe uma
+`<section>` externa que envolve todas as outras, contendo os 4 `<h2>` e **259 links** (o
+menu e o rodapé do site inteiro). Sem filtro, ela viraria um 5º registro apontando para um
+link de menu. O parser exige **exatamente um `<h2>` por section**.
+
+Outras regras:
+
+- **Link principal**: prefere o documento cujo rótulo mencione "Edital". Quando não há
+  nenhum — caso real do "Credenciamento de Aceleradoras", que só tem "Resultado Preliminar"
+  — usa o primeiro e grava `dados_extra["sem_link_edital"]`, sinal de que o edital saiu de
+  cartaz e só restou o resultado.
+- **Cancelamento tem prioridade sobre retificação**: uma chamada cancelada pode ter sido
+  retificada antes, e o que importa ao usuário é que ela não vale mais. Mesma lógica da
+  FUNDECT.
+- **Descrição**: os parágrafos que NÃO contêm link. Os que contêm são as próprias linhas de
+  documento ("📄 Visualizar Edital").
+- Todos os documentos vão para `dados_extra["documentos"]` como `{rotulo, url}`.
+
+**AVISO ELEITORAL:** o site exibia banner de suspensão de conteúdo por legislação eleitoral
+(04/07/2026 a 04/10/2026) quando o scraper foi escrito. A lista pode estar incompleta nesse
+período — **revisitar depois de outubro/2026**.
+
+Sobre o Centelha 3: é programa nacional executado localmente (MCTI, FINEP, CNPq, CONFAP,
+CERTI + FAPERO) e já aparece em outras FAPs. **Não deduplicar entre estados** — cada um tem
+edital e prazo próprios, e o curador decide.
+
+Ano na URL, então `ANO` precisa de atualização anual (como a FAPESQ; a FAPEPI consegue
+calcular sozinha porque o ano está no título dos itens).
+
 ### Scraper FAPESPA: os `count` das categorias do WordPress mentem
 
 `scrapers/fapespa.py`, via REST API (WordPress padrão, a API funciona bem e evita parsear a
