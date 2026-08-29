@@ -189,6 +189,47 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### Scraper FAPAC: a fonte de menor qualidade estrutural do projeto
+
+`scrapers/fapac.py`, de `https://fapac.ac.gov.br/98-2/`. **É a pior fonte estruturalmente.**
+Uma única página escrita à mão, sem estrutura por item, acumulando editais de 2021 a 2026
+misturados com anexos, erratas, resultados, comunicados e portarias — tudo como links
+soltos. Não há título, data nem descrição por chamada; só o texto do link.
+
+A estratégia é filtragem em cascata sobre os 75 links de upload da área de conteúdo:
+ano pelo caminho (`/wp-content/uploads/2026/`), extensão (`.pdf` apenas), tipo de documento
+a excluir (ANEXO, RESULTADO, ERRATA, FORMULÁRIO…), termo obrigatório (EDITAL/CHAMADA/
+CHAMAMENTO) e descarte de encerrados. Sobram 3.
+
+**Dois defeitos do HTML que quebrariam o filtro ingênuo:**
+
+1. **O título vem partido em vários `<a>`.** O edital 002/2026 aparece como dois links
+   consecutivos com o MESMO href: um com o texto `"E"` e outro com `"DITAL Nº 002/2026 …"`.
+   Filtrando link a link, os dois seriam descartados (nenhum contém "EDITAL") e o edital
+   sumiria. O parser **agrupa os `<a>` por href e concatena os textos** antes de filtrar —
+   o que de quebra dá a ordem necessária para a regra de republicação.
+2. **Há "E DITAL" com espaço** (edital 003/2026 — MENTES AZUIS), que sobrevive ao
+   agrupamento. Por isso o filtro usa `E\s*DITAL`, não a string literal. Sem isso, esse
+   edital seria perdido silenciosamente.
+
+Outras regras:
+
+- **Dedup por número do edital, mantendo a última ocorrência.** A página lista a versão
+  original e, abaixo, a republicação por incorreção — a de baixo é a que vale. O registro
+  recebe `dados_extra["republicado"]`.
+- `dados_extra["diario_oficial"]` guarda a referência ao DOE quando existir
+  ("DOE Nº 14.298, 01 de Julho de 2026"), e dela sai a `data_publicacao` — 1 dos 3 tem.
+- **Todo registro leva `dados_extra["fonte_baixa_estruturacao"]`**, sinal para o curador
+  revisar com mais atenção que o normal.
+
+CASO CONHECIDO: o "EDITAL-PDPG-01.2026" foi publicado como **imagem**
+(`...-pdf-724x1024.jpg`), não PDF. É descartado pelo filtro de extensão — não haveria como
+aproveitar —, mas o scraper emite `logger.warning` para o curador saber que existe.
+
+**SE A PRECISÃO SE MOSTRAR RUIM** na curadoria (muitos falsos positivos ou negativos), vale
+considerar **migrar esta fonte para cadastro manual**: são 3 a 5 editais por ano, volume que
+não justifica manter um scraper frágil.
+
 ### Scraper FAPERO: uma `<section>` a mais que engana o parser
 
 `scrapers/fapero.py`, de `/fapero/publicacoes/{ANO}-2/`. Como a Fundação Araucária, a página

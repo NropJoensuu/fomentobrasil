@@ -7,8 +7,9 @@ não derruba a execução das demais.
 
 from datetime import datetime
 
-from scrapers import (araucaria, cnpq, facepe, fapeal, fapeg, fapema, fapemig, fapepi, fapergs,
-                      fapero, fapes, fapesb, fapesc, fapesp, fapespa, fapesq, fapitec, fundect)
+from scrapers import (araucaria, cnpq, fapac, facepe, fapeal, fapeg, fapema, fapemig, fapepi,
+                      fapergs, fapero, fapes, fapesb, fapesc, fapesp, fapespa, fapesq, fapitec,
+                      fundect)
 
 FONTES = [
     ("CNPq", cnpq.coletar_chamadas_cnpq, cnpq.salvar_no_banco),
@@ -29,6 +30,7 @@ FONTES = [
     ("FAPEPI", fapepi.coletar_chamadas_fapepi, fapepi.salvar_no_banco),
     ("FAPESPA", fapespa.coletar_chamadas_fapespa, fapespa.salvar_no_banco),
     ("FAPERO", fapero.coletar_chamadas_fapero, fapero.salvar_no_banco),
+    ("FAPAC", fapac.coletar_chamadas_fapac, fapac.salvar_no_banco),
 ]
 
 
