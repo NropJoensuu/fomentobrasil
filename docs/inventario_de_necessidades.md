@@ -189,6 +189,49 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### Scraper FAPEG: tabela curada + REST API do WordPress (híbrido)
+
+`scrapers/fapeg.py`. **Não usar o SparkX** (`sparkx.fapeg.go.gov.br`): plataforma
+proprietária "Stela", que transmite comandos de construção de UI em vez de dados, depende
+de sessão e só guarda arquivo histórico (2018/2019).
+
+A fonte é o site institucional (WordPress + Elementor), e ele oferece **duas peças
+complementares** — o scraper usa as duas porque nenhuma resolve sozinha:
+
+1. `https://goias.gov.br/fapeg/editais/inscricoes-abertas/` não lista os editais em `<h2>`
+   como as outras FAPs: é uma **tabela** mantida pela própria FAPEG (colunas Nº, Tipo,
+   Origem, Descrição, Link) com exatamente as chamadas abertas — 7 em 2026-08-26. Esse é o
+   recorte que queremos; `/categoria/editais/` tem 297 posts misturando abertos e
+   encerrados desde 2016.
+2. A **REST API do WordPress funciona** (diferente da FACEPE) e aceita vários slugs numa
+   requisição: `wp-json/wp/v2/posts?slug=a,b,c`. Devolve a data de publicação de cada
+   edital, o título limpo e o conteúdo.
+
+Por que o híbrido: a tabela sabe *quais* estão abertas mas a única data nela é a da página
+(não de cada edital); a API tem os dados de cada um mas não sabe quais estão abertas.
+
+Detalhes:
+
+- A coluna **Origem** ("Fapeg/CNPq/Capes") vira a lista `instituicao_financiadora`, em vez
+  de gravar `["FAPEG"]` fixo. Quando vem vazia (acontece — a 17/2026 não tem), cai para
+  `["FAPEG"]`. A FAPEG é sempre incluída, mesmo quando não aparece na célula.
+- A tabela tem uma linha vazia logo após o cabeçalho; ambos são descartados exigindo que a
+  primeira célula case com `NN/AAAA`.
+- **Retificação**: o conteúdo do post é a linha de documentos
+  (`"2ª Retificação – (17/08/2026) 1ª Retificação – (12/08/2026) Edital – (03/08/2026)"`).
+  Havendo "Retifica", grava `status_oficial="retificada"` — 3 das 7 em 2026-08-26. Esse
+  campo **é monitorado** por `scraper_utils`, então uma retificação nova depois da curadoria
+  reabre o registro em `/moderacao/atualizacoes`.
+- Se a API cair, o scraper ainda produz os 7 registros (título montado a partir da tabela),
+  só sem data de publicação e sem documentos. Testado.
+- Se a tabela vier vazia, devolve **lista vazia de propósito**, sem cair para
+  `/categoria/editais/`: importar 297 editais encerrados poluiria a curadoria justamente
+  com o que este scraper existe para evitar. Zero coletados é um sinal visível no painel;
+  dado errado em massa, não.
+
+LIMITAÇÃO: `data_prazo` não está na listagem nem no post — só dentro do PDF. Fica `None`,
+como em FAPES e FACEPE.
+
 ### Scraper FACEPE: dois filtros para separar edital de sub-documento
 
 `scrapers/facepe.py` coleta `https://www.facepe.br/editais/todos/?c=aberto`. WordPress 3.8.x,
