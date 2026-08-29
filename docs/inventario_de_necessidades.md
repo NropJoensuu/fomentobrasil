@@ -189,6 +189,46 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### Scrapers FAPEAL e FAPESB: dois casos de "a API sabe mais que o HTML"
+
+**FAPEAL (`scrapers/fapeal.py`)** — só API, sem HTML. A página `/pesquisador/editais/` usa
+carrosséis por categoria com **sobreposição**: a mesma chamada aparece em "Chamadas
+Abertas", "Chamadas Internacionais" e "Editais Vigentes", e traz só título e link. A
+categoria `chamadas-abertas` da REST API dá o conjunto sem repetição (6 em 2026-08-29) e
+com data. O id da categoria é descoberto **pelo slug**, não fixado no código (era 61):
+ids do WordPress mudam se a categoria for recriada.
+
+- **Cooperação internacional vem das categorias do post, não só do título.** A chamada ERC
+  se chama "Mobilidade de pesquisadores, para a Europa" — nenhuma das palavras-chave
+  (Confap, DAAD, ERC, Mobility) aparece nela, e a detecção por título sozinha erraria. As
+  categorias `internacional*` e `confap` do próprio post acertam. O scraper usa a união das
+  duas regras.
+- **`descricao` fica `None` de propósito.** O `excerpt`/`content` desses posts não é
+  descrição: é a lista de nomes dos anexos ("Chamada", "Chamada original Diretrizes da
+  Fapeal", "RESULTADO FINAL ... EDITAL Anexo I"). Gravar isso poria a palavra "Chamada"
+  como resumo público da oportunidade. Vai para `dados_extra["documentos"]`.
+
+**FAPESB (`scrapers/fapesb.py`)** — híbrido HTML + API. `category/edital/` renderiza **as
+três abas no mesmo HTML** (`#tab1` Abertos, `#tab2` Fechados, `#tab3` Resultados); a troca
+é só CSS/JS. Raspar a página inteira traria encerrados e resultados juntos, então o parser
+lê **somente `#tab1`** (15 itens; tab2 vazia e tab3 com 3, em 2026-08-29).
+
+- **Os rótulos de data vêm vazios, e isso foi investigado**: os `<li>` são literalmente
+  `<li>LANÇAMENTO: </li>`, sem atributo `data-*`, e nenhum `<script>` da página menciona
+  `edital-top-bar`, `LANÇAMENTO` ou `DIVULGAÇÃO`. Não é conteúdo carregado por JavaScript —
+  a FAPESB simplesmente não preenche.
+- A data foi recuperada por outro caminho: cada item aponta para um post do WordPress, e a
+  API devolve os 15 de uma vez por slug (`?slug=a,b,c`) com o campo `date`. Mesmo truque da
+  FAPEG. Resultado: 15/15 com `data_publicacao`, em vez da limitação que se esperava.
+  `data_resultado_previsto` continua `None` — essa não tem fonte nenhuma.
+- Todos os títulos terminam com `" -"` no site; o parser remove.
+- As descrições são boas (parágrafo "Propósito: ..."), 15/15 preenchidas.
+
+Nota sobre chamadas CONFAP repetidas entre FAPs: "Mobility Confap Italy 2026" aparece 4
+vezes no banco (Araucária, FAPEG, FAPEAL, FAPESB) — **não é duplicata**. É o mesmo programa
+nacional operado por cada FAP, com edital, link e financiadora próprios. A dedup é por
+`link`, então cada versão entra uma vez só.
+
 ### Scraper FUNDECT: status explícito na origem (primeira fonte com isso)
 
 `scrapers/fundect.py`, de `https://www.fundect.ms.gov.br/informativos/consultas/`
