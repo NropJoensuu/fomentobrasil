@@ -189,6 +189,45 @@ lista vazia. Todos os scrapers passam `["apoio_formacao_capacitacao"]` (lista de
 a FAPEMIG continua com o placeholder por ora; virar a lista de verdade com os múltiplos 
 valores da própria API é um passo natural seguinte, mas não fazia parte deste escopo.
 
+### Scraper FAPEMA: primeira fonte do Nordeste com prazo na listagem
+
+`scrapers/fapema.py`, via REST API (categoria `editais-em-aberto`, 42 posts numa requisição
+só — a página HTML equivalente tem 5 páginas). Não usar a categoria pai `editais`: são 43
+páginas de histórico.
+
+**O diferencial:** os resumos trazem o período de submissão com datas reais. É a primeira
+FAP do Nordeste em que `data_prazo` sai da listagem sem abrir o PDF — 26 dos 42 em
+2026-08-29. Por isso `data_prazo` **é campo monitorado** aqui (ao contrário de FAPES,
+FACEPE e FAPEG, onde nunca vem da listagem): se a FAPEMA prorrogar um edital já curado, a
+mudança reabre o registro em `/moderacao/atualizacoes`.
+
+A regra é "última data do resumo", que cobre os três formatos que aparecem:
+
+| formato no resumo | última data é |
+|---|---|
+| "Período de Submissão ... 11/08/2026 a 31/08/2026" | o fim do intervalo |
+| "– Inscrições até 11/06/2026" | a única data |
+| "1ª chamada até 12/03 ... 3ª chamada até 15/06/2026" | o encerramento final |
+
+**A exceção são os resumos que começam pelo cronograma.** Aí a última data pode ser de
+divulgação de resultado, não de submissão — nesses o prazo fica `None` e o registro recebe
+`dados_extra["prazo_requer_revisao"]`, em vez de arriscar valor errado. Afeta 3 dos 42.
+
+Duas calibrações que valem registrar, porque a primeira tentativa erraria:
+
+- **Contar datas não funciona como detector de cronograma.** O excerpt do WordPress é
+  truncado (~55 palavras), então o máximo observado é 3 datas — uma regra "mais de 3 datas"
+  nunca dispararia, e o "4º CONCURSO DE ARTIGOS" (o caso que motivou a regra) passaria
+  batido com exatamente 3. A detecção é por marcador de tabela: `cronograma`,
+  `atividades data(s)`, `publicação do edital`, `impugnação`.
+- **O marcador NÃO inclui "divulgação do resultado"**, de propósito. Esse trecho aparece
+  logo após um período de submissão válido em vários resumos ("Período de submissão online
+  12/06/2025 a 18/07/2025 ... Divulgação do Resultado"), e incluí-lo descartaria prazos que
+  a regra da última data acerta.
+
+O resumo bruto vai sempre para `dados_extra["prazo_bruto"]` (42 de 42), porque a variedade
+de formatos torna a extração best-effort e o curador precisa do original para conferir.
+
 ### `tipo_parceria`: detecção unificada em `scraper_utils`
 
 `detectar_tipo_parceria()` em `app/scraper_utils.py` é usada pelos **12 scrapers**. Antes só
