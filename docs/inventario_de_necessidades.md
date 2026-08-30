@@ -926,6 +926,68 @@ alcance do que a chamada financia, e ela custeia participação de pesquisadores
 nacionais **e internacionais**. Vale para editais de participação/organização de eventos em
 geral.
 
+### Curadoria assistida por PDF — o que é extraível, medido (2026-08-30)
+
+Base empírica: os 9 registros curados à mão, comparados campo a campo contra o texto dos
+respectivos PDFs. Não é estimativa — é contagem.
+
+**Os campos se separam em três camadas, e a fronteira é nítida.**
+
+1. **Literais.** Datas e valores aparecem no PDF do jeito que o curador gravou. O extrator
+   (`app/extracao_pdf.py`) acerta **29 de 31** desses campos, 27 já na primeira sugestão.
+   (37 campos no total; os 6 do #34 estão fora da conta pelo motivo do quadro abaixo.)
+2. **Inferíveis com limiar.** `natureza_recurso`: contar "custeio"/"capital"/"bolsa" funciona,
+   mas só com limiar. A #23 cita "bolsa" uma vez e não concede nenhuma; a #118 cita 147 vezes
+   e é só bolsa.
+3. **Julgamento.** `publico_alvo`, `linha_de_fomento`, `abrangencia`. Aqui contar palavra é
+   **ativamente errado**, e os números mostram por quê: #22 e #215 mencionam "pesquisador" 17
+   e 18 vezes, e o curador NÃO marcou `pesquisadores` — quem submete é a instituição. Pior,
+   a #118 tem `mestrandos`, `mestres` e `doutorandos` marcados com ZERO ocorrências dessas
+   palavras: o curador leu a tabela de modalidades de bolsa e deduziu a titulação exigida.
+   Nenhuma regra de texto chega lá.
+
+Por isso a interface **sugere e não preenche**: cada candidato vem com a página e o trecho de
+origem, e o campo só muda quando o curador clica em "usar".
+
+**As duas falhas não são do extrator, e são as mais instrutivas:**
+
+- **O documento do link pode não ser o edital.** O `link` da #34 leva a um *Guia Informativo*
+  de 44 páginas que diz de si mesmo que "não substitui a leitura completa do edital" — nenhum
+  dos 6 campos está lá. Por isso o painel aceita colar uma URL alternativa de PDF.
+- **O edital pode não ser a última palavra.** O prazo da #21 é 31/08/2026, mas o PDF da
+  chamada diz **10/08/2026**: a data mudou por uma *retificação de cronograma* publicada
+  depois, num documento separado. O extrator devolve 10/08 — que é o que aquele documento diz.
+  Ler o edital principal não basta quando existe retificação.
+
+**Armadilhas de parsing que custaram acerto e estão resolvidas** (todas encontradas nos PDFs
+reais, nenhuma prevista de antemão):
+
+- **Data com ponto.** A FAPES escreve `27.11.2026`. Com o padrão só de barra, o cronograma
+  inteiro daquele edital era invisível.
+- **Rótulo depois da data.** A extração lê a coluna de datas antes da de fases, então na
+  FACEPE e na FAPES o rótulo vem DEPOIS: "21/09/2026 (até 23h59, Limite para submissão". A
+  janela de contexto olha para os dois lados, com desconto de prioridade para o lado de trás.
+- **Janela larga atravessa a tabela.** Uma janela fixa de 260 caracteres capturava o rótulo da
+  etapa anterior — foi o que fez a FAPESC devolver 16/09 como data de publicação. A janela é
+  limitada pelas datas vizinhas.
+- **Negativa precisa ser de perto.** Descartar por "impugnação" em qualquer lugar da vizinhança
+  matava o alvo certo, porque num cronograma as etapas ficam coladas e nem toda etapa tem data
+  ("Prazo para impugnação: 10 dias corridos após o lançamento"). Vale a etiqueta mais próxima
+  da data.
+- **Intervalo é um valor só.** "De 31/07/2026 até às 17h do dia 08/09/2026" é um prazo, e o que
+  vale é a ponta final; "de R$ 70.000,00 a R$ 180.000,00" preenche mínimo e máximo de uma vez.
+  A extração de tabela ainda injeta lixo da coluna vizinha no meio do intervalo, o que a
+  tolerância em `_e_conector` absorve.
+
+**Convenção do curador, agora explícita no código.** Cronogramas do CNPq dão só o mês
+("até dezembro de 2026"). O curador converteu para o dia 1. Está em
+`DIA_PADRAO_MES_SEM_DIA`, e o candidato sai marcado para a interface avisar que a data é
+aproximada.
+
+**O que fica de fora, deliberadamente:** `palavras_chave` aparece literalmente no PDF em 40 de
+41 termos (são os eixos/temas listados no edital) e seria fácil de extrair — mas o campo tem
+limite de 150 caracteres e os "Desafios" da #34 já estão truncados no banco. Extrair antes de
+resolver isso só multiplicaria o problema.
 ## `status` vs `status_oficial` — não confundir
 
 Dois campos parecidos, com significados completamente diferentes:

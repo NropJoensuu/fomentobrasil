@@ -4,10 +4,11 @@ from datetime import datetime
 import pdfplumber
 import requests
 from bs4 import BeautifulSoup
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, jsonify, render_template, request, redirect, url_for
 from sqlalchemy import or_, func
 
 from app import db
+from app.extracao_pdf import extrair_candidatos, extrair_paginas
 from app.models import ExecucaoScraper, Oportunidade
 from app.utils import (
     aplicar_faixas,
@@ -339,6 +340,60 @@ def marcar_atualizacao_revisada(id):
     oportunidade.revisao_pendente = False
     db.session.commit()
     return redirect(url_for("main.listar_atualizacoes"))
+
+
+# PENDÊNCIA DE SEGURANÇA: faz requests.get() para uma URL do formulário (SSRF), mesma
+# dívida já documentada em /oportunidades/importar — sem controle de acesso e sem bloqueio
+# de IP privado/loopback. Revisitar junto com o sistema de usuários/papéis.
+@main.route("/moderacao/<int:id>/extrair", methods=["POST"])
+def extrair_do_pdf(id):
+    """Lê o PDF do edital e devolve candidatos para os campos de data e valor.
+
+    Sugere, não preenche: a resposta traz o trecho e a página de cada candidato para o
+    curador conferir. Ver a docstring de `app.extracao_pdf` para o que é e o que não é
+    extraível — e por quê.
+    """
+    oportunidade = Oportunidade.query.get_or_404(id)
+    url = (request.form.get("url_pdf") or oportunidade.link or "").strip()
+    if not url:
+        return jsonify({"ok": False, "erro": "Sem URL para ler."}), 400
+
+    try:
+        resposta = requests.get(
+            url, timeout=90, verify=False,
+            headers={"User-Agent": "fomentobrasil-curadoria/1.0"},
+        )
+        resposta.raise_for_status()
+    except requests.RequestException as e:
+        return jsonify({"ok": False, "erro": f"Não consegui baixar: {type(e).__name__}"}), 502
+
+    if resposta.content[:4] != b"%PDF":
+        return jsonify({
+            "ok": False,
+            "erro": "A URL não devolveu um PDF. Se o link da oportunidade aponta para uma "
+                    "página de listagem, cole aqui a URL do PDF do edital.",
+        }), 415
+
+    try:
+        paginas = extrair_paginas(resposta.content)
+    except Exception as e:
+        return jsonify({"ok": False, "erro": f"Não consegui ler o PDF: {type(e).__name__}"}), 422
+
+    if not any(p.strip() for p in paginas):
+        return jsonify({
+            "ok": False,
+            "erro": "O PDF não tem camada de texto (provavelmente é digitalizado). "
+                    "Preenchimento manual.",
+        }), 422
+
+    candidatos = extrair_candidatos(paginas)
+    return jsonify({
+        "ok": True,
+        "paginas": len(paginas),
+        "candidatos": {
+            campo: [c.como_dict() for c in lista] for campo, lista in candidatos.items()
+        },
+    })
 
 
 @main.route("/moderacao/<int:id>", methods=["GET", "POST"])

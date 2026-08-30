@@ -66,6 +66,24 @@
   </div>
   {% endif %}
 
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h2 class="h6 card-title">Leitura assistida do PDF</h2>
+      <p class="text-muted small mb-2">
+        Extrai datas e valores do edital e mostra o trecho de origem. <strong>Sugere, não
+        preenche</strong> — cada campo só muda quando você clicar em “usar”. Se o link da
+        oportunidade aponta para uma página de listagem em vez do PDF, cole a URL do PDF aqui.
+      </p>
+      <div class="d-flex gap-2 mb-2">
+        <input type="url" id="url-pdf" class="form-control form-control-sm"
+               placeholder="{{ o.link }}" value="">
+        <button type="button" id="btn-extrair" class="btn btn-sm btn-outline-primary text-nowrap">Ler PDF</button>
+      </div>
+      <div id="resultado-extracao"></div>
+    </div>
+  </div>
+
   <form method="POST">
     <div class="card mb-4">
       <div class="card-body">
@@ -347,6 +365,99 @@
 
 {% block extra_scripts %}
 {{ script_faixas(faixas | length) }}
+<script>
+  (function () {
+    const ROTULOS = {
+      data_publicacao: 'Data de Publicação',
+      data_prazo: 'Data Final de Submissão',
+      data_resultado_previsto: 'Data Prevista do Resultado',
+      orcamento_total_chamada: 'Orçamento Total da Chamada',
+      valor_minimo_proposta: 'Valor Mínimo da Proposta',
+      valor_maximo_proposta: 'Valor Máximo da Proposta',
+    };
+    const alvo = document.getElementById('resultado-extracao');
+    const botao = document.getElementById('btn-extrair');
+
+    function dataBr(iso) {
+      return iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+    }
+
+    function usar(campo, valor) {
+      const input = document.querySelector(`[name="${campo}"]`);
+      if (!input) return;
+      if (campo.startsWith('data')) {
+        input.value = valor;                     // <input type="date"> quer ISO
+      } else {
+        // Campos de dinheiro passam pela máscara, que lê centavos: "50000.00" -> R$ 50.000,00
+        input.value = valor;
+        input.dispatchEvent(new Event('input'));
+      }
+      input.classList.add('border-success');
+      input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    function render(dados) {
+      if (!dados.ok) {
+        alvo.innerHTML = `<div class="alert alert-warning py-2 mb-0 small">${dados.erro}</div>`;
+        return;
+      }
+      const campos = Object.keys(dados.candidatos);
+      if (!campos.length) {
+        alvo.innerHTML = `<div class="alert alert-secondary py-2 mb-0 small">
+          Li ${dados.paginas} páginas e não reconheci nenhuma data ou valor. Preenchimento manual.
+        </div>`;
+        return;
+      }
+      let html = `<p class="small text-muted mb-2">${dados.paginas} páginas lidas.</p>`;
+      for (const campo of campos) {
+        html += `<div class="mb-2"><strong class="small">${ROTULOS[campo] || campo}</strong>`;
+        for (const c of dados.candidatos[campo]) {
+          const mostrado = campo.startsWith('data') ? dataBr(c.valor) : c.valor;
+          const aviso = c.mes_sem_dia
+            ? ' <span class="badge text-bg-warning">o edital só dá o mês — dia 1 por convenção</span>'
+            : '';
+          html += `<div class="border rounded p-2 mt-1 small">
+            <div class="d-flex justify-content-between align-items-center gap-2">
+              <span><code>${mostrado}</code>${aviso}
+                <span class="text-muted">· pág. ${c.pagina}</span></span>
+              <button type="button" class="btn btn-sm btn-outline-success py-0 usar-candidato"
+                      data-campo="${campo}" data-valor="${c.valor}">usar</button>
+            </div>
+            <div class="text-muted mt-1" style="font-size:.8em">…${c.trecho}…</div>
+          </div>`;
+        }
+        html += '</div>';
+      }
+      alvo.innerHTML = html;
+    }
+
+    botao.addEventListener('click', async () => {
+      botao.disabled = true;
+      const rotulo = botao.textContent;
+      botao.textContent = 'Lendo…';
+      alvo.innerHTML = '<p class="small text-muted mb-0">Baixando e lendo o PDF…</p>';
+      try {
+        const corpo = new FormData();
+        corpo.append('url_pdf', document.getElementById('url-pdf').value);
+        const r = await fetch('{{ url_for("main.extrair_do_pdf", id=o.id) }}', {
+          method: 'POST', body: corpo,
+        });
+        render(await r.json());
+      } catch (e) {
+        alvo.innerHTML = `<div class="alert alert-danger py-2 mb-0 small">Falhou: ${e}</div>`;
+      } finally {
+        botao.disabled = false;
+        botao.textContent = rotulo;
+      }
+    });
+
+    alvo.addEventListener('click', (e) => {
+      if (e.target.classList.contains('usar-candidato')) {
+        usar(e.target.dataset.campo, e.target.dataset.valor);
+      }
+    });
+  })();
+</script>
 <script>
   function atualizarSecoesCondicionais() {
     const formacaoMarcada = document.querySelector(
