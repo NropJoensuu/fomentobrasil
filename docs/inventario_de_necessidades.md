@@ -827,6 +827,37 @@ coluna `Numeric` (arredondamento binário em valor monetário).
 "Datas e Valores": na prática o curador decide "custeio/capital/bolsa" lendo a mesma tabela
 orçamentária de onde tira os valores.
 
+### Faixas / modalidades internas do edital (2026-08-30)
+
+A maioria dos editais tem uma regra única, mas parte deles se divide internamente —
+"Faixa A/B/C", "Modalidade 1/2", "Eixos" — e cada divisão pode ter **valores, público-alvo e
+área do conhecimento próprios**. Há editais em que a única diferença entre as faixas é a área.
+O caso que motivou isto: a Chamada FUNDECT 09/2026 (PAE-MS) exige anuência das instituições
+parceiras "no caso de evento submetido nas faixas B ou C".
+
+`valor_minimo_proposta`/`valor_maximo_proposta` continuam existindo como o intervalo global do
+edital; as faixas são o detalhamento, e ficam em `dados_extra["faixas"]`, cada uma com
+`nome`, `descricao`, `valor_minimo`, `valor_maximo`, `publico_alvo` (lista) e `area_principal`.
+
+**Por que JSONB e não tabela própria:** a estrutura ainda está se formando e nada filtra por
+faixa hoje. No dia em que a busca precisar de "oportunidades com faixa até R$ X", isto vira
+tabela — a migração é direta, porque a forma já é uma lista de objetos homogêneos.
+
+Dois detalhes de implementação que não são óbvios:
+
+- Os campos usam nomes indexados (`faixa-0-nome`). O índice **só cresce**: remover uma linha
+  deixa buraco na numeração de propósito, porque renumerar no JS quebraria os `id`/`for` dos
+  rótulos. `app.utils.parse_faixas` varre os índices presentes no formulário, não um `range()`.
+- Os valores são gravados como string com **duas casas** ("25000.00"). Não é cosmético: a
+  máscara lê o campo como centavos, então gravar "25000" faria a faixa reaparecer como
+  R$ 250,00 na próxima edição.
+
+`aplicar_faixas` reatribui `dados_extra` inteiro em vez de mutá-lo — é o que faz o SQLAlchemy
+detectar mudança num JSONB — e preserva as chaves que o scraper gravou ali
+(`numero_edital`, `documentos`, `historico_documentos`, `fonte_baixa_estruturacao`...).
+Verificado num round-trip real no registro #215: as faixas entraram, o `historico_documentos`
+do scraper continuou lá e os valores curados voltaram idênticos.
+
 ## `status` vs `status_oficial` — não confundir
 
 Dois campos parecidos, com significados completamente diferentes:

@@ -69,17 +69,17 @@
 
         {% if o.orcamento_total_chamada %}
         <dt class="col-sm-4">Orçamento Total da Chamada</dt>
-        <dd class="col-sm-8">R$ {{ "%.2f"|format(o.orcamento_total_chamada) }}</dd>
+        <dd class="col-sm-8">{{ o.orcamento_total_chamada | moeda }}</dd>
         {% endif %}
 
         {% if o.valor_minimo_proposta %}
         <dt class="col-sm-4">Valor Mínimo da Proposta</dt>
-        <dd class="col-sm-8">R$ {{ "%.2f"|format(o.valor_minimo_proposta) }}</dd>
+        <dd class="col-sm-8">{{ o.valor_minimo_proposta | moeda }}</dd>
         {% endif %}
 
         {% if o.valor_maximo_proposta %}
         <dt class="col-sm-4">Valor Máximo da Proposta</dt>
-        <dd class="col-sm-8">R$ {{ "%.2f"|format(o.valor_maximo_proposta) }}</dd>
+        <dd class="col-sm-8">{{ o.valor_maximo_proposta | moeda }}</dd>
         {% endif %}
 
         {% if o.area_principal %}
@@ -107,6 +107,35 @@
         <dd class="col-sm-8">{{ o.data_resultado_previsto.strftime('%d/%m/%Y') }}</dd>
         {% endif %}
       </dl>
+
+      {% set faixas = (o.dados_extra or {}).get("faixas") or [] %}
+      {% if faixas %}
+      <h2 class="h5 mt-4">Faixas / Modalidades</h2>
+      <div class="row g-3">
+        {% for f in faixas %}
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100">
+            <strong>{{ f.nome or "Faixa " ~ loop.index }}</strong>
+            {% if f.descricao %}<p class="mb-2 mt-1 small">{{ f.descricao }}</p>{% endif %}
+            <dl class="row mb-0 small">
+              {% if f.valor_minimo %}
+              <dt class="col-5">Valor mínimo</dt><dd class="col-7">{{ f.valor_minimo | moeda }}</dd>
+              {% endif %}
+              {% if f.valor_maximo %}
+              <dt class="col-5">Valor máximo</dt><dd class="col-7">{{ f.valor_maximo | moeda }}</dd>
+              {% endif %}
+              {% if f.area_principal %}
+              <dt class="col-5">Área</dt><dd class="col-7">{{ f.area_principal }}</dd>
+              {% endif %}
+              {% if f.publico_alvo %}
+              <dt class="col-5">Público-alvo</dt><dd class="col-7">{{ f.publico_alvo | join(', ') }}</dd>
+              {% endif %}
+            </dl>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
 
       <a href="{{ o.link }}" target="_blank" class="btn btn-primary mt-3">Ver edital completo</a>
     </div>

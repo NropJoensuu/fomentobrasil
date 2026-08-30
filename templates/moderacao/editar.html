@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% from "_faixas.html" import bloco_faixas, script_faixas %}
+{% set faixas = (o.dados_extra or {}).get("faixas") or [] %}
 {% block title %}Moderar — {{ o.titulo }}{% endblock %}
 
 {% block content %}
@@ -277,6 +279,9 @@
           <label class="form-label">Valor Máximo da Proposta</label>
           <input type="text" inputmode="decimal" name="valor_maximo_proposta" class="form-control mascara-moeda" placeholder="R$ 0,00" value="{{ o.valor_maximo_proposta or '' }}">
         </div>
+
+        {{ bloco_faixas(faixas) }}
+
       </div>
     </div>
 
@@ -289,6 +294,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+{{ script_faixas(faixas | length) }}
 <script>
   function atualizarSecoesCondicionais() {
     const formacaoMarcada = document.querySelector(

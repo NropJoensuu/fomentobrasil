@@ -1,0 +1,145 @@
+{#
+  Bloco "Faixas / Modalidades" — as divisões internas de um edital.
+
+  A maioria dos editais não tem faixa nenhuma, então o bloco nasce vazio e recolhido: só
+  aparece conteúdo quando o curador clica em "Adicionar faixa" (ou quando o registro já tem
+  faixas gravadas). Cada faixa pode ter valores, público-alvo e área próprios — há editais em
+  que a única diferença entre as faixas é a área do conhecimento.
+
+  Os campos usam nomes indexados (`faixa-0-nome`, `faixa-0-publico_alvo`, ...). O índice é um
+  contador que só cresce: remover uma linha deixa buracos na numeração de propósito, porque
+  renumerar no JS quebraria os `id`/`for` dos rótulos. O servidor varre os índices presentes
+  (ver `app.utils.parse_faixas`) em vez de assumir uma sequência contínua.
+
+  Guardado em `dados_extra["faixas"]`, não em tabela própria: a estrutura ainda está mudando e
+  nada filtra por faixa hoje. Se um dia a busca precisar de "oportunidades com faixa até
+  R$ X", isto vira tabela.
+#}
+
+{% set VOCAB_PUBLICO_ALVO = [
+    ("pesquisadores", "Pesquisadores"),
+    ("especialistas", "Especialistas (lato sensu)"),
+    ("mestrandos", "Mestrandos"),
+    ("mestres", "Mestres"),
+    ("doutorandos", "Doutorandos"),
+    ("doutores", "Doutores"),
+    ("empresas", "Empresas"),
+    ("startups", "Startups"),
+    ("ies", "IES — Instituições de Ensino Superior"),
+    ("ict", "ICT — Instituições Científicas, Tecnológicas e de Inovação"),
+    ("governo", "Governo"),
+] %}
+{% set VOCAB_AREAS = [
+    "Ciências Exatas e da Terra", "Ciências Biológicas", "Engenharias",
+    "Ciências da Saúde", "Ciências Agrárias", "Ciências Sociais Aplicadas",
+    "Ciências Humanas", "Linguística, Letras e Artes",
+] %}
+
+{% macro linha_faixa(i, f) %}
+<div class="border rounded p-3 mb-3 faixa-linha">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <strong class="text-muted small">Faixa / Modalidade</strong>
+    <button type="button" class="btn btn-sm btn-outline-danger faixa-remover">Remover</button>
+  </div>
+
+  <div class="mb-2">
+    <label class="form-label small mb-1" for="faixa-{{ i }}-nome">Nome</label>
+    <input type="text" class="form-control" id="faixa-{{ i }}-nome" name="faixa-{{ i }}-nome"
+           placeholder="Ex.: Faixa A — Projetos de pequeno porte" value="{{ f.nome or '' }}">
+  </div>
+
+  <div class="mb-2">
+    <label class="form-label small mb-1" for="faixa-{{ i }}-descricao">Descrição</label>
+    <textarea class="form-control" rows="2" id="faixa-{{ i }}-descricao"
+              name="faixa-{{ i }}-descricao">{{ f.descricao or '' }}</textarea>
+  </div>
+
+  <div class="row g-2 mb-2">
+    <div class="col-sm-6">
+      <label class="form-label small mb-1" for="faixa-{{ i }}-valor_minimo">Valor mínimo</label>
+      <input type="text" inputmode="decimal" class="form-control mascara-moeda" placeholder="R$ 0,00"
+             id="faixa-{{ i }}-valor_minimo" name="faixa-{{ i }}-valor_minimo" value="{{ f.valor_minimo or '' }}">
+    </div>
+    <div class="col-sm-6">
+      <label class="form-label small mb-1" for="faixa-{{ i }}-valor_maximo">Valor máximo</label>
+      <input type="text" inputmode="decimal" class="form-control mascara-moeda" placeholder="R$ 0,00"
+             id="faixa-{{ i }}-valor_maximo" name="faixa-{{ i }}-valor_maximo" value="{{ f.valor_maximo or '' }}">
+    </div>
+  </div>
+
+  <div class="row g-2">
+    <div class="col-sm-6">
+      <label class="form-label small mb-1" for="faixa-{{ i }}-area_principal">
+        Área do conhecimento
+        <span class="text-muted">(só se diferir das demais faixas)</span>
+      </label>
+      <select class="form-select" id="faixa-{{ i }}-area_principal" name="faixa-{{ i }}-area_principal">
+        <option value="">— Mesma da oportunidade —</option>
+        {% for area in VOCAB_AREAS %}
+        <option value="{{ area }}" {{ "selected" if f.area_principal == area else "" }}>{{ area }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-sm-6">
+      <label class="form-label small mb-1" for="faixa-{{ i }}-publico_alvo">
+        Público-alvo
+        <span class="text-muted">(deixe vazio se for o mesmo; Ctrl/⌘ marca vários)</span>
+      </label>
+      <select class="form-select" multiple size="5" id="faixa-{{ i }}-publico_alvo"
+              name="faixa-{{ i }}-publico_alvo">
+        {% for valor, rotulo in VOCAB_PUBLICO_ALVO %}
+        <option value="{{ valor }}" {{ "selected" if valor in (f.publico_alvo or []) else "" }}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro bloco_faixas(faixas) %}
+<div class="mb-3">
+  <label class="form-label">
+    Faixas / Modalidades
+    <span data-bs-toggle="tooltip" title="Preencha só quando o edital se divide em partes com regras próprias (Faixa A/B, Modalidade 1/2, Eixos). Deixe vazio quando o edital tem uma regra única.">ℹ️</span>
+  </label>
+  <div id="faixas-container">
+    {% for f in faixas or [] %}
+      {{ linha_faixa(loop.index0, f) }}
+    {% endfor %}
+  </div>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="faixa-adicionar">+ Adicionar faixa</button>
+</div>
+
+{# O molde da linha nova. `faixa-IDX-` é trocado pelo contador no JS. #}
+<template id="faixa-molde">
+  {{ linha_faixa("IDX", {}) }}
+</template>
+{% endmacro %}
+
+{% macro script_faixas(quantidade_inicial) %}
+<script>
+  (function () {
+    const container = document.getElementById('faixas-container');
+    const molde = document.getElementById('faixa-molde');
+    // Contador só cresce: ver comentário no topo de _faixas.html.
+    let proximoIndice = {{ quantidade_inicial }};
+
+    document.getElementById('faixa-adicionar').addEventListener('click', () => {
+      const html = molde.innerHTML.replaceAll('faixa-IDX-', 'faixa-' + proximoIndice + '-');
+      proximoIndice += 1;
+      const envolucro = document.createElement('div');
+      envolucro.innerHTML = html;
+      const linha = envolucro.querySelector('.faixa-linha');
+      container.appendChild(linha);
+      linha.querySelectorAll('.mascara-moeda').forEach(window.aplicarMascaraMoeda);
+    });
+
+    // Delegação: as linhas do molde ainda não existem quando este script roda.
+    container.addEventListener('click', (e) => {
+      if (e.target.classList.contains('faixa-remover')) {
+        e.target.closest('.faixa-linha').remove();
+      }
+    });
+  })();
+</script>
+{% endmacro %}

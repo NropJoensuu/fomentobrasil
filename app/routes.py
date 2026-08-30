@@ -9,7 +9,15 @@ from sqlalchemy import or_, func
 
 from app import db
 from app.models import ExecucaoScraper, Oportunidade
-from app.utils import get_regioes, get_ufs_por_regiao, parse_valor_brl, REGIAO_POR_UF, REGIOES
+from app.utils import (
+    aplicar_faixas,
+    get_regioes,
+    get_ufs_por_regiao,
+    parse_faixas,
+    parse_valor_brl,
+    REGIAO_POR_UF,
+    REGIOES,
+)
 
 main = Blueprint("main", __name__)
 
@@ -182,6 +190,7 @@ def nova_oportunidade():
                 datetime.strptime(request.form["data_publicacao"], "%Y-%m-%d").date()
                 if request.form.get("data_publicacao") else None
             ),
+            dados_extra=aplicar_faixas(None, parse_faixas(request.form)),
         )
         db.session.add(oportunidade)
         db.session.commit()
@@ -341,6 +350,12 @@ def moderar_oportunidade(id):
 
         oportunidade.natureza_recurso = request.form.getlist("natureza_recurso")
         oportunidade.publico_alvo = request.form.getlist("publico_alvo")
+
+        # Reatribuição (e não mutação in-place) para o SQLAlchemy detectar a mudança no
+        # JSONB; `aplicar_faixas` preserva as chaves que o scraper gravou ali.
+        oportunidade.dados_extra = aplicar_faixas(
+            oportunidade.dados_extra, parse_faixas(request.form)
+        )
 
         # Campos que o scraper nem sempre consegue extrair (ex: FAPES nunca traz prazo
         # na listagem) — sem isso no formulário, a curadoria desses casos fica bloqueada.

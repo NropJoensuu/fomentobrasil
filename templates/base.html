@@ -63,14 +63,19 @@
       return 'R$ ' + formatadorMoeda.format(Number(digitos) / 100);
     }
 
-    document.querySelectorAll('.mascara-moeda').forEach(el => {
+    // Global porque linhas de faixa são criadas depois do carregamento da página.
+    window.aplicarMascaraMoeda = function (el) {
+      if (el.dataset.mascaraAtiva) return;
+      el.dataset.mascaraAtiva = '1';
       el.value = formatarMoeda(el.value);
       el.addEventListener('input', () => {
         el.value = formatarMoeda(el.value);
         // Mantém o cursor no fim: a máscara reescreve a string inteira a cada tecla.
         el.setSelectionRange(el.value.length, el.value.length);
       });
-    });
+    };
+
+    document.querySelectorAll('.mascara-moeda').forEach(window.aplicarMascaraMoeda);
   </script>
   {% block extra_scripts %}{% endblock %}
 </body>

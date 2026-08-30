@@ -27,6 +27,10 @@ def create_app(iniciar_agendador=False):
     db.init_app(app)
     migrate.init_app(app, db)
 
+    from app.utils import formatar_moeda
+
+    app.jinja_env.filters["moeda"] = formatar_moeda
+
     from app import models  # <-- adicionar esta linha
 
     from app.routes import main
