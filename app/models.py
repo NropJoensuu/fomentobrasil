@@ -25,7 +25,10 @@ class Oportunidade(db.Model):
     natureza_recurso = db.Column(ARRAY(db.String(50)), nullable=False)  # custeio, capital, bolsa
 
     # Quem pode se candidatar (pode ter mais de um valor)
-    publico_alvo = db.Column(ARRAY(db.String(50)), nullable=False)  # pesquisadores, empresas, startups, ict, mestrandos, doutorandos, ies, governo
+    # "ies" e "ict" são mantidos separados de propósito: a legislação os define em textos
+    # distintos (LDB e Lei 10.973/2004). Editais que usam a sigla "IES/P" da FAPES
+    # ("Instituições de Ensino Superior e/ou de Pesquisa") cobrem os dois — marcar ambos.
+    publico_alvo = db.Column(ARRAY(db.String(50)), nullable=False)  # pesquisadores, especialistas, mestrandos, mestres, doutorandos, doutores, empresas, startups, ies, ict, governo
 
     # Proveniência: institucional (edital top-down) vs vaga_projeto (oferta ligada a projeto já financiado)
     origem = db.Column(db.String(30), nullable=False, default="institucional")
@@ -60,7 +63,6 @@ class Oportunidade(db.Model):
     # pode valer para várias UFs ao mesmo tempo (ex: chamada CONFAP com FAPs de vários estados).
     abrangencia = db.Column(db.String(30), nullable=True)  # nacional, estadual, regional, internacional
     uf = db.Column(ARRAY(db.String(2)), nullable=True)  # preenchido só quando abrangencia="estadual"/"regional"
-    cidade = db.Column(db.String(150), nullable=True)
 
     orcamento_total_chamada = db.Column(db.Numeric(14, 2), nullable=True)
     valor_minimo_proposta = db.Column(db.Numeric(14, 2), nullable=True)

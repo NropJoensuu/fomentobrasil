@@ -33,8 +33,8 @@ VOCAB_LINHA_DE_FOMENTO = [
 ]
 VOCAB_NATUREZA_RECURSO = ["custeio", "capital", "bolsa"]
 VOCAB_PUBLICO_ALVO = [
-    "pesquisadores", "empresas", "startups", "ict",
-    "mestrandos", "doutorandos", "ies", "governo",
+    "pesquisadores", "especialistas", "mestrandos", "mestres", "doutorandos", "doutores",
+    "empresas", "startups", "ies", "ict", "governo",
 ]
 VOCAB_TIPO_INSTRUMENTO = ["chamada_publica_edital", "chamamento_publico", "premio"]
 VOCAB_AREA_PRINCIPAL = [
@@ -73,7 +73,6 @@ CAMPOS_EDITAVEIS = [
     ("nivel_formacao",          "Nível de formação",          "lista",       VOCAB_NIVEL_FORMACAO),
     ("abrangencia",             "Abrangência",                "escolha",     VOCAB_ABRANGENCIA),
     ("uf",                      "UF",                         "lista",       UFS),
-    ("cidade",                  "Cidade",                     "texto",       None),
     ("tipo_parceria",           "Tipo de parceria",           "escolha",     VOCAB_TIPO_PARCERIA),
     ("modalidade_pessoa",       "Modalidade de pessoa",       "escolha",     VOCAB_MODALIDADE_PESSOA),
     ("status_oficial",          "Status oficial do edital",   "escolha",     VOCAB_STATUS_OFICIAL),

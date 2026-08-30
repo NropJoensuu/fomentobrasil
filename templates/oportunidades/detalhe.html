@@ -59,11 +59,6 @@
         </dd>
         {% endif %}
 
-        {% if o.cidade %}
-        <dt class="col-sm-4">Cidade</dt>
-        <dd class="col-sm-8">{{ o.cidade }}</dd>
-        {% endif %}
-
         <dt class="col-sm-4">Instituição Financiadora</dt>
         <dd class="col-sm-8">{{ (o.instituicao_financiadora or []) | join(', ') }}</dd>
 

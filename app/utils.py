@@ -1,3 +1,6 @@
+import re
+from decimal import Decimal
+
 REGIAO_POR_UF = {
     "AC": "Norte", "AP": "Norte", "AM": "Norte", "PA": "Norte", "RO": "Norte", "RR": "Norte", "TO": "Norte",
     "AL": "Nordeste", "BA": "Nordeste", "CE": "Nordeste", "MA": "Nordeste", "PB": "Nordeste",
@@ -20,3 +23,26 @@ def get_ufs_por_regiao(regiao):
 
 
 REGIOES = sorted(set(REGIAO_POR_UF.values()))
+
+
+def parse_valor_brl(texto):
+    """Converte o texto de um campo com máscara de moeda em Decimal.
+
+    Espelha a regra da máscara `.mascara-moeda` (base.html): só os dígitos importam e os
+    dois últimos são os centavos. Como a máscara roda tanto ao digitar quanto ao carregar
+    a página, o formulário sempre envia um valor já formatado — "R$ 12.345,67" — ou o
+    valor cru do banco ("12345.67"), e ambos caem na mesma regra.
+
+    Sem separador decimal nenhum o número é lido como inteiro em reais, para que um valor
+    colado à mão ("12345") não vire R$ 123,45.
+    """
+    texto = (texto or "").strip()
+    if not texto:
+        return None
+    tem_separador_decimal = "," in texto or "." in texto
+    digitos = re.sub(r"\D", "", texto)
+    if not digitos:
+        return None
+    if tem_separador_decimal:
+        return Decimal(digitos) / 100
+    return Decimal(digitos)

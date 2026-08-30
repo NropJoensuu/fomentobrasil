@@ -48,6 +48,30 @@
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
     [...tooltipTriggerList].forEach(el => new bootstrap.Tooltip(el));
   </script>
+  <script>
+    // Máscara de moeda (R$ 12.345,67) para todo input .mascara-moeda.
+    // Trabalha só com os dígitos: os dois últimos são os centavos. Isso faz o valor
+    // vindo do banco ("50000.00") ser formatado corretamente ao carregar a página,
+    // sem precisar de filtro no Jinja.
+    const formatadorMoeda = new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    });
+
+    function formatarMoeda(valor) {
+      const digitos = (valor || '').replace(/\D/g, '').replace(/^0+/, '');
+      if (!digitos) return '';
+      return 'R$ ' + formatadorMoeda.format(Number(digitos) / 100);
+    }
+
+    document.querySelectorAll('.mascara-moeda').forEach(el => {
+      el.value = formatarMoeda(el.value);
+      el.addEventListener('input', () => {
+        el.value = formatarMoeda(el.value);
+        // Mantém o cursor no fim: a máscara reescreve a string inteira a cada tecla.
+        el.setSelectionRange(el.value.length, el.value.length);
+      });
+    });
+  </script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

@@ -78,60 +78,27 @@
 
         <div class="mb-3">
           <label class="form-label">
-            Natureza do Recurso <span class="text-danger">*</span>
-            <span data-bs-toggle="tooltip" title="O que a linha de fomento concede na prática. Pode marcar mais de um valor.">ℹ️</span>
-          </label>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="custeio" id="natureza_custeio">
-            <label class="form-check-label" for="natureza_custeio">Custeio</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="capital" id="natureza_capital">
-            <label class="form-check-label" for="natureza_capital">Capital</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="bolsa" id="natureza_bolsa">
-            <label class="form-check-label" for="natureza_bolsa">Bolsa</label>
-          </div>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">
             Público-Alvo <span class="text-danger">*</span>
-            <span data-bs-toggle="tooltip" title="Quem pode se candidatar. Pode marcar mais de um valor. Pesquisador não é sinônimo de doutor.">ℹ️</span>
+            <span data-bs-toggle="tooltip" title="Quem pode se candidatar. Pode marcar mais de um valor. Pesquisador não é sinônimo de doutor: marque a titulação só quando o edital a exigir explicitamente. Quando o edital usar 'IES/P' (Instituições de Ensino Superior e/ou de Pesquisa), marque IES e ICT.">ℹ️</span>
           </label>
+          {% for valor, rotulo in [
+              ("pesquisadores", "Pesquisadores"),
+              ("especialistas", "Especialistas (lato sensu)"),
+              ("mestrandos", "Mestrandos"),
+              ("mestres", "Mestres"),
+              ("doutorandos", "Doutorandos"),
+              ("doutores", "Doutores"),
+              ("empresas", "Empresas"),
+              ("startups", "Startups"),
+              ("ies", "IES — Instituições de Ensino Superior"),
+              ("ict", "ICT — Instituições Científicas, Tecnológicas e de Inovação"),
+              ("governo", "Governo"),
+          ] %}
           <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="publico_alvo" value="pesquisadores" id="publico_pesquisadores">
-            <label class="form-check-label" for="publico_pesquisadores">Pesquisadores</label>
+            <input class="form-check-input" type="checkbox" name="publico_alvo" value="{{ valor }}" id="publico_{{ valor }}">
+            <label class="form-check-label" for="publico_{{ valor }}">{{ rotulo }}</label>
           </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="publico_alvo" value="empresas" id="publico_empresas">
-            <label class="form-check-label" for="publico_empresas">Empresas</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="publico_alvo" value="startups" id="publico_startups">
-            <label class="form-check-label" for="publico_startups">Startups</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="publico_alvo" value="ict" id="publico_ict">
-            <label class="form-check-label" for="publico_ict">ICT</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="publico_alvo" value="mestrandos" id="publico_mestrandos">
-            <label class="form-check-label" for="publico_mestrandos">Mestrandos</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="publico_alvo" value="doutorandos" id="publico_doutorandos">
-            <label class="form-check-label" for="publico_doutorandos">Doutorandos</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="publico_alvo" value="ies" id="publico_ies">
-            <label class="form-check-label" for="publico_ies">IES</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="publico_alvo" value="governo" id="publico_governo">
-            <label class="form-check-label" for="publico_governo">Governo</label>
-          </div>
+          {% endfor %}
         </div>
 
         <div class="mb-3">
@@ -275,10 +242,6 @@
           </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Cidade <small class="text-muted">(opcional, quando vaga ligada a instituição física)</small></label>
-          <input type="text" name="cidade" class="form-control">
-        </div>
       </div>
     </div>
 
@@ -326,7 +289,26 @@
             Orçamento Total da Chamada
             <span data-bs-toggle="tooltip" title="Valor total disponibilizado pela chamada, quando informado no edital.">ℹ️</span>
           </label>
-          <input type="number" step="0.01" name="orcamento_total_chamada" class="form-control">
+          <input type="text" inputmode="decimal" name="orcamento_total_chamada" class="form-control mascara-moeda" placeholder="R$ 0,00">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
+            Natureza do Recurso <span class="text-danger">*</span>
+            <span data-bs-toggle="tooltip" title="O que a linha de fomento concede na prática. Pode marcar mais de um valor.">ℹ️</span>
+          </label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="custeio" id="natureza_custeio">
+            <label class="form-check-label" for="natureza_custeio">Custeio</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="capital" id="natureza_capital">
+            <label class="form-check-label" for="natureza_capital">Capital</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="bolsa" id="natureza_bolsa">
+            <label class="form-check-label" for="natureza_bolsa">Bolsa</label>
+          </div>
         </div>
 
         <div class="mb-3">
@@ -334,7 +316,7 @@
             Valor Mínimo da Proposta
             <span data-bs-toggle="tooltip" title="Valor mínimo que pode ser solicitado por proposta.">ℹ️</span>
           </label>
-          <input type="number" step="0.01" name="valor_minimo_proposta" class="form-control">
+          <input type="text" inputmode="decimal" name="valor_minimo_proposta" class="form-control mascara-moeda" placeholder="R$ 0,00">
         </div>
 
         <div class="mb-3">
@@ -342,7 +324,7 @@
             Valor Máximo da Proposta
             <span data-bs-toggle="tooltip" title="Valor máximo que pode ser solicitado por proposta.">ℹ️</span>
           </label>
-          <input type="number" step="0.01" name="valor_maximo_proposta" class="form-control">
+          <input type="text" inputmode="decimal" name="valor_maximo_proposta" class="form-control mascara-moeda" placeholder="R$ 0,00">
         </div>
       </div>
     </div>

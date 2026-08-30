@@ -9,7 +9,7 @@ from sqlalchemy import or_, func
 
 from app import db
 from app.models import ExecucaoScraper, Oportunidade
-from app.utils import get_regioes, get_ufs_por_regiao, REGIAO_POR_UF, REGIOES
+from app.utils import get_regioes, get_ufs_por_regiao, parse_valor_brl, REGIAO_POR_UF, REGIOES
 
 main = Blueprint("main", __name__)
 
@@ -138,8 +138,7 @@ def nova_oportunidade():
         palavras_chave = request.form.getlist("palavras_chave")
 
         def parse_decimal(campo):
-            valor_raw = request.form.get(campo) or ""
-            return float(valor_raw) if valor_raw else None
+            return parse_valor_brl(request.form.get(campo))
 
         data_prazo_raw = request.form.get("data_prazo") or ""
         data_prazo = (
@@ -179,7 +178,6 @@ def nova_oportunidade():
             nivel_formacao=request.form.getlist("nivel_formacao") or None,
             abrangencia=request.form.get("abrangencia") or None,
             uf=request.form.getlist("uf") or None,
-            cidade=request.form.get("cidade") or None,
             data_publicacao=(
                 datetime.strptime(request.form["data_publicacao"], "%Y-%m-%d").date()
                 if request.form.get("data_publicacao") else None
@@ -318,8 +316,7 @@ def moderar_oportunidade(id):
             )
 
         def parse_decimal(campo):
-            valor_raw = request.form.get(campo) or ""
-            return float(valor_raw) if valor_raw else None
+            return parse_valor_brl(request.form.get(campo))
 
         def parse_data(campo):
             valor_raw = request.form.get(campo) or ""
@@ -338,7 +335,6 @@ def moderar_oportunidade(id):
         oportunidade.nivel_formacao = request.form.getlist("nivel_formacao") or None
         oportunidade.abrangencia = request.form.get("abrangencia") or None
         oportunidade.uf = request.form.getlist("uf") or None
-        oportunidade.cidade = request.form.get("cidade") or None
         oportunidade.area_principal = request.form.get("area_principal") or None
 
         oportunidade.palavras_chave = request.form.getlist("palavras_chave") or None

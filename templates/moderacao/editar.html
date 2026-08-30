@@ -74,31 +74,21 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Natureza do Recurso <span class="text-danger">*</span></label>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="custeio" id="natureza_custeio" {{ "checked" if "custeio" in (o.natureza_recurso or []) else "" }}>
-            <label class="form-check-label" for="natureza_custeio">Custeio</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="capital" id="natureza_capital" {{ "checked" if "capital" in (o.natureza_recurso or []) else "" }}>
-            <label class="form-check-label" for="natureza_capital">Capital</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="bolsa" id="natureza_bolsa" {{ "checked" if "bolsa" in (o.natureza_recurso or []) else "" }}>
-            <label class="form-check-label" for="natureza_bolsa">Bolsa</label>
-          </div>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Público-Alvo <span class="text-danger">*</span></label>
+          <label class="form-label">
+            Público-Alvo <span class="text-danger">*</span>
+            <span data-bs-toggle="tooltip" title="Pesquisador não é sinônimo de doutor: marque a titulação só quando o edital a exigir explicitamente. Quando o edital usar 'IES/P' (Instituições de Ensino Superior e/ou de Pesquisa), marque IES e ICT.">ℹ️</span>
+          </label>
           {% for valor, rotulo in [
             ("pesquisadores", "Pesquisadores"),
+            ("especialistas", "Especialistas (lato sensu)"),
+            ("mestrandos", "Mestrandos"),
+            ("mestres", "Mestres"),
+            ("doutorandos", "Doutorandos"),
+            ("doutores", "Doutores"),
             ("empresas", "Empresas"),
             ("startups", "Startups"),
-            ("ict", "ICT"),
-            ("mestrandos", "Mestrandos"),
-            ("doutorandos", "Doutorandos"),
-            ("ies", "IES"),
+            ("ies", "IES — Instituições de Ensino Superior"),
+            ("ict", "ICT — Instituições Científicas, Tecnológicas e de Inovação"),
             ("governo", "Governo"),
           ] %}
           <div class="form-check">
@@ -235,10 +225,6 @@
           </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Cidade</label>
-          <input type="text" name="cidade" class="form-control" value="{{ o.cidade or '' }}">
-        </div>
       </div>
     </div>
 
@@ -263,17 +249,33 @@
 
         <div class="mb-3">
           <label class="form-label">Orçamento Total da Chamada</label>
-          <input type="number" step="0.01" name="orcamento_total_chamada" class="form-control" value="{{ o.orcamento_total_chamada or '' }}">
+          <input type="text" inputmode="decimal" name="orcamento_total_chamada" class="form-control mascara-moeda" placeholder="R$ 0,00" value="{{ o.orcamento_total_chamada or '' }}">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Natureza do Recurso <span class="text-danger">*</span></label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="custeio" id="natureza_custeio" {{ "checked" if "custeio" in (o.natureza_recurso or []) else "" }}>
+            <label class="form-check-label" for="natureza_custeio">Custeio</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="capital" id="natureza_capital" {{ "checked" if "capital" in (o.natureza_recurso or []) else "" }}>
+            <label class="form-check-label" for="natureza_capital">Capital</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="natureza_recurso" value="bolsa" id="natureza_bolsa" {{ "checked" if "bolsa" in (o.natureza_recurso or []) else "" }}>
+            <label class="form-check-label" for="natureza_bolsa">Bolsa</label>
+          </div>
         </div>
 
         <div class="mb-3">
           <label class="form-label">Valor Mínimo da Proposta</label>
-          <input type="number" step="0.01" name="valor_minimo_proposta" class="form-control" value="{{ o.valor_minimo_proposta or '' }}">
+          <input type="text" inputmode="decimal" name="valor_minimo_proposta" class="form-control mascara-moeda" placeholder="R$ 0,00" value="{{ o.valor_minimo_proposta or '' }}">
         </div>
 
         <div class="mb-3">
           <label class="form-label">Valor Máximo da Proposta</label>
-          <input type="number" step="0.01" name="valor_maximo_proposta" class="form-control" value="{{ o.valor_maximo_proposta or '' }}">
+          <input type="text" inputmode="decimal" name="valor_maximo_proposta" class="form-control mascara-moeda" placeholder="R$ 0,00" value="{{ o.valor_maximo_proposta or '' }}">
         </div>
       </div>
     </div>

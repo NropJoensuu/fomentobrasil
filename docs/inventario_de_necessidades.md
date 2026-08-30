@@ -762,10 +762,70 @@ Termos frequentemente confundidos entre si. Vocabulário de referência para man
 - **Linha de fomento** (`linha_de_fomento`) — a finalidade do fomento: o que a chamada se propõe a apoiar. Ex: `auxilio_pesquisa`, `auxilio_inovacao`, `auxilio_divulgacao_cientifica`, `apoio_formacao_capacitacao`, `apoio_redes_grupos_pesquisa`. É o "para quê" da chamada.
 - **Tipo de instrumento** (`tipo_instrumento`) — o instrumento administrativo/legal usado para veicular a chamada, independente da linha de fomento. Ex: `chamada_publica_edital`, `chamamento_publico`, `premio`. Uma mesma linha de fomento (ex: auxílio pesquisa) pode ser operacionalizada por instrumentos diferentes.
 - **Natureza do recurso** (`natureza_recurso`) — o que é efetivamente concedido na prática, podendo ter mais de um valor simultâneo. Ex: `custeio`, `capital`, `bolsa`. Uma chamada de auxílio pesquisa pode conceder custeio e capital ao mesmo tempo, por exemplo.
-- **Público-alvo** (`publico_alvo`) — quem pode se candidatar, podendo ter mais de um valor. Ex: `pesquisadores`, `empresas`, `startups`, `ict`, `mestrandos`, `doutorandos`, `ies`, `governo`. Importante: "pesquisador" não é sinônimo de "doutor" — nem todo pesquisador tem doutorado, e a categoria é mais ampla que os níveis de formação acadêmica.
+- **Público-alvo** (`publico_alvo`) — quem pode se candidatar, podendo ter mais de um valor. Pessoas: `pesquisadores`, `especialistas`, `mestrandos`, `mestres`, `doutorandos`, `doutores`. Instituições e organizações: `empresas`, `startups`, `ies`, `ict`, `governo`. Importante: "pesquisador" não é sinônimo de "doutor" — nem todo pesquisador tem doutorado, e a categoria é mais ampla que os níveis de formação acadêmica.
 - **Nível de formação** (`nivel_formacao`) — grau acadêmico do beneficiário (mestrado, doutorado, pós-doutorado, iniciação científica, não aplicável). Independente de `publico_alvo` — só é relevante quando `natureza_recurso` inclui `bolsa` (não faz sentido para custeio ou capital direcionado a uma empresa, por exemplo).
 - **Modalidade de pessoa** (`modalidade_pessoa`) — só relevante quando `linha_de_fomento` é `apoio_formacao_capacitacao`. Descreve o tipo de movimentação de pessoal que o apoio financia: `atracao` (trazer pesquisador de fora), `fixacao` (reter pesquisador já vinculado), `capacitacao_exterior` (formação/estágio no exterior).
 - **Tipo de parceria** (`tipo_parceria`) — escopo geográfico/institucional da parceria entre instituições, quando a chamada exigir ou incentivar cooperação. Ex: `nacional`, `regional`, `internacional`. Distinto de `abrangencia` (que descreve o alcance geográfico da própria chamada, não da parceria).
+
+### `ies` e `ict` são separados de propósito — e o "IES/P" da FAPES cobre os dois (2026-08-30)
+
+A FAPES escreve **IES/P** nos seus editais, expandindo para "Instituições de Ensino Superior
+e/ou de Pesquisa". A sigla é da casa, não da legislação, e junta numa coisa só duas categorias
+que a lei define separadamente:
+
+- **IES** — Instituições de Ensino Superior, definidas pela LDB (Lei 9.394/1996).
+- **ICT** — Instituições Científicas, Tecnológicas e de Inovação, definidas pelo Marco Legal
+  de CT&I (Lei 10.973/2004, art. 2º, V, com a redação da Lei 13.243/2016).
+
+As duas se sobrepõem mas não coincidem: uma universidade federal é IES **e** ICT; um instituto
+de pesquisa sem graduação (Fiocruz, INPA, Butantan) é ICT e **não** é IES; uma faculdade
+privada só de ensino é IES e não é ICT.
+
+**Decisão:** manter os dois valores separados no vocabulário e usar os termos da legislação
+nos rótulos do formulário, em vez de adotar o "IES/P" da FAPES. Quando o edital disser
+"IES/P", o curador marca **os dois**. O caminho inverso — um valor único `ies_p` — perderia
+informação e não seria reconhecível fora do Espírito Santo.
+
+### Titulação no público-alvo: `mestres`, `doutores`, `especialistas` (2026-08-30)
+
+O vocabulário só tinha `mestrandos` e `doutorandos` (quem está cursando). Faltavam os
+**titulados**, e o edital FAPESC 47/2026 tornou a lacuna visível: ele restringe a candidatura
+por titulação já obtida, não por vínculo com um programa de pós-graduação.
+
+A objeção óbvia — "doutor já é pesquisador, por definição" — é verdadeira no mundo real e
+irrelevante para a busca. `pesquisadores` descreve o **papel**; `doutores` descreve o
+**requisito formal de titulação** que o edital impõe. Quem procura chamada exigindo doutorado
+não quer a lista inteira de chamadas para pesquisadores. Marcar os dois, quando os dois se
+aplicam, é o comportamento correto.
+
+`especialistas` cobre a pós-graduação *lato sensu*, que não tem correspondente em
+`nivel_formacao` (esse campo só existe para bolsas *stricto sensu* + iniciação científica).
+
+### Campo `cidade` removido (2026-08-30)
+
+Estava `NULL` nas 340 oportunidades e nenhum scraper a preenchia. Localização é coberta por
+`abrangencia` + `uf`. Só faria sentido para vaga ligada a instituição física — caso fora do
+escopo atual. Migração `c4e2a91f7d38`, com `downgrade()` que recria a coluna.
+
+### Máscara de moeda nos campos de valor (2026-08-30)
+
+Os três campos monetários (`orcamento_total_chamada`, `valor_minimo_proposta`,
+`valor_maximo_proposta`) eram `<input type="number">`, que aceita ponto decimal e nenhum
+separador de milhar — difícil de conferir contra o PDF, onde o valor está escrito
+"R$ 236.000,00".
+
+Agora são `<input type="text" class="mascara-moeda">`, com a máscara em `base.html`. A regra é
+cents-first: só os dígitos contam e os dois últimos são os centavos. Isso resolve de graça a
+formatação do valor **já gravado**: o Jinja renderiza o `Numeric(14,2)` como `"236000.00"`, e a
+mesma máscara aplicada no `load` produz `R$ 236.000,00` — sem precisar de filtro no template.
+
+No servidor, `app.utils.parse_valor_brl` faz o caminho de volta e devolve `Decimal`, não
+`float` — os antigos `parse_decimal` das rotas convertiam para `float`, o que é errado para
+coluna `Numeric` (arredondamento binário em valor monetário).
+
+**Natureza do recurso** saiu da seção de classificação e foi para junto dos valores, na seção
+"Datas e Valores": na prática o curador decide "custeio/capital/bolsa" lendo a mesma tabela
+orçamentária de onde tira os valores.
 
 ## `status` vs `status_oficial` — não confundir
 
