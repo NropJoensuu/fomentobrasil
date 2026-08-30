@@ -1,29 +1,74 @@
 {% extends "base.html" %}
 {% block title %}Moderação — Fomento Brasil{% endblock %}
 
+{% set ROTULOS_STATUS = {
+  "pendente": "Pendentes", "aprovado": "Aprovados",
+  "rejeitado": "Rejeitados", "rascunho": "Rascunhos",
+} %}
+
 {% block content %}
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="mb-0">Moderação — {{ pendentes|length }} pendente(s)</h1>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Moderação</h1>
     <a href="{{ url_for('main.listar_atualizacoes') }}" class="btn btn-outline-warning btn-sm">
       Atualizações ({{ total_atualizacoes }})
     </a>
   </div>
 
-  {% if not pendentes %}
-  <p class="text-muted">Nenhum item pendente no momento.</p>
+  <ul class="nav nav-tabs mb-3">
+    {% for valor, rotulo in ROTULOS_STATUS.items() %}
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if status == valor else '' }}"
+         href="{{ url_for('main.listar_pendentes', status=valor, busca=busca or None) }}">
+        {{ rotulo }} <span class="text-muted">({{ contagens.get(valor, 0) }})</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <form method="GET" class="d-flex gap-2 mb-3" style="max-width: 30rem;">
+    <input type="hidden" name="status" value="{{ status }}">
+    <input type="text" name="busca" class="form-control form-control-sm"
+           placeholder="Filtrar por título ou financiadora" value="{{ busca }}">
+    <button type="submit" class="btn btn-sm btn-outline-secondary">Filtrar</button>
+    {% if busca %}
+    <a href="{{ url_for('main.listar_pendentes', status=status) }}" class="btn btn-sm btn-link">Limpar</a>
+    {% endif %}
+  </form>
+
+  {% if not itens %}
+  <p class="text-muted">Nenhum item {{ ROTULOS_STATUS[status] | lower }}{{ " para esse filtro" if busca else "" }}.</p>
   {% endif %}
 
-  <table class="table bg-white">
+  <table class="table bg-white align-middle">
     <thead>
-      <tr><th>Título</th><th>Financiadora</th><th>Origem</th><th></th></tr>
+      <tr>
+        <th>Título</th>
+        <th>Financiadora</th>
+        <th>{{ "Entrou em" if status == "pendente" else "Editado em" }}</th>
+        <th></th>
+      </tr>
     </thead>
     <tbody>
-      {% for o in pendentes %}
+      {% for o in itens %}
       <tr>
-        <td>{{ o.titulo }}</td>
+        <td>
+          {{ o.titulo }}
+          {% if o.revisao_pendente %}
+          <span class="badge text-bg-warning" title="A fonte mudou depois da curadoria">retificado na fonte</span>
+          {% endif %}
+          {% if o.status_oficial %}
+          <span class="badge text-bg-secondary">{{ o.status_oficial | replace("_", " ") }}</span>
+          {% endif %}
+        </td>
         <td>{{ (o.instituicao_financiadora or []) | join(', ') }}</td>
-        <td><small class="text-muted">{{ (o.dados_extra or {}).get('categoria_fapes') or (o.dados_extra or {}).get('fonte') or '' }}</small></td>
-        <td><a href="{{ url_for('main.moderar_oportunidade', id=o.id) }}" class="btn btn-sm btn-primary">Revisar</a></td>
+        <td class="text-muted small">
+          {{ (o.criado_em if status == "pendente" else o.atualizado_em).strftime("%d/%m/%Y") }}
+        </td>
+        <td>
+          <a href="{{ url_for('main.moderar_oportunidade', id=o.id) }}" class="btn btn-sm btn-primary">
+            {{ "Revisar" if status == "pendente" else "Reabrir" }}
+          </a>
+        </td>
       </tr>
       {% endfor %}
     </tbody>

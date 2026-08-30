@@ -11,6 +11,7 @@ from app import db
 from app.models import ExecucaoScraper, Oportunidade
 from app.utils import (
     aplicar_faixas,
+    avisos_de_aprovacao,
     get_regioes,
     get_ufs_por_regiao,
     parse_faixas,
@@ -272,14 +273,52 @@ def extrair_dados_de_link(link):
 # PENDÊNCIA DE SEGURANÇA: rotas de moderação sem controle de acesso — qualquer
 # pessoa com a URL pode editar/aprovar/rejeitar. Aceitável por ora (não há dado
 # sensível), mas precisa exigir login de colaborador/admin quando esse sistema existir.
+STATUS_MODERACAO = ("pendente", "aprovado", "rejeitado", "rascunho")
+
+
 @main.route("/moderacao")
 def listar_pendentes():
-    pendentes = Oportunidade.query.filter_by(status="pendente").order_by(
+    # `status` na URL para poder voltar a um item JÁ CURADO: sem isso, um registro
+    # aprovado só era alcançável digitando /moderacao/<id> na mão. Retificações do edital
+    # e curadoria incompleta são os dois motivos concretos de revisitar.
+    status = request.args.get("status")
+    if status not in STATUS_MODERACAO:
+        status = "pendente"
+
+    busca = (request.args.get("busca") or "").strip()
+
+    query = Oportunidade.query.filter_by(status=status)
+    if busca:
+        termo = f"%{busca}%"
+        query = query.filter(
+            or_(
+                Oportunidade.titulo.ilike(termo),
+                func.array_to_string(Oportunidade.instituicao_financiadora, ",").ilike(termo),
+            )
+        )
+
+    # Aprovados/rejeitados ordenam pela última edição (o que você mexeu por último é o que
+    # provavelmente quer rever); pendentes seguem pela entrada, como antes.
+    ordem = (
         Oportunidade.criado_em.desc()
-    ).all()
+        if status == "pendente"
+        else Oportunidade.atualizado_em.desc()
+    )
+    itens = query.order_by(ordem).all()
+
+    contagens = dict(
+        db.session.query(Oportunidade.status, func.count(Oportunidade.id))
+        .group_by(Oportunidade.status)
+        .all()
+    )
     total_atualizacoes = Oportunidade.query.filter_by(revisao_pendente=True).count()
     return render_template(
-        "moderacao/listar.html", pendentes=pendentes, total_atualizacoes=total_atualizacoes
+        "moderacao/listar.html",
+        itens=itens,
+        status=status,
+        busca=busca,
+        contagens=contagens,
+        total_atualizacoes=total_atualizacoes,
     )
 
 
@@ -365,6 +404,13 @@ def moderar_oportunidade(id):
         oportunidade.orcamento_total_chamada = parse_decimal("orcamento_total_chamada")
         oportunidade.valor_minimo_proposta = parse_decimal("valor_minimo_proposta")
         oportunidade.valor_maximo_proposta = parse_decimal("valor_maximo_proposta")
+
+        avisos = avisos_de_aprovacao(request.form) if acao == "aprovar" else []
+        if avisos and not request.form.get("confirmar_avisos"):
+            # Devolve o formulário com os avisos SEM commit: `oportunidade` já recebeu as
+            # edições acima, mas elas ficam só na sessão e o `db.session` é descartado no
+            # fim da requisição. O curador vê os campos como acabou de preenchê-los.
+            return render_template("moderacao/editar.html", o=oportunidade, avisos=avisos)
 
         if acao == "aprovar":
             oportunidade.status = "aprovado"

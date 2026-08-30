@@ -119,3 +119,82 @@ def formatar_moeda(valor):
     # instalado no sistema, que é o modo clássico de isso quebrar em produção.
     texto = f"{numero:,.2f}"
     return "R$ " + texto.replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+
+
+# Os 19 scrapers gravam esta linha de fomento quando não conseguem inferi-la do título
+# (que é quase sempre). Ver o comentário "Placeholder" em cada `salvar_no_banco`. Um
+# registro que ainda esteja exatamente assim provavelmente não passou pela curadoria.
+PLACEHOLDER_LINHA_DE_FOMENTO = ["apoio_formacao_capacitacao"]
+
+# Campos que, vazios, não impedem aprovar mas quase sempre significam curadoria
+# incompleta — a busca pública fica pior sem eles. Ver `avisos_de_aprovacao`.
+# (campo, mensagem, é_lista) — `é_lista` diz como ler o campo no formulário: `getlist`
+# para os ARRAY, `get` para os escalares.
+AVISOS_POR_CAMPO = [
+    ("natureza_recurso", "Natureza do Recurso não foi marcada", True),
+    ("publico_alvo", "Público-Alvo não foi marcado", True),
+    ("data_prazo", "Data Final de Submissão em branco", False),
+]
+
+# Campos opcionais cuja ausência vale mostrar no painel de conferência, sem alarde.
+OPCIONAIS_POR_CAMPO = [
+    ("descricao", "Descrição"),
+    ("area_principal", "Área Principal"),
+    ("palavras_chave", "Palavras-chave"),
+    ("data_publicacao", "Data de Publicação"),
+    ("data_resultado_previsto", "Data Prevista do Resultado"),
+    ("orcamento_total_chamada", "Orçamento Total da Chamada"),
+    ("valor_minimo_proposta", "Valor Mínimo da Proposta"),
+    ("valor_maximo_proposta", "Valor Máximo da Proposta"),
+    ("abrangencia", "Abrangência"),
+]
+
+
+def _vazio(valor):
+    return valor is None or valor == "" or valor == []
+
+
+def resumo_preenchimento(oportunidade):
+    """Panorama do que falta num registro, para o painel no topo do formulário.
+
+    Devolve `(importantes, opcionais, placeholder)`. É só leitura do estado atual —
+    diferente de `avisos_de_aprovacao`, que decide se a aprovação pede confirmação.
+    """
+    importantes = [
+        rotulo
+        for campo, rotulo, _ in AVISOS_POR_CAMPO
+        if _vazio(getattr(oportunidade, campo, None))
+    ]
+    opcionais = [
+        rotulo
+        for campo, rotulo in OPCIONAIS_POR_CAMPO
+        if _vazio(getattr(oportunidade, campo, None))
+    ]
+    placeholder = (
+        list(oportunidade.linha_de_fomento or []) == PLACEHOLDER_LINHA_DE_FOMENTO
+    )
+    return importantes, opcionais, placeholder
+
+
+def avisos_de_aprovacao(form):
+    """Avisos que fazem a aprovação pedir uma confirmação explícita.
+
+    Recebe o formulário submetido (e não o registro no banco) de propósito: o que vale é
+    o que está sendo gravado agora, não o que estava lá antes.
+
+    Foi #34 e #215 aprovados com `natureza_recurso` vazio que motivaram isto. A aprovação
+    não é bloqueada — há editais em que a informação realmente não existe —, mas passa a
+    exigir um "aprovar mesmo assim" consciente.
+    """
+    avisos = []
+    for campo, mensagem, e_lista in AVISOS_POR_CAMPO:
+        if not (form.getlist(campo) if e_lista else form.get(campo)):
+            avisos.append(mensagem)
+
+    if form.getlist("linha_de_fomento") == PLACEHOLDER_LINHA_DE_FOMENTO:
+        avisos.append(
+            "Linha de Fomento continua em “Apoio à Formação/Capacitação”, que é o valor "
+            "que os scrapers gravam quando não conseguem inferir — confirme se é mesmo essa"
+        )
+
+    return avisos

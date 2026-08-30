@@ -858,6 +858,74 @@ detectar mudança num JSONB — e preserva as chaves que o scraper gravou ali
 Verificado num round-trip real no registro #215: as faixas entraram, o `historico_documentos`
 do scraper continuou lá e os valores curados voltaram idênticos.
 
+### Avisos de curadoria incompleta e reabertura de itens já curados (2026-08-30)
+
+**O problema real:** #34 (FAPESP, Desafios da Amazônia) e #215 (FUNDECT, PAE-MS) foram
+aprovados com `natureza_recurso` vazio. Não foi descuido de digitação — nada no formulário
+web sinalizava a falta, e a única forma de voltar a um registro aprovado era digitar
+`/moderacao/<id>` na mão, porque `/moderacao` só listava pendentes.
+
+Três mecanismos, do mais passivo ao mais ativo:
+
+1. **Painel "Estado atual do registro"**, sempre visível no topo do formulário. Lista o que
+   está em branco, separando o que importa (natureza, público-alvo, prazo) do que é opcional
+   (área, valores, palavras-chave...). Só leitura, sem atrito.
+2. **"não mexido"** — marca quando `linha_de_fomento` ainda é exatamente
+   `["apoio_formacao_capacitacao"]`, que é o placeholder que **todos os 19 scrapers** gravam
+   quando não conseguem inferir a linha do título. É um indício, não um erro: há chamadas em
+   que o placeholder acerta por acaso (o CNPq 19/2026 "Asas para o Futuro" é uma delas), por
+   isso o texto diz "confirme se é mesmo essa" em vez de acusar.
+3. **Confirmação ao aprovar.** Aprovar com campo importante vazio devolve o formulário com os
+   avisos e exige marcar "Aprovar mesmo assim". A aprovação **não** é bloqueada — há editais
+   em que a informação de fato não existe. O retorno acontece **antes do commit**: as edições
+   ficam só na sessão, então o curador vê o formulário exatamente como preencheu, sem perder
+   nada e sem ter gravado nada.
+
+**Reabrir item curado:** `/moderacao` ganhou abas por status (Pendentes / Aprovados /
+Rejeitados / Rascunhos) com contagem, e um filtro por título ou financiadora. As abas de
+curados ordenam por `atualizado_em` (o que você mexeu por último é o que costuma querer rever)
+e o botão vira "Reabrir". A página pública de detalhe ganhou "Editar curadoria".
+
+Retificação da fonte já era coberta por `revisao_pendente` + `/moderacao/atualizacoes`; agora o
+selo "retificado na fonte" também aparece na listagem principal, junto com o `status_oficial`.
+
+### Curadoria comunitária / gamificação — ideia registrada, não implementada (2026-08-30)
+
+Ideia do Igor: em vez de curadoria centralizada, algo no espírito das *notas da comunidade* —
+pesquisadores avaliam e completam registros, e quem organiza mais ganha destaque. Muda o
+desenho do sistema de moderação inteiro (identidade, reputação, resolução de conflito entre
+contribuições, e o que acontece quando duas pessoas discordam da classificação). **Fica para
+depois, deliberadamente** — anotado aqui para não se perder. Depende do sistema de
+usuários/papéis que já é pré-requisito de várias outras pendências deste documento.
+
+### Áreas correlatas automáticas — avaliado, decidido não fazer agora (2026-08-30)
+
+Pedido: identificar automaticamente as áreas do conhecimento correlatas aos temas/desafios de
+uma chamada. Levantamento: `area_principal` estava preenchida em **7 de 340 registros**, todas
+por curadoria manual — nenhum scraper preenche esse campo e nenhum tem como, porque a listagem
+raramente diz a área.
+
+O obstáculo vem antes da extração: `area_principal` é um `String` único e "áreas correlatas" é
+plural. Precisaria de um `areas_correlatas` (ARRAY) ao lado. Só depois disso valeria discutir
+como identificar — dicionário termo→Grande Área (determinístico e auditável, mas fraco
+justamente nas chamadas temáticas como "Desafios da Amazônia") ou classificação junto com a
+leitura do PDF, que é para onde o projeto vai de qualquer forma.
+
+Recomendação registrada, se um dia for feito: **sugerir, nunca preencher em silêncio**. Área
+vira faceta de busca, e faceta errada é pior que faceta vazia — o usuário filtra por
+Engenharias e o edital certo some da lista. E o caso "para todas as áreas do conhecimento"
+provavelmente quer um valor próprio, porque marcar as 8 Grandes Áreas significa outra coisa.
+
+**Decisão (2026-08-30): fica como está.**
+
+### `abrangencia` de chamadas para participação em eventos
+
+Registrado porque parece erro e não é: a Chamada FUNDECT 09/2026 (PAE-MS) é de uma FAP
+estadual do MS e está com `abrangencia = internacional`. Correto — o que o campo descreve é o
+alcance do que a chamada financia, e ela custeia participação de pesquisadores em eventos
+nacionais **e internacionais**. Vale para editais de participação/organização de eventos em
+geral.
+
 ## `status` vs `status_oficial` — não confundir
 
 Dois campos parecidos, com significados completamente diferentes:

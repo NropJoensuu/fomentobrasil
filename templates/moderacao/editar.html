@@ -4,11 +4,57 @@
 {% block title %}Moderar — {{ o.titulo }}{% endblock %}
 
 {% block content %}
-  <a href="{{ url_for('main.listar_pendentes') }}" class="text-decoration-none mb-3 d-inline-block">&larr; Voltar para Moderação</a>
-  <h1 class="mb-4">Revisar Oportunidade</h1>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    {# Volta para a aba do status do próprio registro, não sempre para "Pendentes". #}
+    <a href="{{ url_for('main.listar_pendentes', status=o.status) }}" class="text-decoration-none">&larr; Voltar para Moderação</a>
+    <a href="{{ url_for('main.detalhe_oportunidade', id=o.id) }}" class="text-decoration-none small">Ver página pública &rarr;</a>
+  </div>
+  <h1 class="mb-1">Revisar Oportunidade</h1>
+  <p class="text-muted mb-4">
+    <span class="badge text-bg-{{ {"aprovado": "success", "rejeitado": "danger", "pendente": "warning"}.get(o.status, "secondary") }}">{{ o.status }}</span>
+    <small>última edição em {{ o.atualizado_em.strftime("%d/%m/%Y %H:%M") }}</small>
+  </p>
 
   {% if erro %}
   <div class="alert alert-warning">{{ erro }}</div>
+  {% endif %}
+
+  {% if avisos %}
+  <div class="alert alert-warning">
+    <strong>Confira antes de aprovar:</strong>
+    <ul class="mb-2 mt-2">
+      {% for aviso in avisos %}<li>{{ aviso }}</li>{% endfor %}
+    </ul>
+    <p class="mb-0 small">
+      Suas edições continuam no formulário abaixo e ainda <strong>não foram gravadas</strong>.
+      Corrija o que faltar e aprove de novo, ou marque a caixa ao lado do botão Aprovar para
+      aprovar assim mesmo.
+    </p>
+  </div>
+  {% endif %}
+
+  {% set importantes, opcionais, placeholder = resumo_preenchimento(o) %}
+  {% if importantes or opcionais or placeholder %}
+  <div class="alert alert-light border">
+    <strong class="small">Estado atual do registro</strong>
+    <ul class="mb-0 mt-2 small">
+      {% if placeholder %}
+      <li>
+        <span class="badge text-bg-secondary">não mexido</span>
+        Linha de Fomento está em “Apoio à Formação/Capacitação” — o valor que os scrapers
+        gravam quando não conseguem inferir. Pode estar certo; só não foi escolhido por ninguém.
+      </li>
+      {% endif %}
+      {% for rotulo in importantes %}
+      <li><span class="badge text-bg-warning">em branco</span> {{ rotulo }}</li>
+      {% endfor %}
+      {% if opcionais %}
+      <li class="text-muted">
+        Opcionais em branco: {{ opcionais | join(', ') }}
+      </li>
+      {% endif %}
+    </ul>
+  </div>
   {% endif %}
 
   {% if o.dados_extra %}
@@ -288,6 +334,12 @@
     <div class="d-flex gap-2 mt-4">
       <button type="submit" name="acao" value="salvar" class="btn btn-outline-secondary">Salvar (mantém pendente)</button>
       <button type="submit" name="acao" value="aprovar" class="btn btn-success">Aprovar</button>
+      {% if avisos %}
+      <div class="form-check align-self-center">
+        <input class="form-check-input" type="checkbox" name="confirmar_avisos" value="1" id="confirmar_avisos">
+        <label class="form-check-label small" for="confirmar_avisos">Aprovar mesmo assim</label>
+      </div>
+      {% endif %}
       <button type="submit" name="acao" value="rejeitar" class="btn btn-danger">Rejeitar</button>
     </div>
   </form>

@@ -2,7 +2,12 @@
 {% block title %}{{ o.titulo }} — Fomento Brasil{% endblock %}
 
 {% block content %}
-  <a href="{{ url_for('main.listar_oportunidades') }}" class="d-inline-block mb-4">&larr; Voltar para Oportunidades</a>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <a href="{{ url_for('main.listar_oportunidades') }}">&larr; Voltar para Oportunidades</a>
+    {# PENDÊNCIA DE SEGURANÇA: link visível a qualquer visitante, mesma dívida de
+       controle de acesso já documentada para as rotas /moderacao. #}
+    <a href="{{ url_for('main.moderar_oportunidade', id=o.id) }}" class="btn btn-sm btn-outline-secondary">Editar curadoria</a>
+  </div>
 
   {% if o.status == "pendente" %}
   <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert">
