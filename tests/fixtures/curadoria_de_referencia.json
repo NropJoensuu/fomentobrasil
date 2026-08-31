@@ -1,0 +1,95 @@
+{
+ "_sobre": "Valores conferidos à mão pelo curador nos 9 editais, e o texto extraído dos respectivos PDFs. Serve de base de regressão para app/extracao_pdf.py: mexer nas regras sem rodar scripts/testar_extracao_pdf.py é mexer no escuro. O texto está congelado de propósito — o edital do CNPq 19/2026 já mudou de conteúdo por retificação depois de baixado.",
+ "_fora_da_conta": {
+  "34:*": "O link leva a um Guia Informativo, não ao edital. Nenhum campo está nesse PDF.",
+  "21:data_prazo": "31/08 veio da retificação de cronograma; o PDF da chamada diz 10/08.",
+  "21:data_resultado_previsto": "Idem: o cronograma retificado move o resultado para Outubro/2026."
+ },
+ "registros": {
+  "21": {
+   "titulo": "Chamada Pública CNPq/MMULHERES Nº 19/2026 - Programa Asas para o Futuro",
+   "link": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-19-2026/chamada-publica-cnpq-N-19-2026",
+   "esperado": {
+    "data_publicacao": "2026-06-30",
+    "data_prazo": "2026-08-31",
+    "data_resultado_previsto": "2026-10-01",
+    "orcamento_total_chamada": "7552000.00",
+    "valor_maximo_proposta": "236000.00"
+   }
+  },
+  "22": {
+   "titulo": "Chamada Pública CNPq/MCTI nº 15/2026 - Programa de Cooperação Afro-Brasileira em Ciência e Tecnologia - PROAFRICA",
+   "link": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-15-2026/chamada-publica-cnpq-N-15-2026",
+   "esperado": {
+    "data_publicacao": "2026-05-25",
+    "data_prazo": "2026-08-31",
+    "data_resultado_previsto": "2026-12-01",
+    "orcamento_total_chamada": "25000000.00"
+   }
+  },
+  "23": {
+   "titulo": "Chamada CNPq/SETEC/MCTI N° 13/2026 - Apoio a Eventos de Promoção do Empreendedorismo e da Inovação no Brasil",
+   "link": "https://www.gov.br/cnpq/pt-br/chamadas/todas-as-chamadas/chamadas-2026/chamada-no-13-2026/chamada-publica-cnpq-N-13-2026",
+   "esperado": {
+    "data_publicacao": "2026-04-29",
+    "data_prazo": "2026-09-18",
+    "data_resultado_previsto": "2026-11-01",
+    "orcamento_total_chamada": "2500000.00"
+   }
+  },
+  "34": {
+   "titulo": "Chamada de Propostas - Programa Desafios da Amazônia",
+   "link": "https://fapesp.br/18249",
+   "esperado": {
+    "data_publicacao": "2026-06-26",
+    "data_prazo": "2026-09-01",
+    "data_resultado_previsto": "2027-04-30",
+    "orcamento_total_chamada": "107000000.00",
+    "valor_minimo_proposta": "6000000.00",
+    "valor_maximo_proposta": "8000000.00"
+   }
+  },
+  "93": {
+   "titulo": "EDITAL FAPES Nº 21/2026 - REDES DE PESQUISA, DESENVOLVIMENTO E INOVAÇÃO EM SETORES ESTRATÉGICOS",
+   "link": "https://fapes.es.gov.br/Media/fapes/Editais/Edital_Fapes_21-2026_-_Redes_de_PDI_em_Setores_Estratégicos.pdf",
+   "esperado": {
+    "data_publicacao": "2026-08-06",
+    "data_prazo": "2026-09-14",
+    "data_resultado_previsto": "2026-11-27",
+    "orcamento_total_chamada": "12000000.00",
+    "valor_maximo_proposta": "1200000.00"
+   }
+  },
+  "118": {
+   "titulo": "EDITAL DE CHAMADA PÚBLICA FAPESC/SSP N.º 47/2026 PROGRAMA DE PESQUISA APLICADA, INTELIGÊNCIA DE DADOS E INOVAÇÃO EM DEFESA DO CONSUMIDOR – INOVA PROCON/SC",
+   "link": "https://fapesc.sc.gov.br/edital-de-chamada-publica-fapesc-ssp-n-o-47-2026-programa-de-pesquisa-aplicada-inteligencia-de-dados-e-inovacao-em-defesa-do-consumidor-inova-procon-sc/",
+   "esperado": {
+    "data_publicacao": "2026-07-28",
+    "data_prazo": "2026-08-31",
+    "data_resultado_previsto": "2026-10-16",
+    "orcamento_total_chamada": "1176000.00"
+   }
+  },
+  "160": {
+   "titulo": "Lançamento do Edital nº27/2026 Facepe Estudos Étnico-Raciais Solano Trindade",
+   "link": "https://www.facepe.br/wp-content/uploads/2026/08/2026.08.27-Solano-Trindade.pdf",
+   "esperado": {
+    "data_publicacao": "2026-08-27",
+    "data_prazo": "2026-09-21",
+    "data_resultado_previsto": "2026-10-26",
+    "orcamento_total_chamada": "2500000.00",
+    "valor_maximo_proposta": "180000.00"
+   }
+  },
+  "215": {
+   "titulo": "Chamada Fundect Nº 09/2026 - PAE-MS 2026 Seleção de Propostas para Realização de Eventos Científicos, Tecnológicos e de Inovação no Estado de Mato Grosso do Sul",
+   "link": "https://www.fundect.ms.gov.br/wp-content/uploads/2026/07/Chamada_PAE_2026.pdf",
+   "esperado": {
+    "data_publicacao": "2026-07-31",
+    "data_prazo": "2026-09-08",
+    "data_resultado_previsto": "2026-11-17",
+    "orcamento_total_chamada": "1000000.00"
+   }
+  }
+ }
+}
