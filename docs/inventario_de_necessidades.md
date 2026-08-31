@@ -988,6 +988,65 @@ aproximada.
 41 termos (são os eixos/temas listados no edital) e seria fácil de extrair — mas o campo tem
 limite de 150 caracteres e os "Desafios" da #34 já estão truncados no banco. Extrair antes de
 resolver isso só multiplicaria o problema.
+### Segunda rodada de curadoria assistida: seis editais de fontes novas (2026-08-30)
+
+Os 9 primeiros treinaram as regras, então medir neles de novo seria testar no próprio material
+de treino. Esta rodada usou FAPERO, FAPAC, FAPESQ e FAPEMIG — nenhuma delas influenciou uma
+linha do extrator. Tudo abaixo veio da curadoria real, e cada correção passou por
+`scripts/testar_extracao_pdf.py` antes de entrar.
+
+**Regras novas, todas com um edital concreto por trás:**
+
+- **Data por extenso.** A FAPERO escreve "Resultado Final e Homologação 01 de Julho de 2026".
+  O extrator lia só o "Julho de 2026" e devolvia 01/07 pela convenção do dia 1 — resposta
+  certa por acidente, e com o aviso errado de "data aproximada".
+- **Cabeçalho do Diário Oficial.** Editais publicados como extrato do DOE trazem
+  "Disponibilização: 08/05/2026 Publicação: 08/05/2026" no topo, que é a data de publicação
+  de verdade.
+- **"Publicação no Diário Oficial" nem sempre é do edital.** No Centelha 3 essa frase aparece
+  logo abaixo de "Divulgação do resultado final", referindo-se à publicação do RESULTADO.
+- **Submissão sem a palavra "propostas".** "Fase 1 - Submissão das ideias inovadoras" não
+  casava porque a regra exigia "propostas" depois de "submissão".
+- **Ano fora do documento.** Editais citam legislação ("Decreto de 29/04/2020") e trazem
+  rodapés de sistema. Essas datas casam as regras e subiam no ranking. O candidato cujo ano
+  destoa do ano dominante do documento perde prioridade — sem ser descartado, para não errar
+  em edital publicado na virada do ano.
+- **Critério de porte não é teto de proposta.** "Pessoa jurídica com faturamento bruto anual
+  de até R$ 4.800.000,00" tem o "de até" colado no valor, então a regra de proximidade o
+  aceitava como valor máximo. Virou negativa absoluta, válida em qualquer posição.
+- **URL embrulhada.** A FAPEMIG serve o PDF por um intermediário
+  (`fapemig.br/files/...?title=...&url=https://api.site.fapemig.br/...pdf`); o endereço de
+  fora devolve HTML. `_url_real_do_pdf` desembrulha o parâmetro `url`.
+
+**FASE não é RODADA — a distinção que quase virou regra errada.**
+
+O curador formulou: "quando têm muitas fases, a submissão é a correspondente à 1ª fase, já que
+se a pessoa não participar da fase 1, não participa da fase 2". Correto, e implementá-lo como
+"prefira a data mais cedo" **quebrou** a chamada CNPq 13/2026 — que tem "1ª Rodada" com limite
+em 28/05 e uma segunda em 18/09, e cujo prazo curado é 18/09.
+
+A diferença é real: fases são sequenciais, rodadas são independentes. Quem chega hoje ainda
+entra na próxima rodada, mas não entra na fase 2 sem ter passado pela 1. Por isso a preferência
+pela primeira fase é uma **regra de prioridade** (procura "fase 1" no rótulo, negando "fase 2"),
+não um desempate por data. Foi o `scripts/testar_extracao_pdf.py` que pegou a regressão — é o
+caso de uso dele.
+
+**Componentes somam; faixas são alternativas.**
+
+O Centelha 3 concede até R$ 80.000,00 de subvenção econômica **mais** até R$ 50.000,00 em
+bolsas. Não são duas faixas: um projeto recebe os dois. Vai como `valor_maximo_proposta` =
+R$ 130.000,00. Faixa é quando o proponente **escolhe uma** (Faixa A ou B), como na FUNDECT
+09/2026. Regra: se o proponente escolhe, é faixa; se acumula, soma.
+
+**Documento que precisa ser recortado.** O PDF da FAPAC 003/2026 é o Diário Oficial inteiro —
+o edital só começa no fim da página 6. As datas e valores das páginas anteriores são de outros
+atos. Ainda não tratado: seria preciso localizar o início do edital dentro do diário antes de
+extrair. Enquanto isso, o trecho de origem de cada candidato é o que protege o curador.
+
+**Moeda estrangeira.** A chamada CONFAP & WBI (Bélgica) dá o valor em **euros** (20.000 €). O
+campo é `Numeric` em reais e não há taxa de câmbio no sistema. Pendência: registrar a moeda de
+origem e marcar o valor convertido como aproximado, já que depende da cotação do dia.
+
 ## `status` vs `status_oficial` — não confundir
 
 Dois campos parecidos, com significados completamente diferentes:

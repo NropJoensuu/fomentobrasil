@@ -399,6 +399,10 @@
     function render(dados) {
       if (!dados.ok) {
         alvo.innerHTML = `<div class="alert alert-warning py-2 mb-0 small">${dados.erro}</div>`;
+        // Quando o problema é a URL, deixa o campo pronto para colar outra.
+        const campo = document.getElementById('url-pdf');
+        campo.focus();
+        campo.select();
         return;
       }
       const campos = Object.keys(dados.candidatos);

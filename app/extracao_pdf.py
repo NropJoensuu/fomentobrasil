@@ -31,6 +31,7 @@ DUAS ARMADILHAS REAIS, ambas encontradas nos 9 registros:
 
 import io
 import re
+from collections import Counter
 from datetime import date
 
 import pdfplumber
@@ -51,6 +52,13 @@ MESES = {
 PADRAO_DATA = re.compile(r"\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})\b")
 # Aceita "Outubro/2026" e "até dezembro de 2026" — o CNPq usa as duas formas no mesmo
 # cronograma, e o segundo formato é justamente o da divulgação do resultado.
+# "01 de Julho de 2026" — o cronograma da FAPERO é todo assim. Sem isto, o padrão de
+# mês/ano casava só o "Julho de 2026" e devolvia 01/07 pela CONVENÇÃO do dia 1, marcando a
+# data como aproximada. A resposta saía certa por acidente e com o aviso errado.
+PADRAO_DATA_EXTENSO = re.compile(
+    rf"\b(\d{{1,2}})\s+de\s+({'|'.join(MESES)})\s+de\s+(\d{{4}})\b", re.IGNORECASE
+)
+
 PADRAO_MES_ANO = re.compile(
     rf"\b({'|'.join(MESES)})\s*(?:/|\s+de\s+)\s*(\d{{4}})\b", re.IGNORECASE
 )
@@ -98,6 +106,16 @@ REGRAS_DATA = [
     ("data_prazo", 20, r"per[íi]odo\s+(?:para\s+)?(?:de\s+)?(?:submiss|inscri)", r"impugna[çc]|recurso administrativo"),
     ("data_prazo", 28, r"limite\s+para\s+submiss|limite\s+para\s+(?:o\s+)?envio", r"impugna[çc]|recurso administrativo"),
     ("data_prazo", 25, r"(?:enviar|submeter)\s+a\s+proposta", r"impugna[çc]|recurso administrativo"),
+    # "Fase 1 - Submissão das ideias inovadoras": em edital com fases sequenciais, o prazo
+    # que interessa é o da primeira (ver "A exceção do prazo" em `extrair_candidatos`).
+    ("data_prazo", 32, r"(?:fase\s*1|1[ªa]\s*fase|primeira\s+fase)\b.{0,40}submiss"
+                       r"|submiss.{0,40}\b(?:fase\s*1|1[ªa]\s*fase|primeira\s+fase)\b",
+     # Sem negar a fase 2, "…selecionadas na Fase 1 Fase 2 - Submissão dos Projetos" também
+     # casava, e o prazo da fase 2 passava na frente do da fase 1.
+     r"fase\s*2|2[ªa]\s*fase|segunda\s+fase"),
+    # Exigir a palavra "propostas"
+    # depois de "submissão" deixava de fora todo edital que chama o objeto de outra coisa.
+    ("data_prazo", 15, r"submiss[ãa]o\s+d[ae]s?\s+\w+", r"impugna[çc]|recurso administrativo"),
     ("data_prazo", 10, r"submiss[ãa]o\s+(?:eletr[ôo]nica\s+)?(?:das?\s+)?propostas?|inscri[çc][ãa]o",
      r"impugna|recurso|resultado|homologa"),
 
@@ -111,19 +129,38 @@ REGRAS_DATA = [
 
     ("data_publicacao", 30, r"lan[çc]amento\s+d[ao]\s+(?:chamada|edital)",
      r"ap[óo]s\s+o\s+lan[çc]amento|impugna[çc]"),
-    ("data_publicacao", 20, r"publica[çc][ãa]o\s+n[oa]\s+di[áa]rio|an[úu]ncio\s+d[ao]\s+chamada", None),
+    # "Publicação no Diário Oficial do Estado 04/09/2026" logo abaixo de "Divulgação do
+    # resultado final" é a publicação do RESULTADO, não a do edital.
+    ("data_publicacao", 20, r"publica[çc][ãa]o\s+n[oa]\s+di[áa]rio|an[úu]ncio\s+d[ao]\s+chamada",
+     r"resultado|homologa[çc]"),
+    # Cabeçalho do Diário Oficial nos editais publicados como extrato do DOE:
+    # "Diário Oficial do Estado de Rondônia nº 88 Disponibilização: 08/05/2026 Publicação: 08/05/2026"
+    ("data_publicacao", 25, r"publica[çc][ãa]o\s*:|disponibiliza[çc][ãa]o\s*:", None),
     # A FAPES não põe data de publicação no cronograma: o que existe é a assinatura
     # eletrônica do diretor, na última página. Prioridade baixa, por ser um proxy.
     ("data_publicacao", 5, r"assinado\s+em|assinatura\s+eletr", None),
 ]
+
+# Negativa que vale em qualquer posição do contexto, diferente das negativas das regras,
+# que só contam quando estão MAIS PERTO da ocorrência que a positiva. "Pessoa jurídica com
+# faturamento bruto anual de até R$ 4.800.000,00" tem o "de até" colado no valor e o
+# "faturamento" mais longe — pela regra de proximidade o critério de porte da empresa
+# passava como teto da proposta. Aqui a palavra desqualifica onde quer que esteja.
+NEGATIVA_ABSOLUTA_VALOR = re.compile(
+    r"faturamento|receita\s+bruta|porte\s+d[ao]\s+empresa", re.IGNORECASE
+)
 
 REGRAS_VALOR = [
     ("orcamento_total_chamada", 30, r"valor\s+(?:global|total)|montante\s+(?:global|total)|recursos?\s+(?:financeiros?\s+)?(?:total|global)", None),
     ("orcamento_total_chamada", 20, r"dota[çc][ãa]o\s+or[çc]ament|total\s+d[eo]s?\s+recursos|totalizando", None),
     ("valor_maximo_proposta", 30, r"valor\s+m[áa]ximo\s+(?:por\s+)?(?:proposta|projeto)|limite\s+m[áa]ximo\s+por\s+(?:proposta|projeto)", None),
     ("valor_maximo_proposta", 28, r"teto\s+or[çc]ament", None),
-    ("valor_maximo_proposta", 25, r"(?:projetos?|propostas?)\s+de\s+at[ée]\s*$|de\s+at[ée]\s*$", None),
-    ("valor_maximo_proposta", 20, r"at[ée]\s+o?\s*valor\s+de|limitad[oa]s?\s+a", None),
+    ("valor_maximo_proposta", 25, r"(?:projetos?|propostas?)\s+de\s+at[ée]\s*$|de\s+at[ée]\s*$",
+     r"faturamento|receita\s+bruta|porte\s+d[ao]"),
+    ("valor_maximo_proposta", 20, r"at[ée]\s+o?\s*valor\s+de|limitad[oa]s?\s+a",
+     # "faturamento bruto anual de até R$ 4.800.000,00" é critério de porte da
+     # empresa proponente, não teto da proposta.
+     r"faturamento|receita\s+bruta|porte\s+d[ao]"),
     ("valor_minimo_proposta", 30, r"valor\s+m[íi]nimo\s+(?:por\s+)?(?:proposta|projeto)", None),
     # Só dispara em intervalo (dois valores ligados por "a"/"até"), onde a faixa por
     # proposta é o significado quase certo mesmo sem rótulo canônico.
@@ -223,7 +260,19 @@ def _ocorrencias(texto, padrao_completo=True):
             achados.append((m.start(), m.end(), date(ano, mes, dia), False))
         except ValueError:
             continue
+    extensos = []
+    for m in PADRAO_DATA_EXTENSO.finditer(texto):
+        dia, mes, ano = int(m.group(1)), MESES[m.group(2).lower()], int(m.group(3))
+        try:
+            achados.append((m.start(), m.end(), date(ano, mes, dia), False))
+            extensos.append((m.start(), m.end()))
+        except ValueError:
+            continue
+
     for m in PADRAO_MES_ANO.finditer(texto):
+        # Não conta o "Julho de 2026" que já foi lido como parte de "01 de Julho de 2026".
+        if any(i <= m.start() and m.end() <= f for i, f in extensos):
+            continue
         valor = date(int(m.group(2)), MESES[m.group(1).lower()], DIA_PADRAO_MES_SEM_DIA)
         achados.append((m.start(), m.end(), valor, True))
     return sorted(achados)
@@ -321,6 +370,9 @@ def _candidatos_de_valor(paginas):
             antes = texto[max(limite_anterior, inicio - JANELA_ANTES):inicio]
             depois = texto[fim:min(limite_seguinte, fim + JANELA_DEPOIS)]
 
+            if NEGATIVA_ABSOLUTA_VALOR.search(f"{antes} {depois}"):
+                continue
+
             campo, prioridade = _classificar(antes, depois, REGRAS_VALOR)
             if not campo or (prioridade <= 12 and len(valores) < 2):
                 continue
@@ -339,17 +391,56 @@ def extrair_candidatos(paginas):
     """Agrupa os candidatos por campo, do mais confiável para o menos.
 
     Um mesmo campo pode ter vários candidatos de propósito: o cronograma cita "resultado
-    preliminar" e "resultado final", e quem decide qual vale é o curador. A ordenação é por
-    prioridade da regra e, para `data_prazo`, pela data mais TARDIA em caso de empate — um
-    período "de 29/07 a 31/08" tem as duas pontas casando com a mesma regra, e o prazo é a
-    ponta final.
+    preliminar" e "resultado final", e quem decide qual vale é o curador.
+
+    O desempate entre candidatos de mesma prioridade segue a regra do curador para editais
+    com muitas fases (verificada no Centelha 3 / FAPERO, que tem duas fases e onze etapas):
+
+    - **Resultado: a data mais TARDE.** Quem lê quer saber quando o projeto efetivamente
+      começa, e o que responde isso é a última divulgação, não a preliminar.
+    - **Publicação: a data mais CEDO.** O edital é publicado uma vez, no começo.
+    - **Prazo: a data mais TARDE**, com uma exceção importante.
+
+    A exceção do prazo — FASE não é RODADA. No Centelha 3 (FAPERO) o prazo que vale é o da
+    Fase 1: as fases são sequenciais, e quem não submete na 1 não chega na 2. Já a chamada
+    CNPq 13/2026 tem "1ª Rodada" com limite em 28/05 e uma segunda rodada em 18/09, e o
+    curador escolheu 18/09 — rodadas são independentes, e quem chega hoje ainda pode entrar
+    na próxima. Por isso a preferência pela primeira fase é uma REGRA DE PRIORIDADE
+    (`fase 1` no rótulo), não um desempate por data: assim ela pega o caso sequencial sem
+    estragar o caso das rodadas.
+
+    Isso é o desempate ENTRE candidatos. DENTRO de um intervalo ("de 12/03/2026 a
+    23/04/2026") continua valendo a ponta final para prazo — são coisas diferentes: um
+    intervalo é uma etapa só, com começo e fim.
     """
+    # Editais carregam datas de legislação citada ("Decreto de 29/04/2020") e rodapés de
+    # sistema. Elas casam as regras e sobem no ranking. Em vez de descartar — o que erraria
+    # em edital publicado na virada do ano —, o candidato fora do ano dominante do documento
+    # perde prioridade e cai para o fim da lista, continuando visível.
+    PENALIDADE_ANO_ESTRANHO = 15
+
+    # +1 ordena crescente (mais cedo primeiro); -1, decrescente.
+    SENTIDO_DO_DESEMPATE = {
+        "data_publicacao": 1,
+        "data_prazo": -1,
+        "data_resultado_previsto": -1,
+    }
+    candidatos_de_data = _candidatos_de_data(paginas)
+
+    anos = Counter(c.valor.year for c in candidatos_de_data)
+    ano_dominante = anos.most_common(1)[0][0] if anos else None
+    if ano_dominante:
+        for c in candidatos_de_data:
+            if abs(c.valor.year - ano_dominante) > 1:
+                c.prioridade -= PENALIDADE_ANO_ESTRANHO
+
     por_campo = {}
-    for c in _candidatos_de_data(paginas) + _candidatos_de_valor(paginas):
+    for c in candidatos_de_data + _candidatos_de_valor(paginas):
         por_campo.setdefault(c.campo, []).append(c)
 
     for campo, lista in por_campo.items():
-        lista.sort(key=lambda c: (c.prioridade, c.valor if campo.startswith("data") else 0), reverse=True)
+        sentido = SENTIDO_DO_DESEMPATE.get(campo, 0)
+        lista.sort(key=lambda c: (-c.prioridade, c.valor.toordinal() * sentido if sentido else 0))
         # Remove repetições do mesmo valor mantendo a ocorrência mais confiável.
         vistos, unicos = set(), []
         for c in lista:

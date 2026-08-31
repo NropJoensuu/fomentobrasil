@@ -1,5 +1,6 @@
 import io
 from datetime import datetime
+from urllib.parse import parse_qs, urlparse
 
 import pdfplumber
 import requests
@@ -342,6 +343,22 @@ def marcar_atualizacao_revisada(id):
     return redirect(url_for("main.listar_atualizacoes"))
 
 
+def _url_real_do_pdf(url):
+    """Desembrulha URLs de download que carregam o arquivo real num parâmetro `url=`.
+
+    A FAPEMIG serve os PDFs por um intermediário: o link visível é
+    `fapemig.br/files/Chamada-16%2F2026?title=...&url=https://api.site.fapemig.br/...pdf`,
+    e é o parâmetro `url` que aponta para o arquivo — o endereço de fora devolve HTML.
+    Colar o link da página, que é o gesto natural, dava "a URL não devolveu um PDF".
+    """
+    if not url:
+        return url
+    embutida = parse_qs(urlparse(url).query).get("url", [None])[0]
+    if embutida and embutida.lower().split("?")[0].endswith(".pdf"):
+        return embutida
+    return url
+
+
 # PENDÊNCIA DE SEGURANÇA: faz requests.get() para uma URL do formulário (SSRF), mesma
 # dívida já documentada em /oportunidades/importar — sem controle de acesso e sem bloqueio
 # de IP privado/loopback. Revisitar junto com o sistema de usuários/papéis.
@@ -354,7 +371,7 @@ def extrair_do_pdf(id):
     extraível — e por quê.
     """
     oportunidade = Oportunidade.query.get_or_404(id)
-    url = (request.form.get("url_pdf") or oportunidade.link or "").strip()
+    url = _url_real_do_pdf((request.form.get("url_pdf") or oportunidade.link or "").strip())
     if not url:
         return jsonify({"ok": False, "erro": "Sem URL para ler."}), 400
 
