@@ -511,8 +511,38 @@
     const alvo = document.getElementById('resultado-extracao');
     const botao = document.getElementById('btn-extrair');
 
+    // Campos que os dois mecanismos cobrem — regra (este painel) e IA (painel acima).
+    // Fora daqui é só classificação, e só a IA opina; aquele painel não muda.
+    const CAMPOS_COMPARAVEIS = [
+      'data_publicacao', 'data_prazo', 'data_resultado_previsto',
+      'orcamento_total_chamada', 'valor_minimo_proposta', 'valor_maximo_proposta',
+    ];
+    const formatadorMoeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
     function dataBr(iso) {
       return iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+    }
+
+    function escapeHtml(texto) {
+      const div = document.createElement('div');
+      div.textContent = texto == null ? '' : texto;
+      return div.innerHTML;
+    }
+
+    // Formato para EXIBIR (dd/mm/aaaa ou R$ 1.234,56).
+    function fmtValor(campo, valor) {
+      if (valor === null || valor === undefined) return '';
+      return campo.startsWith('data') ? dataBr(valor) : formatadorMoeda.format(valor);
+    }
+
+    // Formato para o atributo data-valor que `usar()` consome. Data já é ISO (o <input
+    // type=date> quer isso). Dinheiro PRECISA de duas casas decimais fixas — a máscara de
+    // moeda lê os dois últimos dígitos como centavos (ver base.html), então "180000" (sem
+    // decimais, o que Number.toString() produz para um valor inteiro) viraria R$ 1.800,00
+    // em vez de R$ 180.000,00. toFixed(2) garante as duas casas sempre.
+    function valorParaAtributo(campo, valor) {
+      if (valor === null || valor === undefined) return '';
+      return campo.startsWith('data') ? valor : Number(valor).toFixed(2);
     }
 
     function usar(campo, valor) {
@@ -529,6 +559,60 @@
       input.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
 
+    // Esconde, no painel de IA acima, os cards dos campos que passaram a ter comparação
+    // aqui embaixo — evita mostrar o mesmo campo duas vezes (a motivação inteira desta
+    // parte é reduzir ruído visual, não gerar sugestão a menos).
+    function ocultarCardsIaDuplicados(comparacao) {
+      for (const campo in comparacao) {
+        if (comparacao[campo].status === 'nenhum') continue;
+        document.querySelectorAll(`.ia-aplicar[data-campo="${campo}"]`).forEach(botao => {
+          const card = botao.closest('.col-md-6');
+          if (card) card.style.display = 'none';
+        });
+      }
+    }
+
+    function blocoComparacao(campo, cmp) {
+      const rotulo = ROTULOS[campo] || campo;
+      if (!cmp || cmp.status === 'nenhum') return '';
+
+      if (cmp.status === 'concordam') {
+        // Discreto de propósito: concordância é sinal fraco (os dois podem errar do mesmo
+        // jeito), não uma confirmação — mas não precisa de botão porque não há nada para
+        // decidir entre duas opções iguais.
+        return `<div class="small text-muted mb-2">
+          ✓ regra e IA concordam em ${rotulo}: <code>${fmtValor(campo, cmp.valor_regra)}</code>
+        </div>`;
+      }
+
+      if (cmp.status === 'divergem') {
+        return `<div class="alert alert-warning py-2 mb-2 small">
+          <strong>⚠ divergência em ${rotulo}</strong>
+          <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
+            <span>regra: <code>${fmtValor(campo, cmp.valor_regra)}</code></span>
+            <button type="button" class="btn btn-sm btn-outline-success py-0 usar-candidato"
+                    data-campo="${campo}" data-valor="${valorParaAtributo(campo, cmp.valor_regra)}">aplicar regra</button>
+          </div>
+          <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
+            <span>IA: <code>${fmtValor(campo, cmp.valor_ia)}</code></span>
+            <button type="button" class="btn btn-sm btn-outline-success py-0 usar-candidato"
+                    data-campo="${campo}" data-valor="${valorParaAtributo(campo, cmp.valor_ia)}">aplicar IA</button>
+          </div>
+          ${cmp.evidencia_ia ? `<div class="text-muted fst-italic mt-1" style="font-size:.8em">"${escapeHtml(cmp.evidencia_ia)}"</div>` : ''}
+        </div>`;
+      }
+
+      // so_regra ou so_ia: comportamento atual (mostrar normal, com botão de aplicar),
+      // só indicando de onde veio.
+      const origem = cmp.status === 'so_regra' ? 'regra' : 'IA';
+      const valor = cmp.status === 'so_regra' ? cmp.valor_regra : cmp.valor_ia;
+      return `<div class="small mb-2 d-flex justify-content-between align-items-center gap-2 border rounded p-2">
+        <span>${rotulo} <span class="text-muted">(só ${origem})</span>: <code>${fmtValor(campo, valor)}</code></span>
+        <button type="button" class="btn btn-sm btn-outline-success py-0 usar-candidato"
+                data-campo="${campo}" data-valor="${valorParaAtributo(campo, valor)}">aplicar</button>
+      </div>`;
+    }
+
     function render(dados) {
       if (!dados.ok) {
         alvo.innerHTML = `<div class="alert alert-warning py-2 mb-0 small">${dados.erro}</div>`;
@@ -538,14 +622,29 @@
         campo.select();
         return;
       }
+
+      const comparacao = dados.comparacao || {};
+      let html = `<p class="small text-muted mb-2">${dados.paginas} páginas lidas.</p>`;
+
+      // Resumo regra-vs-IA primeiro (só para quem tem algo dos dois lados pra comparar).
+      for (const campo of CAMPOS_COMPARAVEIS) {
+        html += blocoComparacao(campo, comparacao[campo]);
+      }
+
       const campos = Object.keys(dados.candidatos);
       if (!campos.length) {
-        alvo.innerHTML = `<div class="alert alert-secondary py-2 mb-0 small">
-          Li ${dados.paginas} páginas e não reconheci nenhuma data ou valor. Preenchimento manual.
+        html += `<div class="alert alert-secondary py-2 mb-0 small">
+          Não reconheci nenhuma data ou valor no texto. Preenchimento manual.
         </div>`;
+        alvo.innerHTML = html;
+        ocultarCardsIaDuplicados(comparacao);
         return;
       }
-      let html = `<p class="small text-muted mb-2">${dados.paginas} páginas lidas.</p>`;
+
+      // Lista completa de candidatos por campo continua abaixo do resumo — o resumo só
+      // compara o MELHOR de cada lado; ver todos com página e trecho ainda importa quando
+      // o curador desconfia do que a regra escolheu como melhor.
+      html += '<p class="small text-muted mb-1 mt-3">Todos os candidatos que a regra encontrou:</p>';
       for (const campo of campos) {
         html += `<div class="mb-2"><strong class="small">${ROTULOS[campo] || campo}</strong>`;
         for (const c of dados.candidatos[campo]) {
@@ -560,12 +659,13 @@
               <button type="button" class="btn btn-sm btn-outline-success py-0 usar-candidato"
                       data-campo="${campo}" data-valor="${c.valor}">usar</button>
             </div>
-            <div class="text-muted mt-1" style="font-size:.8em">…${c.trecho}…</div>
+            <div class="text-muted mt-1" style="font-size:.8em">…${escapeHtml(c.trecho)}…</div>
           </div>`;
         }
         html += '</div>';
       }
       alvo.innerHTML = html;
+      ocultarCardsIaDuplicados(comparacao);
     }
 
     botao.addEventListener('click', async () => {

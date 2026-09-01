@@ -1248,9 +1248,68 @@ DECLARADO, não uma dedução a partir de haver bolsa; marcar mais de uma linha 
 tiver objetivos distintos e explícitos, nunca por dedução a partir dos instrumentos; e quando
 usar `premiacao` (reconhece resultado já alcançado, não financia atividade futura).
 
-**Terceiro ajuste desta rodada (exibição por concordância entre regra e IA) ainda não foi
-especificado** — o briefing que chegou cobria só os dois itens acima; fica pendente até
-receber o restante.
+**Terceiro ajuste desta rodada (2026-09-01): exibição por concordância entre regra e IA.**
+Justificativa do porquê NÃO suprimir a sugestão da IA nos 6 campos que a extração
+determinística (`app/extracao_pdf.py`) já cobre (as 3 datas + `orcamento_total_chamada`,
+`valor_minimo_proposta`, `valor_maximo_proposta`): os 29/29 do extrator foram medidos
+provavelmente sobre o mesmo conjunto que originou as próprias regras — uma regra escrita
+contra 29 documentos acerta 29 documentos, isso não diz nada sobre o 30º. Divergir da IA é o
+detector mais barato que existe disso, e suprimir a sugestão nesses campos jogaria fora
+justamente o sinal de risco. O custo de gerar já é zero (o campo vem na mesma chamada); o
+problema era só ruído visual de mostrar os dois separadamente — por isso a mudança é só na
+EXIBIÇÃO.
+
+Implementação: o botão "Ler PDF" (extração por regra, `/moderacao/<id>/extrair`) passou a
+comparar o melhor candidato de cada um dos 6 campos contra o que já estiver salvo em
+`dados_extra["sugestao_ia"]` (se a IA já tiver rodado nesse registro) e devolve um bloco
+`comparacao` na resposta JSON, classificando cada campo em `concordam` / `divergem` /
+`so_regra` / `so_ia` / `nenhum`. O painel de leitura assistida do PDF passou a renderizar
+esse resumo: concordância vira uma linha discreta sem botão (não é confirmação forte — os
+dois podem errar do mesmo jeito —, só não sobra decisão a tomar); divergência vira um alerta
+com os dois valores lado a lado, cada um com seu próprio botão de aplicar, e a evidência
+literal da IA embaixo; um lado só continua exatamente como já era, só com a origem indicada.
+Quando o resumo aparece para um campo, o card correspondente no painel de IA (acima) é
+escondido via JS — evita mostrar o mesmo campo duas vezes, que era o ruído visual que
+motivou a mudança.
+
+Comparação implementada em `app/routes.py` (`_comparar_regra_e_ia`,
+`_normalizar_para_comparar`): datas viram `"AAAA-MM-DD"` dos dois lados; valores viram float
+arredondado a 2 casas — sem o arredondamento, "180000.00" (string da regra) e `180000`
+(number da IA) podem comparar diferente por ruído de ponto flutuante, mesma classe do bug já
+visto neste projeto comparando `Decimal` do banco com `float` do scraper.
+
+`dados_extra["divergencias_regra_ia"]` grava a lista de divergências encontradas na última
+comparação (substituída inteira a cada nova leitura do PDF, não acumulada por registro — o
+"conjunto acumulado" que interessa para o artigo é entre REGISTROS, não repetições no mesmo
+edital). Testado contra um PDF real (#180, FACEPE): a regra achou `data_prazo=30/04/2026`;
+com uma sugestão da IA sintética divergente (`15/05/2026`), a rota classificou `divergem` e
+persistiu a divergência corretamente; com a sugestão ajustada para bater com a regra, a
+mesma rota classificou `concordam` e **substituiu** a lista antiga por `[]` — confirma que o
+campo é mesmo uma fotografia da última comparação, não um acumulador.
+
+**Pegadinha JSONB encontrada MONTANDO o teste (não no código da aplicação — vale registrar
+mesmo assim, porque é fácil repetir por engano):** construir o dado sintético de teste com
+`dados = dict(o.dados_extra or {})` e depois mutar `dados["sugestao_ia"]["campos"][...]`
+(dois níveis abaixo) parece seguro — `dados` É um dict novo — mas `dados["sugestao_ia"]`
+continua sendo o MESMO objeto aninhado que `o.dados_extra["sugestao_ia"]` já apontava (cópia
+rasa só duplica o nível de cima). Mutar esse aninhado afeta os dois lados por igual, então
+"antigo" e "novo" ficam iguais em conteúdo mesmo sendo dicts de topo diferentes, e o
+SQLAlchemy não vê mudança nenhuma para gravar. O código da aplicação nunca faz isso — sempre
+atribui uma chave nova no nível de cima do dict novo (`dados["divergencias_regra_ia"] =
+...`), sem depender de nenhum aninhado compartilhado — mas é fácil reintroduzir esse padrão
+sem perceber num teste ou numa rota nova. Regra prática: ao montar `dados_extra` sintético
+para teste, construir a estrutura inteira do zero, nunca reaproveitar um sub-dict do valor
+antigo que vai ser mutado.
+
+**Sem validação end-to-end com a API real da IA nesta sessão** — não havia
+`ANTHROPIC_API_KEY` configurada no ambiente. A comparação regra-vs-IA foi validada de ponta a
+ponta contra um PDF real (#180) usando uma sugestão da IA SINTÉTICA (montada à mão, não gerada
+pela API) para simular concordância e divergência; a lógica de exibição (`blocoComparacao`)
+foi executada de verdade em Node contra os seis status possíveis, incluindo um payload de XSS
+deliberado no trecho de evidência para confirmar o escape. O que ficou sem cobertura real:
+confirmar que o PROMPT ajustado (segundo item acima) de fato reduz os falsos-positivos de
+`apoio_formacao_capacitacao` num edital real, e ver uma divergência genuína (não simulada)
+entre regra e IA. Fica para quando a chave estiver configurada.
 
 ## `status` vs `status_oficial` — não confundir
 

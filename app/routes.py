@@ -387,13 +387,102 @@ def extrair_do_pdf(id):
         }), 422
 
     candidatos = extrair_candidatos(paginas)
+
+    # PARTE 3: compara contra a sugestão da IA já persistida (se houver), nos campos que os
+    # dois mecanismos cobrem — datas e valores. Não suprime a sugestão da IA nesses campos
+    # (ela continua vindo na mesma chamada, sem custo extra); só muda como os dois resultados
+    # aparecem juntos. Divergir é o sinal mais barato que temos de que um documento fugiu do
+    # padrão sobre o qual as regras foram escritas — concordar não prova que as regras
+    # generalizam, só que não erraram desta vez.
+    comparacao = _comparar_regra_e_ia(candidatos, oportunidade.dados_extra)
+    divergencias = [
+        {
+            "campo": campo,
+            "valor_regra": dado["valor_regra"],
+            "valor_ia": dado["valor_ia"],
+            "evidencia_ia": dado["evidencia_ia"],
+        }
+        for campo, dado in comparacao.items()
+        if dado["status"] == "divergem"
+    ]
+    if (oportunidade.dados_extra or {}).get("sugestao_ia"):
+        # Só grava quando havia de fato uma sugestão da IA para comparar — senão toda
+        # leitura de PDF gravaria uma lista vazia sem sentido. Substitui (não acumula): o
+        # campo é uma fotografia da última comparação, não um histórico de tentativas no
+        # mesmo registro — o "conjunto acumulado" citado no briefing é entre REGISTROS
+        # (muitos editais, cada um com 0+ divergências), não repetições no mesmo.
+        dados = dict(oportunidade.dados_extra or {})
+        dados["divergencias_regra_ia"] = divergencias
+        oportunidade.dados_extra = dados
+        db.session.commit()
+
     return jsonify({
         "ok": True,
         "paginas": len(paginas),
         "candidatos": {
             campo: [c.como_dict() for c in lista] for campo, lista in candidatos.items()
         },
+        "comparacao": comparacao,
     })
+
+
+# Campos cobertos pelos dois mecanismos: extração por regra (app.extracao_pdf) e sugestão
+# por IA (app.curadoria_ia). Fora daqui — classificação (linha_de_fomento, proponente_elegivel,
+# área etc.) — só a IA opina, e a tela de moderação continua exatamente como está.
+CAMPOS_COMPARAVEIS_REGRA_IA = [
+    "data_publicacao", "data_prazo", "data_resultado_previsto",
+    "orcamento_total_chamada", "valor_minimo_proposta", "valor_maximo_proposta",
+]
+
+
+def _normalizar_para_comparar(campo, valor):
+    """Reduz o valor da regra (date/str) e o da IA (str/número) à mesma forma comparável.
+
+    Datas viram "AAAA-MM-DD" dos dois lados. Valores viram float arredondado a 2 casas —
+    sem o arredondamento, "180000.0" (regra, string) e 180000 (IA, JSON number) podem
+    comparar diferente por ruído de ponto flutuante, mesma classe de bug já vista neste
+    projeto ao comparar Decimal do banco com float do scraper.
+    """
+    if valor in (None, ""):
+        return None
+    if campo.startswith("data"):
+        return valor.isoformat() if hasattr(valor, "isoformat") else str(valor)[:10]
+    try:
+        return round(float(valor), 2)
+    except (TypeError, ValueError):
+        return None
+
+
+def _comparar_regra_e_ia(candidatos, dados_extra):
+    """Para cada campo comparável, classifica em concordam/divergem/so_regra/so_ia/nenhum."""
+    campos_ia = ((dados_extra or {}).get("sugestao_ia") or {}).get("campos") or {}
+    comparacao = {}
+
+    for campo in CAMPOS_COMPARAVEIS_REGRA_IA:
+        melhor_regra = candidatos.get(campo, [None])[0]
+        valor_regra = _normalizar_para_comparar(campo, melhor_regra.valor if melhor_regra else None)
+
+        dado_ia = campos_ia.get(campo) or {}
+        valor_ia = _normalizar_para_comparar(campo, dado_ia.get("valor"))
+        evidencia_ia = dado_ia.get("evidencia") if valor_ia is not None else None
+
+        if valor_regra is not None and valor_ia is not None:
+            status = "concordam" if valor_regra == valor_ia else "divergem"
+        elif valor_regra is not None:
+            status = "so_regra"
+        elif valor_ia is not None:
+            status = "so_ia"
+        else:
+            status = "nenhum"
+
+        comparacao[campo] = {
+            "status": status,
+            "valor_regra": valor_regra,
+            "valor_ia": valor_ia,
+            "evidencia_ia": evidencia_ia,
+        }
+
+    return comparacao
 
 
 # PENDÊNCIA DE SEGURANÇA: mesma dívida das demais rotas de moderação — sem controle de
