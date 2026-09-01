@@ -1098,6 +1098,57 @@ propósito: a distinção é sutil e precisa estar visível na hora de marcar.
 duas já tinham `publico_alvo` gravado. A migração renomeia a chave com `jsonb_set`; sem isso as
 faixas existentes ficariam com a chave antiga e sumiriam do formulário.
 
+### Curadoria assistida por IA — sugestão, nunca decisão (2026-08-31)
+
+`app/curadoria_ia.py` lê o edital e propõe valores para os campos de curadoria. **Não altera
+`status` e não grava em campo estruturado**: a saída vai para `dados_extra["sugestao_ia"]` e
+aparece na tela de moderação para o curador aplicar campo a campo, ou ignorar.
+
+**Cada campo vem com o trecho literal que o justifica.** Isso muda a conferência de "reler o
+edital" para "bater o olho no trecho", e é a proteção contra alucinação — sobretudo em datas e
+valores, que a análise dos registros curados apontou como o ponto de maior risco.
+
+**Complementar ao `app/extracao_pdf.py`, não substituto.** Os dois cobrem camadas diferentes,
+e a divisão veio da medição, não de preferência:
+
+| camada | quem cobre | por quê |
+|---|---|---|
+| datas e valores | `extracao_pdf.py` (regra) | 29/29 medidos, sem custo e sem rede externa |
+| `proponente_elegivel`, `linha_de_fomento`, `abrangencia` | IA | contar palavra ali é comprovadamente errado — a CNPq 15/2026 diz "pesquisador" 17 vezes e não tem `pesquisadores` marcado, porque quem submete é a instituição |
+
+**Duas decisões que divergem do briefing original**, ambas para reduzir modo de falha:
+
+- **Saída estruturada** (`output_config.format` com JSON Schema) em vez de pedir JSON no
+  prompt e limpar cercas de markdown na mão. O vocabulário controlado vira `enum` no esquema,
+  então valor fora do vocabulário deixa de ser possível em vez de ser só desencorajado — e o
+  parse não depende de o modelo não escrever ```json.
+- **Pensamento adaptativo ligado.** O próprio briefing aponta o cronograma com muitas datas
+  parecidas como o risco principal, e desambiguar isso é exatamente onde ele ajuda.
+  `max_tokens` subiu para 16000 pelo mesmo motivo: 19 campos, cada um com evidência, mais o
+  raciocínio — truncar perde a chamada inteira, e só se paga o que é gerado.
+
+O prompt carrega as regras que a curadoria manual produziu: proponente é quem SUBMETE (não
+quem é beneficiado); "IES/P" cobre IES e ICT; população beneficiada específica vai em
+`palavras_chave`; **fase sequencial usa o prazo da primeira, rodada independente usa o da
+última**; seleção de pesquisador é fomento (`fixacao`), credenciamento de avaliador não é.
+
+**Calibração antes de usar em volume.** `scripts/calibrar_ia.py` roda a IA nos registros já
+curados à mão e classifica cada campo em acerto / divergência / omissão / excesso, com relatório
+por CAMPO — uma média alta esconderia datas errando sistematicamente enquanto campos
+categóricos acertam sempre. "Excesso" não é necessariamente erro: o curador pode ter deixado
+em branco o que a IA encontrou, por isso o relatório guarda valor e evidência de cada um.
+
+> **Estado em 2026-08-31: o código está pronto e a calibração NÃO foi executada** — falta
+> `ANTHROPIC_API_KEY` no `.env`. Os números de taxa de acerto por campo e de custo por edital
+> entram aqui depois da primeira execução. Esse dado também interessa ao artigo científico
+> planejado, então vale rodar a calibração inteira (15 editais) de uma vez e guardar o
+> relatório.
+
+**Limites deliberados desta versão:** uma sugestão por acionamento manual, um registro por vez
+(sem lote até haver custo e qualidade medidos); sem OCR, então PDF digitalizado como imagem
+devolve erro explicativo — a FAPAC tem ao menos um edital publicado como `.jpg`; e gerar de
+novo substitui a sugestão anterior, o que a tela avisa antes.
+
 ## `status` vs `status_oficial` — não confundir
 
 Dois campos parecidos, com significados completamente diferentes:

@@ -84,6 +84,83 @@
     </div>
   </div>
 
+
+  {% set sugestao = (o.dados_extra or {}).get("sugestao_ia") %}
+  {% set sugestao_erro = (o.dados_extra or {}).get("sugestao_ia_erro") %}
+
+  {# Formulário PRÓPRIO: aninhar <form> dentro do principal é inválido em HTML e o botão
+     acabaria submetendo a moderação inteira. #}
+  <form method="POST" action="{{ url_for('main.sugerir_com_ia', id=o.id) }}" id="form-ia" class="mb-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div>
+            <h2 class="h6 card-title mb-1">Curadoria assistida por IA</h2>
+            <p class="text-muted small mb-0">
+              Lê o edital e <strong>sugere</strong> campos, cada um com o trecho que o justifica.
+              Nada é preenchido nem salvo automaticamente.
+              {% if sugestao %}
+              <br><span class="text-warning-emphasis">Já existe uma sugestão — gerar de novo a substitui.</span>
+              {% endif %}
+            </p>
+          </div>
+          <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap" id="btn-ia">
+            {{ "Gerar novamente" if sugestao else "Sugerir campos com IA" }}
+          </button>
+        </div>
+
+        {% if sugestao_erro %}
+        <div class="alert alert-warning py-2 mt-3 mb-0 small">
+          Não consegui ler este edital: <code>{{ sugestao_erro }}</code>
+        </div>
+        {% endif %}
+
+        {% if sugestao %}
+          {% if not sugestao.e_fomento %}
+          <div class="alert alert-danger py-2 mt-3 mb-0 small">
+            <strong>A IA acha que isto não é fomento à pesquisa.</strong>
+            {{ sugestao.observacao or "" }}
+          </div>
+          {% endif %}
+
+          {% set com_valor = sugestao.campos.items() | selectattr("1.valor") | list %}
+          <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+            <span class="small text-muted">
+              {{ com_valor | length }} campo(s) sugerido(s) ·
+              {{ sugestao._meta.tipo_fonte }} ·
+              {{ sugestao._meta.caracteres_analisados }} caracteres
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-success py-0" id="ia-aplicar-todas">
+              Aplicar todas
+            </button>
+          </div>
+
+          <div class="row g-2">
+            {% for campo, dado in com_valor %}
+            <div class="col-md-6">
+              <div class="border rounded p-2 h-100 small">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div>
+                    <div class="text-muted" style="font-size:.85em">{{ campo }}</div>
+                    <code>{{ dado.valor | tojson }}</code>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline-success py-0 ia-aplicar text-nowrap"
+                          data-campo="{{ campo }}" data-valor="{{ dado.valor | tojson | forceescape }}">
+                    aplicar
+                  </button>
+                </div>
+                {% if dado.evidencia %}
+                <div class="text-muted fst-italic mt-1" style="font-size:.8em">“{{ dado.evidencia }}”</div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </form>
+
   <form method="POST">
     <div class="card mb-4">
       <div class="card-body">
@@ -367,6 +444,60 @@
 
 {% block extra_scripts %}
 {{ script_faixas(faixas | length) }}
+<script>
+  (function () {
+    const botao = document.getElementById('btn-ia');
+    document.getElementById('form-ia').addEventListener('submit', () => {
+      botao.disabled = true;
+      botao.textContent = 'Lendo o edital…';
+    });
+
+    // Campos que são lista de checkboxes: aplicar significa marcar exatamente o sugerido.
+    const CAIXAS = ['linha_de_fomento', 'natureza_recurso', 'proponente_elegivel', 'nivel_formacao', 'uf'];
+    const TAGS = ['palavras_chave', 'instituicao_financiadora'];
+    const MOEDA = ['orcamento_total_chamada', 'valor_minimo_proposta', 'valor_maximo_proposta'];
+
+    function aplicar(campo, valor) {
+      if (valor === null || valor === undefined) return;
+
+      if (CAIXAS.includes(campo)) {
+        const caixas = document.querySelectorAll(`input[type=checkbox][name="${campo}"]`);
+        caixas.forEach(c => { c.checked = valor.includes(c.value); });
+        if (caixas.length) caixas[0].dispatchEvent(new Event('change', {bubbles: true}));
+        return;
+      }
+
+      if (TAGS.includes(campo)) {
+        // Reaproveita o componente de tags já existente no formulário.
+        if (typeof inicializarTags === 'function') inicializarTags(campo, valor);
+        return;
+      }
+
+      const input = document.querySelector(`[name="${campo}"]`);
+      if (!input) return;
+      input.value = valor;
+      if (MOEDA.includes(campo)) input.dispatchEvent(new Event('input'));
+      input.classList.add('border-success');
+    }
+
+    document.querySelectorAll('.ia-aplicar').forEach(b => {
+      b.addEventListener('click', () => {
+        aplicar(b.dataset.campo, JSON.parse(b.dataset.valor));
+        b.classList.replace('btn-outline-success', 'btn-success');
+        b.textContent = 'aplicado';
+      });
+    });
+
+    const todas = document.getElementById('ia-aplicar-todas');
+    if (todas) {
+      todas.addEventListener('click', () => {
+        document.querySelectorAll('.ia-aplicar').forEach(b => b.click());
+        // Nada é salvo aqui: as seções condicionais precisam reavaliar, e o curador revisa.
+        if (typeof atualizarSecoesCondicionais === 'function') atualizarSecoesCondicionais();
+      });
+    }
+  })();
+</script>
 <script>
   (function () {
     const ROTULOS = {

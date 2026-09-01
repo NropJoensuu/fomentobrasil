@@ -51,3 +51,4 @@ Thumbs.db
 
 # Export de análise, gerado sob demanda (scripts de leitura do banco)
 curados.json
+calibracao_ia.json

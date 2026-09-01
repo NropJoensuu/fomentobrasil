@@ -1,5 +1,6 @@
 import re
 from decimal import Decimal, InvalidOperation
+from urllib.parse import parse_qs, urlparse
 
 REGIAO_POR_UF = {
     "AC": "Norte", "AP": "Norte", "AM": "Norte", "PA": "Norte", "RO": "Norte", "RR": "Norte", "TO": "Norte",
@@ -224,3 +225,19 @@ def avisos_de_aprovacao(form):
         )
 
     return avisos
+
+
+def url_real_do_pdf(url):
+    """Desembrulha URLs de download que carregam o arquivo real num parâmetro `url=`.
+
+    A FAPEMIG serve os PDFs por um intermediário: o link visível é
+    `fapemig.br/files/Chamada-16%2F2026?title=...&url=https://api.site.fapemig.br/...pdf`,
+    e é o parâmetro `url` que aponta para o arquivo — o endereço de fora devolve HTML.
+    Colar o link da página, que é o gesto natural, dava "a URL não devolveu um PDF".
+    """
+    if not url:
+        return url
+    embutida = parse_qs(urlparse(url).query).get("url", [None])[0]
+    if embutida and embutida.lower().split("?")[0].endswith(".pdf"):
+        return embutida
+    return url

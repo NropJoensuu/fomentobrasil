@@ -1,6 +1,5 @@
 import io
 from datetime import datetime
-from urllib.parse import parse_qs, urlparse
 
 import pdfplumber
 import requests
@@ -20,6 +19,7 @@ from app.utils import (
     parse_valor_brl,
     REGIAO_POR_UF,
     REGIOES,
+    url_real_do_pdf,
 )
 
 main = Blueprint("main", __name__)
@@ -342,22 +342,6 @@ def marcar_atualizacao_revisada(id):
     return redirect(url_for("main.listar_atualizacoes"))
 
 
-def _url_real_do_pdf(url):
-    """Desembrulha URLs de download que carregam o arquivo real num parâmetro `url=`.
-
-    A FAPEMIG serve os PDFs por um intermediário: o link visível é
-    `fapemig.br/files/Chamada-16%2F2026?title=...&url=https://api.site.fapemig.br/...pdf`,
-    e é o parâmetro `url` que aponta para o arquivo — o endereço de fora devolve HTML.
-    Colar o link da página, que é o gesto natural, dava "a URL não devolveu um PDF".
-    """
-    if not url:
-        return url
-    embutida = parse_qs(urlparse(url).query).get("url", [None])[0]
-    if embutida and embutida.lower().split("?")[0].endswith(".pdf"):
-        return embutida
-    return url
-
-
 # PENDÊNCIA DE SEGURANÇA: faz requests.get() para uma URL do formulário (SSRF), mesma
 # dívida já documentada em /oportunidades/importar — sem controle de acesso e sem bloqueio
 # de IP privado/loopback. Revisitar junto com o sistema de usuários/papéis.
@@ -370,7 +354,7 @@ def extrair_do_pdf(id):
     extraível — e por quê.
     """
     oportunidade = Oportunidade.query.get_or_404(id)
-    url = _url_real_do_pdf((request.form.get("url_pdf") or oportunidade.link or "").strip())
+    url = url_real_do_pdf((request.form.get("url_pdf") or oportunidade.link or "").strip())
     if not url:
         return jsonify({"ok": False, "erro": "Sem URL para ler."}), 400
 
@@ -410,6 +394,33 @@ def extrair_do_pdf(id):
             campo: [c.como_dict() for c in lista] for campo, lista in candidatos.items()
         },
     })
+
+
+# PENDÊNCIA DE SEGURANÇA: mesma dívida das demais rotas de moderação — sem controle de
+# acesso, qualquer pessoa com a URL dispara uma chamada paga à API. Precisa exigir login de
+# curador antes de ir a público.
+@main.route("/moderacao/<int:id>/sugerir-ia", methods=["POST"])
+def sugerir_com_ia(id):
+    """Pede sugestões ao modelo e guarda em dados_extra["sugestao_ia"].
+
+    NÃO altera `status` nem grava em campo estruturado — a sugestão só aparece na tela para
+    o curador aplicar campo a campo. Ver a docstring de `app.curadoria_ia`.
+    """
+    from app.curadoria_ia import sugerir_campos
+
+    oportunidade = Oportunidade.query.get_or_404(id)
+
+    # dict(...) + reatribuição: o SQLAlchemy não detecta mutação dentro de um dict de coluna
+    # JSONB e descartaria a alteração no commit. Já mordeu este projeto antes.
+    dados = dict(oportunidade.dados_extra or {})
+    try:
+        dados["sugestao_ia"] = sugerir_campos(oportunidade)
+        dados.pop("sugestao_ia_erro", None)
+    except Exception as e:
+        dados["sugestao_ia_erro"] = f"{type(e).__name__}: {e}"
+    oportunidade.dados_extra = dados
+    db.session.commit()
+    return redirect(url_for("main.moderar_oportunidade", id=id))
 
 
 @main.route("/moderacao/<int:id>", methods=["GET", "POST"])
