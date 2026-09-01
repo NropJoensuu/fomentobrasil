@@ -35,6 +35,8 @@ from decimal import Decimal
 warnings.filterwarnings("ignore")
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
+from types import SimpleNamespace  # noqa: E402
+
 from app import create_app  # noqa: E402
 from app.curadoria_ia import CAMPOS_ESPERADOS, MODELO, sugerir_campos  # noqa: E402
 from app.models import Oportunidade  # noqa: E402
@@ -79,76 +81,92 @@ def main():
     ap.add_argument("--limite", type=int, default=None, help="roda só os N primeiros")
     args = ap.parse_args()
 
+    # Lê tudo do banco de uma vez e SOLTA a conexão antes das chamadas à API. Segurar a
+    # sessão aberta durante ~8 minutos de rede derrubava o Neon por ociosidade
+    # ("SSL connection has been closed unexpectedly") na saída do app_context — e o
+    # relatório, que só era escrito depois, se perdia inteiro junto com as 15 chamadas.
     app = create_app()
     with app.app_context():
-        registros = (
+        consulta = (
             Oportunidade.query.filter_by(status="aprovado")
-            .order_by(Oportunidade.id).all()
+            .order_by(Oportunidade.id)
         )
-        if args.limite:
-            registros = registros[: args.limite]
+        registros = [
+            SimpleNamespace(
+                id=o.id, titulo=o.titulo, link=o.link,
+                instituicao_financiadora=list(o.instituicao_financiadora or []),
+                curado={c: getattr(o, c, None) for c in CAMPOS_ESPERADOS},
+            )
+            for o in (consulta.all()[: args.limite] if args.limite else consulta.all())
+        ]
 
-        # `palavras_chave` é texto livre: comparar conjunto de strings livres marcaria
-        # divergência sempre e não diria nada. Fica no relatório, fora da pontuação.
-        campos = [c for c in CAMPOS_ESPERADOS if c != "palavras_chave"]
-        placar = {c: {"acerto": 0, "divergencia": 0, "omissao": 0, "excesso": 0} for c in campos}
-        detalhes, falhas = [], []
-        tokens_entrada = tokens_saida = 0
+    campos = [c for c in CAMPOS_ESPERADOS if c != "palavras_chave"]
+    placar = {c: {"acerto": 0, "divergencia": 0, "omissao": 0, "excesso": 0} for c in campos}
+    detalhes, falhas = [], []
+    tokens_entrada = tokens_saida = 0
 
-        for i, o in enumerate(registros, 1):
-            print(f"[{i}/{len(registros)}] #{o.id} {o.titulo[:58]}", flush=True)
-            inicio = time.time()
-            try:
-                sugestao = sugerir_campos(o)
-            except Exception as e:
-                print(f"    FALHOU: {type(e).__name__}: {e}", flush=True)
-                falhas.append({"id": o.id, "titulo": o.titulo, "erro": f"{type(e).__name__}: {e}"})
+    def gravar():
+        """Grava o relatório a cada edital: uma falha no meio não custa o trabalho todo."""
+        n = len(detalhes)
+        custo = (tokens_entrada / 1e6) * PRECO_ENTRADA + (tokens_saida / 1e6) * PRECO_SAIDA
+        resumo = {
+            "modelo": MODELO,
+            "registros_medidos": n,
+            "falhas": falhas,
+            "tokens_entrada": tokens_entrada,
+            "tokens_saida": tokens_saida,
+            "custo_estimado_usd": round(custo, 4),
+            "custo_por_edital_usd": round(custo / n, 4) if n else None,
+            "placar_por_campo": placar,
+        }
+        SAIDA.write_text(json.dumps({"resumo": resumo, "detalhes": detalhes},
+                                    ensure_ascii=False, indent=1, default=str))
+        return resumo
+
+    for i, o in enumerate(registros, 1):
+        print(f"[{i}/{len(registros)}] #{o.id} {o.titulo[:58]}", flush=True)
+        inicio = time.time()
+        try:
+            sugestao = sugerir_campos(o)
+        except Exception as e:
+            print(f"    FALHOU: {type(e).__name__}: {e}", flush=True)
+            falhas.append({"id": o.id, "titulo": o.titulo, "erro": f"{type(e).__name__}: {e}"})
+            gravar()
+            continue
+
+        meta = sugestao.get("_meta", {})
+        tokens_entrada += meta.get("tokens_entrada", 0)
+        tokens_saida += meta.get("tokens_saida", 0)
+
+        registro = {
+            "id": o.id, "titulo": o.titulo, "link": o.link,
+            "e_fomento": sugestao.get("e_fomento"),
+            "observacao": sugestao.get("observacao"),
+            "segundos": round(time.time() - inicio, 1),
+            "_meta": meta, "campos": {},
+        }
+        for campo in campos:
+            dado = (sugestao.get("campos") or {}).get(campo) or {}
+            curado = _normalizar(campo, o.curado.get(campo))
+            sugerido = _normalizar(campo, dado.get("valor"))
+            classe = _classificar(curado, sugerido)
+            if classe is None:
                 continue
-
-            meta = sugestao.get("_meta", {})
-            tokens_entrada += meta.get("tokens_entrada", 0)
-            tokens_saida += meta.get("tokens_saida", 0)
-
-            registro = {
-                "id": o.id, "titulo": o.titulo, "link": o.link,
-                "e_fomento": sugestao.get("e_fomento"),
-                "observacao": sugestao.get("observacao"),
-                "segundos": round(time.time() - inicio, 1),
-                "_meta": meta, "campos": {},
+            placar[campo][classe] += 1
+            registro["campos"][campo] = {
+                "classe": classe,
+                "curado": o.curado.get(campo),
+                "sugerido": dado.get("valor"),
+                "evidencia": dado.get("evidencia"),
             }
-            for campo in campos:
-                dado = sugestao["campos"].get(campo) or {}
-                curado = _normalizar(campo, getattr(o, campo, None))
-                sugerido = _normalizar(campo, dado.get("valor"))
-                classe = _classificar(curado, sugerido)
-                if classe is None:
-                    continue
-                placar[campo][classe] += 1
-                registro["campos"][campo] = {
-                    "classe": classe,
-                    "curado": getattr(o, campo, None),
-                    "sugerido": dado.get("valor"),
-                    "evidencia": dado.get("evidencia"),
-                }
-            detalhes.append(registro)
-            print(f"    {registro['segundos']}s | "
-                  + " ".join(f"{k}={sum(1 for c in registro['campos'].values() if c['classe'] == k)}"
-                             for k in ("acerto", "divergencia", "omissao", "excesso")), flush=True)
+        detalhes.append(registro)
+        gravar()
+        print(f"    {registro['segundos']}s | "
+              + " ".join(f"{k}={sum(1 for c in registro['campos'].values() if c['classe'] == k)}"
+                         for k in ("acerto", "divergencia", "omissao", "excesso")), flush=True)
 
-    n = len(detalhes)
-    custo = (tokens_entrada / 1e6) * PRECO_ENTRADA + (tokens_saida / 1e6) * PRECO_SAIDA
-    resumo = {
-        "modelo": MODELO,
-        "registros_medidos": n,
-        "falhas": falhas,
-        "tokens_entrada": tokens_entrada,
-        "tokens_saida": tokens_saida,
-        "custo_estimado_usd": round(custo, 4),
-        "custo_por_edital_usd": round(custo / n, 4) if n else None,
-        "placar_por_campo": placar,
-    }
-    SAIDA.write_text(json.dumps({"resumo": resumo, "detalhes": detalhes},
-                                ensure_ascii=False, indent=1, default=str))
+    resumo = gravar()
+    n = resumo["registros_medidos"]
 
     print(f"\n{'=' * 74}")
     print(f"{'campo':<26}{'acerto':>8}{'diverg':>8}{'omiss':>8}{'excesso':>9}{'taxa':>9}")
@@ -163,8 +181,8 @@ def main():
     print(f"{n} editais medidos | {len(falhas)} falha(s) | "
           f"{tokens_entrada} tokens de entrada, {tokens_saida} de saída")
     if n:
-        print(f"custo estimado US$ {custo:.4f} no total, "
-              f"US$ {custo / n:.4f} por edital")
+        print(f"custo estimado US$ {resumo['custo_estimado_usd']:.4f} no total, "
+              f"US$ {resumo['custo_por_edital_usd']:.4f} por edital")
     print(f"relatório completo em {SAIDA.name}")
 
 

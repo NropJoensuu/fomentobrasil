@@ -1138,11 +1138,52 @@ por CAMPO — uma média alta esconderia datas errando sistematicamente enquanto
 categóricos acertam sempre. "Excesso" não é necessariamente erro: o curador pode ter deixado
 em branco o que a IA encontrou, por isso o relatório guarda valor e evidência de cada um.
 
-> **Estado em 2026-08-31: o código está pronto e a calibração NÃO foi executada** — falta
-> `ANTHROPIC_API_KEY` no `.env`. Os números de taxa de acerto por campo e de custo por edital
-> entram aqui depois da primeira execução. Esse dado também interessa ao artigo científico
-> planejado, então vale rodar a calibração inteira (15 editais) de uma vez e guardar o
-> relatório.
+**Calibração de 2026-08-31 — 15 editais, US$ 0,11 por edital, ~45s cada.** A primeira rodada
+mediu principalmente dois bugs meus, não a capacidade do modelo. Vale registrar os dois,
+porque são o tipo de erro que passa despercebido:
+
+1. **A IA lia o documento errado em 8 dos 15.** O `link` do registro quase nunca aponta para o
+   edital: leva a uma página de listagem, e o que sobra depois de limpar navegação é um talo —
+   1.300 a 2.000 caracteres nas páginas do CNPq, **oito** na da FAPESP. Todos os campos
+   financeiros vinham vazios porque a informação não estava no texto enviado.
+2. **O prompt trazia um exemplo de JSON com dois campos**, e o modelo tratou o exemplo como a
+   lista de campos. `orcamento_total_chamada`, `data_resultado_previsto` e os dois valores de
+   proposta vieram nulos em **15 de 15** — não uma vez sequer.
+
+Corrigidos os dois (`extrair_texto` agora segue a página até o PDF do edital, inclusive por
+`<meta refresh>` e por URL solta no HTML de página renderizada por JavaScript; e o prompt lista
+os 19 campos um a um), a segunda rodada deu:
+
+| campo | taxa | leitura |
+|---|---|---|
+| `tipo_instrumento` | 100% | 15/15 |
+| `uf` | 92% | |
+| `abrangencia`, `natureza_recurso` | 80% | |
+| `instituicao_promotora` | **80%** | 27% na conta bruta: 8 das 11 "divergências" eram a mesma instituição por extenso ("Fundação de Amparo à Pesquisa do Estado de Minas Gerais – FAPEMIG" vs "FAPEMIG"). Prompt passou a exigir sigla |
+| `orcamento_total_chamada` | 79% | era 0% antes da correção |
+| `data_publicacao` | 73% | |
+| `data_prazo` | 60% | abaixo da extração por regra, que faz 29/29 |
+| `data_resultado_previsto` | 47% | era 0% |
+| `linha_de_fomento` | 33% | |
+| `proponente_elegivel` | **20%** | |
+
+**As duas taxas baixas confirmam o que a análise dos PDFs já indicava, e por isso não são
+surpresa.** `proponente_elegivel` erra de modo característico: acrescenta titulação quando o
+edital lista requisitos (#215: `ies, ict` viraram `mestres, doutores, ies, ict`) ou troca
+instituição por pessoa (#377: `ies, ict` virou `pesquisadores`). `linha_de_fomento` erra por
+excesso — marca `apoio_formacao_capacitacao` sempre que há bolsa, o que às vezes é defensável
+e às vezes não. São exatamente os campos que a análise classificou como julgamento.
+
+**"Excesso" quase sempre era acerto do modelo, não erro.** Dos 5 excessos em
+`valor_maximo_proposta`, 4 são valores reais que o curador tinha registrado como faixa em vez
+de campo (#22 R$ 1.000.000 da Faixa A, #23 R$ 200.000 de eventos internacionais, #215
+R$ 80.000 da Faixa C). Vale conferir o #82: a IA achou "até R$ 500.000,00 por proposta", e o
+campo estava vazio.
+
+**Conclusão operacional:** a IA é boa nos campos que a regra não cobre e medíocre justamente
+onde a regra é excelente (`data_prazo`: 60% contra 29/29 da extração por regra). O desenho de
+usar as duas em painéis separados se sustenta — mas o painel da IA deveria deixar de sugerir
+data e valor quando a extração por regra já tiver resposta para o mesmo campo.
 
 **Limites deliberados desta versão:** uma sugestão por acionamento manual, um registro por vez
 (sem lote até haver custo e qualidade medidos); sem OCR, então PDF digitalizado como imagem
