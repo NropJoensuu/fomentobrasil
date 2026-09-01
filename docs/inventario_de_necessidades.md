@@ -1190,6 +1190,68 @@ data e valor quando a extração por regra já tiver resposta para o mesmo campo
 devolve erro explicativo — a FAPAC tem ao menos um edital publicado como `.jpg`; e gerar de
 novo substitui a sugestão anterior, o que a tela avisa antes.
 
+### Ajustes da primeira calibração (2026-09-01): `premio` vira `linha_de_fomento`, prompt de `linha_de_fomento`
+
+Dois ajustes derivados diretamente da calibração acima.
+
+**`premio` era `tipo_instrumento`, virou `linha_de_fomento` (`premiacao`).** Erro de
+categoria: `tipo_instrumento` responde "qual procedimento administrativo" (chamada pública,
+chamamento público) — prêmio não é procedimento, é o que está sendo oferecido, e é concedido
+POR MEIO de um edital ("Edital do Prêmio X"). As cinco linhas de fomento existentes são todas
+apoio PROSPECTIVO a atividade futura; `premiacao` é a exceção retrospectiva — reconhece
+resultado já alcançado.
+
+Migração (`f92c4118d4d8`) preservou os dados: os 14 registros com `tipo_instrumento='premio'`
+ganharam `'premiacao'` em `linha_de_fomento` (sem apagar o que já houvesse — a maioria ainda
+tinha só o placeholder `apoio_formacao_capacitacao`, que fica para o curador remover) e
+migraram `tipo_instrumento` para `chamada_publica_edital`. Confirmado: 342 registros antes e
+depois, 0 com `tipo_instrumento='premio'` após, 14 com `'premiacao'` na lista.
+
+Vocabulário atualizado em todos os lugares que o repetiam — `app/models.py` (comentários),
+`app/curadoria_ia.py` (`VOCAB_LINHA_DE_FOMENTO`/`VOCAB_TIPO_INSTRUMENTO`, que alimentam
+`_validar`: crítico, porque sem isso uma sugestão `premiacao` da IA seria descartada como
+"fora do vocabulário"), `scripts/curadoria_cli.py`, os selects/checkboxes de
+`templates/oportunidades/nova.html`, `templates/moderacao/editar.html` e o filtro em
+`templates/oportunidades/listar.html`. Os 6 scrapers que detectam prêmio pelo título
+(FAPESB, FUNDECT, FAPEAL, FACEPE, FAPEMA, FAPEPI) passaram a traduzir a detecção interna
+(`tipo_instrumento` continua "premio" só como sinal interno, nunca gravado) para
+`tipo_instrumento="chamada_publica_edital"` + `linha_de_fomento=["premiacao"]`, em vez do
+placeholder de sempre.
+
+**Medição registrada, sem ação:** depois da migração, `tipo_instrumento` ficou com
+`chamada_publica_edital` em 98,54% dos 342 registros e `chamamento_publico` em só 1,46% (5
+registros) — bem abaixo do limiar de 5% que tornaria o campo residual. **Pendência a
+reavaliar se essa proporção não mudar com volume:** um campo com esmagadora maioria de um
+único valor carrega pouca informação para filtro/busca. Não é para agir agora, só para
+revisitar quando houver mais dado.
+
+**Prompt de `linha_de_fomento` ajustado — hipótese de que o modelo confundia instrumento com
+propósito.** Esse foi o único campo que PIOROU depois da correção que passou a ler o PDF
+inteiro (calibração acima): 47% → 33%. Hipótese: com o texto inteiro entram muitas menções a
+bolsa, e o modelo marca `apoio_formacao_capacitacao` sempre que vê bolsa, mesmo quando a
+bolsa é só o instrumento de uma chamada de outro propósito (ex.: auxílio pesquisa que também
+banca bolsistas da equipe).
+
+Ressalva que fica registrada: parte da queda pode vir do GABARITO, não do modelo — os 15
+editais foram curados à mão quando `linha_de_fomento` ainda era valor único, então um edital
+que hoje teria três linhas marcadas só tem uma no gabarito antigo. As duas causas empurram na
+mesma direção (mais "divergência" medida) e não são separáveis com os dados atuais. Este
+ajuste tratou só a hipótese do modelo — a hipótese do gabarito fica para a recuragem manual
+dos 15 registros, que é trabalho separado (fora do escopo desta sessão, para não haver
+retrabalho: recurar antes do prompt estar certo geraria gabarito sobre um prompt que ainda ia
+mudar).
+
+`PROMPT_SISTEMA` ganhou uma seção explícita: `linha_de_fomento` é o PROPÓSITO da chamada, não
+o tipo de recurso concedido — bolsa é instrumento e vai em `natureza_recurso`; só marcar
+`apoio_formacao_capacitacao` quando formar/capacitar/atrair/fixar pessoas for o objetivo
+DECLARADO, não uma dedução a partir de haver bolsa; marcar mais de uma linha quando a chamada
+tiver objetivos distintos e explícitos, nunca por dedução a partir dos instrumentos; e quando
+usar `premiacao` (reconhece resultado já alcançado, não financia atividade futura).
+
+**Terceiro ajuste desta rodada (exibição por concordância entre regra e IA) ainda não foi
+especificado** — o briefing que chegou cobria só os dois itens acima; fica pendente até
+receber o restante.
+
 ## `status` vs `status_oficial` — não confundir
 
 Dois campos parecidos, com significados completamente diferentes:

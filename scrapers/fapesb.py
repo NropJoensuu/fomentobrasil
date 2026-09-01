@@ -157,6 +157,11 @@ def salvar_no_banco(registros):
     ja_existentes = 0
 
     for r in registros:
+        # Prêmio não é tipo_instrumento (é o que está sendo oferecido, não o
+        # procedimento) — vira linha_de_fomento própria, e o instrumento que veicula
+        # o prêmio é um edital como qualquer outro.
+        e_premio = r["tipo_instrumento"] == "premio"
+
         resultado = processar_registro(
             dados_novos={
                 "link": r["link"][:500],
@@ -169,12 +174,13 @@ def salvar_no_banco(registros):
                 "data_resultado_previsto": None,  # rótulo existe no site, mas vem vazio
                 "instituicao_financiadora": ["FAPESB"],
                 "instituicao_promotora": "FAPESB",
-                "tipo_instrumento": r["tipo_instrumento"],
+                "tipo_instrumento": "chamada_publica_edital" if e_premio else r["tipo_instrumento"],
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["BA"],
                 "abrangencia": "estadual",
-                # Placeholder: não é inferível do título. Corrigido na curadoria.
-                "linha_de_fomento": ["apoio_formacao_capacitacao"],
+                # Placeholder, exceto quando o título já indica prêmio de propósito.
+                # Corrigido na curadoria quando o placeholder não se aplicar.
+                "linha_de_fomento": ["premiacao"] if e_premio else ["apoio_formacao_capacitacao"],
                 "natureza_recurso": [],
                 "proponente_elegivel": [],
                 "origem": "institucional",

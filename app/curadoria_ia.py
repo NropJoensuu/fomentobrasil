@@ -53,9 +53,9 @@ MAX_TOKENS = 16000
 
 VOCAB_LINHA_DE_FOMENTO = [
     "auxilio_pesquisa", "auxilio_inovacao", "auxilio_divulgacao_cientifica",
-    "apoio_formacao_capacitacao", "apoio_redes_grupos_pesquisa",
+    "apoio_formacao_capacitacao", "apoio_redes_grupos_pesquisa", "premiacao",
 ]
-VOCAB_TIPO_INSTRUMENTO = ["chamada_publica_edital", "chamamento_publico", "premio"]
+VOCAB_TIPO_INSTRUMENTO = ["chamada_publica_edital", "chamamento_publico"]
 VOCAB_NATUREZA_RECURSO = ["custeio", "capital", "bolsa"]
 VOCAB_PROPONENTE = [
     "pesquisadores", "especialistas", "mestrandos", "mestres", "doutorandos", "doutores",
@@ -283,6 +283,30 @@ Os papéis que existem no edital são:
 
 ## Como preencher cada campo
 
+linha_de_fomento é o PROPÓSITO da chamada — o que ela existe para apoiar. NÃO é o tipo de \
+recurso que ela concede.
+
+Uma chamada de apoio a projetos de pesquisa que concede bolsas continua sendo \
+auxilio_pesquisa. A bolsa é um INSTRUMENTO e vai em natureza_recurso, não em \
+linha_de_fomento.
+
+Só marque apoio_formacao_capacitacao quando o objetivo declarado da chamada for formar, \
+capacitar, atrair ou fixar pessoas — não quando bolsas aparecem como meio de executar outro \
+objetivo.
+
+Exemplos do contraste:
+
+"Apoiar projetos de pesquisa em biotecnologia, com concessão de bolsas de mestrado para a \
+equipe" -> auxilio_pesquisa (bolsa é meio). natureza_recurso inclui bolsa.
+"Conceder bolsas de mestrado e doutorado para formação de recursos humanos qualificados" \
+-> apoio_formacao_capacitacao (formar é o fim).
+
+Marque MAIS DE UMA linha quando a chamada tiver objetivos distintos e explícitos. Não marque \
+uma linha por dedução a partir dos instrumentos.
+
+premiacao: use quando a chamada reconhece resultado já alcançado (prêmio, concurso de \
+trabalhos, menção honrosa) em vez de apoiar atividade futura.
+
 proponente_elegivel — QUEM PODE APRESENTAR A PROPOSTA.
 Pessoa física: pesquisadores, especialistas, mestrandos, mestres, doutorandos, doutores.
 Pessoa jurídica: ies, ict, empresas, startups, governo.
@@ -328,8 +352,8 @@ ficar em seções mais adiante e são tão importantes quanto os demais.
 
 Vocabulário fechado:
 - linha_de_fomento (lista): auxilio_pesquisa, auxilio_inovacao, auxilio_divulgacao_cientifica, \
-apoio_formacao_capacitacao, apoio_redes_grupos_pesquisa
-- tipo_instrumento: chamada_publica_edital, chamamento_publico, premio
+apoio_formacao_capacitacao, apoio_redes_grupos_pesquisa, premiacao
+- tipo_instrumento: chamada_publica_edital, chamamento_publico
 - natureza_recurso (lista): custeio, capital, bolsa
 - proponente_elegivel (lista): pesquisadores, especialistas, mestrandos, mestres, doutorandos, \
 doutores, ies, ict, empresas, startups, governo

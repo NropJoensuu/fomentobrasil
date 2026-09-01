@@ -30,6 +30,7 @@ VOCAB_LINHA_DE_FOMENTO = [
     "auxilio_divulgacao_cientifica",
     "apoio_formacao_capacitacao",
     "apoio_redes_grupos_pesquisa",
+    "premiacao",
 ]
 VOCAB_NATUREZA_RECURSO = ["custeio", "capital", "bolsa"]
 # Mesma lista de app.utils.VOCABULARIO_PROPONENTE, repetida aqui de propósito: este script
@@ -38,7 +39,7 @@ VOCAB_PROPONENTE_ELEGIVEL = [
     "pesquisadores", "especialistas", "mestrandos", "mestres", "doutorandos", "doutores",
     "ies", "ict", "empresas", "startups", "governo",
 ]
-VOCAB_TIPO_INSTRUMENTO = ["chamada_publica_edital", "chamamento_publico", "premio"]
+VOCAB_TIPO_INSTRUMENTO = ["chamada_publica_edital", "chamamento_publico"]
 VOCAB_AREA_PRINCIPAL = [
     "Ciências Exatas e da Terra", "Ciências Biológicas", "Engenharias",
     "Ciências da Saúde", "Ciências Agrárias", "Ciências Sociais Aplicadas",

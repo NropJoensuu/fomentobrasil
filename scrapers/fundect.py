@@ -184,6 +184,11 @@ def salvar_no_banco(registros):
         if r["historico_documentos"]:
             dados_extra["historico_documentos"] = r["historico_documentos"]
 
+        # Prêmio não é tipo_instrumento (é o que está sendo oferecido, não o
+        # procedimento) — vira linha_de_fomento própria, e o instrumento que veicula
+        # o prêmio é um edital como qualquer outro.
+        e_premio = r["tipo_instrumento"] == "premio"
+
         resultado = processar_registro(
             dados_novos={
                 "link": r["link"][:500],
@@ -200,12 +205,13 @@ def salvar_no_banco(registros):
                 # extraí-las automaticamente seria chute — o curador completa a lista.
                 "instituicao_financiadora": ["FUNDECT"],
                 "instituicao_promotora": "FUNDECT",
-                "tipo_instrumento": r["tipo_instrumento"],
+                "tipo_instrumento": "chamada_publica_edital" if e_premio else r["tipo_instrumento"],
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["MS"],
                 "abrangencia": "estadual",
-                # Placeholder: não é inferível do título. Corrigido na curadoria.
-                "linha_de_fomento": ["apoio_formacao_capacitacao"],
+                # Placeholder, exceto quando o título já indica prêmio de propósito.
+                # Corrigido na curadoria quando o placeholder não se aplicar.
+                "linha_de_fomento": ["premiacao"] if e_premio else ["apoio_formacao_capacitacao"],
                 "natureza_recurso": [],
                 "proponente_elegivel": [],
                 "origem": "institucional",

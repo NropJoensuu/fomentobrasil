@@ -16,10 +16,16 @@ class Oportunidade(db.Model):
 
     # Linha de fomento: o que a chamada oferece em termos de finalidade. Lista porque uma
     # chamada pode ter mais de uma simultaneamente (ex: FAPEMIG-SEDE 013/2026 tem três).
-    linha_de_fomento = db.Column(ARRAY(db.String(50)), nullable=False)  # auxilio_pesquisa, auxilio_inovacao, auxilio_divulgacao_cientifica, apoio_formacao_capacitacao, apoio_redes_grupos_pesquisa
+    # `premiacao` (2026-09-01) é a exceção retrospectiva às outras cinco, que são todas
+    # apoio prospectivo a atividade futura: reconhece resultado já alcançado, não financia
+    # o que vai acontecer. Migrou de `tipo_instrumento` — ver comentário abaixo.
+    linha_de_fomento = db.Column(ARRAY(db.String(50)), nullable=False)  # auxilio_pesquisa, auxilio_inovacao, auxilio_divulgacao_cientifica, apoio_formacao_capacitacao, apoio_redes_grupos_pesquisa, premiacao
 
-    # Instrumento administrativo/legal usado para veicular a linha de fomento
-    tipo_instrumento = db.Column(db.String(50), nullable=False)  # chamada_publica_edital, chamamento_publico, premio
+    # Instrumento administrativo/legal usado para veicular a linha de fomento. `premio` saiu
+    # daqui (2026-09-01): não é procedimento, é o que está sendo oferecido — erro de
+    # categoria. Um prêmio é concedido POR MEIO de um edital, então vira `linha_de_fomento`
+    # ("premiacao") e o instrumento passa a ser `chamada_publica_edital` como qualquer outro.
+    tipo_instrumento = db.Column(db.String(50), nullable=False)  # chamada_publica_edital, chamamento_publico
 
     # O que é efetivamente concedido na prática (pode ter mais de um valor)
     natureza_recurso = db.Column(ARRAY(db.String(50)), nullable=False)  # custeio, capital, bolsa
