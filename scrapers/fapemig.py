@@ -169,7 +169,7 @@ def coletar_chamadas_fapemig(apenas_abertas=True):
                     "data_resultado_previsto": resultado_previsto,
                     "orcamento_total_chamada": orcamento,
                     "status_oficial": STATUS_OFICIAL_POR_STATUS_CHAMADA.get(status_chamada),
-                    "publico_alvo": mapear_publico_alvo(item.get("publico_alvo")),
+                    "proponente_elegivel": mapear_publico_alvo(item.get("publico_alvo")),
                     "dados_extra": {
                         "numero_chamada": item.get("numero"),
                         "status_chamada_fapemig": status_chamada,
@@ -180,7 +180,7 @@ def coletar_chamadas_fapemig(apenas_abertas=True):
                             item.get("o_que_pode_ser_financiado")
                         ),
                         # Taxonomias que a própria FAPEMIG já classifica. Não são gravadas
-                        # direto em linha_de_fomento/publico_alvo porque o vocabulário não
+                        # direto em linha_de_fomento/proponente_elegivel porque o vocabulário não
                         # é idêntico ao nosso (e linha_de_fomento é valor único, enquanto a
                         # FAPEMIG marca vários). Ficam aqui para orientar a curadoria.
                         "linhas_fomento_fapemig": _rotulos_selecionados(
@@ -223,6 +223,7 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "data_publicacao": r["data_publicacao"],
                 "instituicao_financiadora": ["FAPEMIG"],
+                "instituicao_promotora": "FAPEMIG",
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["MG"],
@@ -230,10 +231,10 @@ def salvar_no_banco(registros):
                 # Placeholder: a FAPEMIG marca várias linhas de fomento por chamada, e o
                 # nosso campo é de valor único. Ver dados_extra["linhas_fomento_fapemig"].
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
-                # natureza_recurso a API não informa; publico_alvo vem da taxonomia da
+                # natureza_recurso a API não informa; proponente_elegivel vem da taxonomia da
                 # FAPEMIG (só os valores com equivalente exato — ver MAPA_PUBLICO_ALVO).
                 "natureza_recurso": [],
-                "publico_alvo": r["publico_alvo"],
+                "proponente_elegivel": r["proponente_elegivel"],
                 "origem": "institucional",
                 "status": "pendente",
                 "dados_extra": r["dados_extra"],

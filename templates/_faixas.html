@@ -6,7 +6,7 @@
   faixas gravadas). Cada faixa pode ter valores, público-alvo e área próprios — há editais em
   que a única diferença entre as faixas é a área do conhecimento.
 
-  Os campos usam nomes indexados (`faixa-0-nome`, `faixa-0-publico_alvo`, ...). O índice é um
+  Os campos usam nomes indexados (`faixa-0-nome`, `faixa-0-proponente_elegivel`, ...). O índice é um
   contador que só cresce: remover uma linha deixa buracos na numeração de propósito, porque
   renumerar no JS quebraria os `id`/`for` dos rótulos. O servidor varre os índices presentes
   (ver `app.utils.parse_faixas`) em vez de assumir uma sequência contínua.
@@ -16,19 +16,7 @@
   R$ X", isto vira tabela.
 #}
 
-{% set VOCAB_PUBLICO_ALVO = [
-    ("pesquisadores", "Pesquisadores"),
-    ("especialistas", "Especialistas (lato sensu)"),
-    ("mestrandos", "Mestrandos"),
-    ("mestres", "Mestres"),
-    ("doutorandos", "Doutorandos"),
-    ("doutores", "Doutores"),
-    ("empresas", "Empresas"),
-    ("startups", "Startups"),
-    ("ies", "IES — Instituições de Ensino Superior"),
-    ("ict", "ICT — Instituições Científicas, Tecnológicas e de Inovação"),
-    ("governo", "Governo"),
-] %}
+{% set VOCAB_PROPONENTE = proponente_pf + proponente_pj %}
 {% set VOCAB_AREAS = [
     "Ciências Exatas e da Terra", "Ciências Biológicas", "Engenharias",
     "Ciências da Saúde", "Ciências Agrárias", "Ciências Sociais Aplicadas",
@@ -81,14 +69,14 @@
       </select>
     </div>
     <div class="col-sm-6">
-      <label class="form-label small mb-1" for="faixa-{{ i }}-publico_alvo">
-        Público-alvo
+      <label class="form-label small mb-1" for="faixa-{{ i }}-proponente_elegivel">
+        Proponente elegível
         <span class="text-muted">(deixe vazio se for o mesmo; Ctrl/⌘ marca vários)</span>
       </label>
-      <select class="form-select" multiple size="5" id="faixa-{{ i }}-publico_alvo"
-              name="faixa-{{ i }}-publico_alvo">
-        {% for valor, rotulo in VOCAB_PUBLICO_ALVO %}
-        <option value="{{ valor }}" {{ "selected" if valor in (f.publico_alvo or []) else "" }}>{{ rotulo }}</option>
+      <select class="form-select" multiple size="5" id="faixa-{{ i }}-proponente_elegivel"
+              name="faixa-{{ i }}-proponente_elegivel">
+        {% for valor, rotulo in VOCAB_PROPONENTE %}
+        <option value="{{ valor }}" {{ "selected" if valor in (f.proponente_elegivel or []) else "" }}>{{ rotulo }}</option>
         {% endfor %}
       </select>
     </div>

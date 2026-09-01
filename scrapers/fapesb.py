@@ -168,6 +168,7 @@ def salvar_no_banco(registros):
                 "data_prazo": None,  # não aparece na listagem
                 "data_resultado_previsto": None,  # rótulo existe no site, mas vem vazio
                 "instituicao_financiadora": ["FAPESB"],
+                "instituicao_promotora": "FAPESB",
                 "tipo_instrumento": r["tipo_instrumento"],
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["BA"],
@@ -175,7 +176,7 @@ def salvar_no_banco(registros):
                 # Placeholder: não é inferível do título. Corrigido na curadoria.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "origem": "institucional",
                 "status": "pendente",
             },

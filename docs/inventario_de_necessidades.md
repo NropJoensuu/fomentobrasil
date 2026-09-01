@@ -762,7 +762,7 @@ Termos frequentemente confundidos entre si. Vocabulário de referência para man
 - **Linha de fomento** (`linha_de_fomento`) — a finalidade do fomento: o que a chamada se propõe a apoiar. Ex: `auxilio_pesquisa`, `auxilio_inovacao`, `auxilio_divulgacao_cientifica`, `apoio_formacao_capacitacao`, `apoio_redes_grupos_pesquisa`. É o "para quê" da chamada.
 - **Tipo de instrumento** (`tipo_instrumento`) — o instrumento administrativo/legal usado para veicular a chamada, independente da linha de fomento. Ex: `chamada_publica_edital`, `chamamento_publico`, `premio`. Uma mesma linha de fomento (ex: auxílio pesquisa) pode ser operacionalizada por instrumentos diferentes.
 - **Natureza do recurso** (`natureza_recurso`) — o que é efetivamente concedido na prática, podendo ter mais de um valor simultâneo. Ex: `custeio`, `capital`, `bolsa`. Uma chamada de auxílio pesquisa pode conceder custeio e capital ao mesmo tempo, por exemplo.
-- **Público-alvo** (`publico_alvo`) — quem pode se candidatar, podendo ter mais de um valor. Pessoas: `pesquisadores`, `especialistas`, `mestrandos`, `mestres`, `doutorandos`, `doutores`. Instituições e organizações: `empresas`, `startups`, `ies`, `ict`, `governo`. Importante: "pesquisador" não é sinônimo de "doutor" — nem todo pesquisador tem doutorado, e a categoria é mais ampla que os níveis de formação acadêmica.
+- **Proponente elegível** (`proponente_elegivel`) — quem pode **apresentar a proposta**, podendo ter mais de um valor. Pessoa física: `pesquisadores`, `especialistas`, `mestrandos`, `mestres`, `doutorandos`, `doutores`. Pessoa jurídica: `ies`, `ict`, `empresas`, `startups`, `governo`. Importante: "pesquisador" não é sinônimo de "doutor" — nem todo pesquisador tem doutorado, e a categoria é mais ampla que os níveis de formação acadêmica. **Não** é "quem é beneficiado": população beneficiada específica (mães, mulheres, quilombolas) vai em `palavras_chave`.
 - **Nível de formação** (`nivel_formacao`) — grau acadêmico do beneficiário (mestrado, doutorado, pós-doutorado, iniciação científica, não aplicável). Independente de `publico_alvo` — só é relevante quando `natureza_recurso` inclui `bolsa` (não faz sentido para custeio ou capital direcionado a uma empresa, por exemplo).
 - **Modalidade de pessoa** (`modalidade_pessoa`) — só relevante quando `linha_de_fomento` é `apoio_formacao_capacitacao`. Descreve o tipo de movimentação de pessoal que o apoio financia: `atracao` (trazer pesquisador de fora), `fixacao` (reter pesquisador já vinculado), `capacitacao_exterior` (formação/estágio no exterior).
 - **Tipo de parceria** (`tipo_parceria`) — escopo geográfico/institucional da parceria entre instituições, quando a chamada exigir ou incentivar cooperação. Ex: `nacional`, `regional`, `internacional`. Distinto de `abrangencia` (que descreve o alcance geográfico da própria chamada, não da parceria).
@@ -1046,6 +1046,57 @@ extrair. Enquanto isso, o trecho de origem de cada candidato é o que protege o 
 **Moeda estrangeira.** A chamada CONFAP & WBI (Bélgica) dá o valor em **euros** (20.000 €). O
 campo é `Numeric` em reais e não há taxa de câmbio no sistema. Pendência: registrar a moeda de
 origem e marcar o valor convertido como aproximado, já que depende da cotação do dia.
+
+### Glossário de papéis institucionais: pré-outorga vs pós-concessão (2026-08-31)
+
+**A constatação que originou a mudança.** Nos 15 registros curados à mão,
+`instituicao_executora` e `instituicao_beneficiaria` foram preenchidas com **tipos**, não com
+nomes próprios. De nove valores distintos nos dois campos, **um só** era instituição real:
+
+```
+instituicao_executora     'FAPERO' 'ICT' 'ICT-MG' 'ICT-PE' 'ICT-RO; IES-RO' 'IF; IES'
+instituicao_beneficiaria  'ICT-Amazônia Legal' 'ICT-ES; IES-ES' 'PROCON-SC'
+```
+
+O `'FAPERO'` em `instituicao_executora` (registro #376) é o caso mais eloquente: a FAPERO é
+quem **publica e financia** aquele edital. E o sufixo em `'ICT-Amazônia Legal'` nem é UF — é
+região, um terceiro conceito que `abrangencia` + `uf` já cobrem.
+
+**O diagnóstico.** Os papéis se dividem em dois momentos:
+
+- **Pré-outorga** — existem no momento em que alguém procura o edital: **promotora** (publica
+  a chamada e recebe as propostas), **financiadoras** (aportam o recurso), **proponente**
+  (apresenta a proposta), **demandante** (a instituição cuja necessidade motivou a chamada).
+- **Pós-concessão** — só passam a existir depois que a proposta é aprovada: **executora**,
+  **beneficiária** e **outorgada** (papéis de Termo de Outorga) e **interveniente** (de
+  convênio, TED ou ACT).
+
+Um portal de **descoberta** trabalha no primeiro grupo. Os do segundo foram removidos.
+
+**Três mudanças, uma migração** (`d7f39c15b204`):
+
+1. `publico_alvo` → **`proponente_elegivel`**. O nome antigo convidava à leitura "quem é
+   beneficiado", e o conteúdo sempre foi "quem pode apresentar a proposta" — inclusive quando
+   o curador o descrevia de outro jeito. Renomear coluna no Alembic exige `alter_column` com
+   `new_column_name` escrito à mão: o autogenerate detecta renomeação como
+   `drop_column` + `add_column`, o que apagaria os dados.
+2. **`instituicao_promotora`** (String, nullable). Não é derivável das financiadoras: o
+   Amazônia +10 tem aporte de várias FAPs, CONFAP e BNDES, e foi publicado pela FAPESP numa
+   edição e pelo CNPq em outra. O proponente precisa saber ONDE submete. Backfill a partir de
+   `instituicao_financiadora[1]`, que é como os scrapers preenchem — a fonte de onde o edital
+   foi coletado é o site da própria promotora. Correto em 14 dos 15 curados; o #34 (Amazônia
+   +10) foi ajustado à mão de `CONFAP` para `FAPESP`, que é o que o link confirma.
+3. Remoção de `instituicao_executora` e `instituicao_beneficiaria`.
+
+**Agrupamento PF/PJ é só de interface.** No banco `proponente_elegivel` continua um campo
+único. A divisão em duas colunas existe porque a pergunta é diferente dos dois lados: "o
+edital aceita a pessoa submetendo em nome próprio?" versus "aceita a instituição?". Marcar dos
+dois lados ao mesmo tempo é caso real e frequente. Os rótulos de IES e ICT vêm expandidos de
+propósito: a distinção é sutil e precisa estar visível na hora de marcar.
+
+**A chave dentro das faixas também foi renomeada.** As faixas vivem em `dados_extra` (JSONB) e
+duas já tinham `publico_alvo` gravado. A migração renomeia a chave com `jsonb_set`; sem isso as
+faixas existentes ficariam com a chave antiga e sumiriam do formulário.
 
 ## `status` vs `status_oficial` — não confundir
 

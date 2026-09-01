@@ -45,8 +45,8 @@
         <dt class="col-sm-4">Tipo de Instrumento</dt>
         <dd class="col-sm-8">{{ o.tipo_instrumento }}</dd>
 
-        <dt class="col-sm-4">Público-Alvo</dt>
-        <dd class="col-sm-8">{{ o.publico_alvo | join(', ') }}</dd>
+        <dt class="col-sm-4">Proponente Elegível</dt>
+        <dd class="col-sm-8">{{ o.proponente_elegivel | join(', ') }}</dd>
 
         <dt class="col-sm-4">Natureza do Recurso</dt>
         <dd class="col-sm-8">{{ o.natureza_recurso | join(', ') }}</dd>
@@ -64,13 +64,13 @@
         </dd>
         {% endif %}
 
-        <dt class="col-sm-4">Instituição Financiadora</dt>
-        <dd class="col-sm-8">{{ (o.instituicao_financiadora or []) | join(', ') }}</dd>
-
-        {% if o.instituicao_executora %}
-        <dt class="col-sm-4">Instituição Executora</dt>
-        <dd class="col-sm-8">{{ o.instituicao_executora }}</dd>
+        {% if o.instituicao_promotora %}
+        <dt class="col-sm-4">Promotora</dt>
+        <dd class="col-sm-8">{{ o.instituicao_promotora }}</dd>
         {% endif %}
+
+        <dt class="col-sm-4">Financiadoras</dt>
+        <dd class="col-sm-8">{{ (o.instituicao_financiadora or []) | join(', ') }}</dd>
 
         {% if o.orcamento_total_chamada %}
         <dt class="col-sm-4">Orçamento Total da Chamada</dt>
@@ -132,8 +132,8 @@
               {% if f.area_principal %}
               <dt class="col-5">Área</dt><dd class="col-7">{{ f.area_principal }}</dd>
               {% endif %}
-              {% if f.publico_alvo %}
-              <dt class="col-5">Público-alvo</dt><dd class="col-7">{{ f.publico_alvo | join(', ') }}</dd>
+              {% if f.proponente_elegivel %}
+              <dt class="col-5">Proponente</dt><dd class="col-7">{{ f.proponente_elegivel | join(', ') }}</dd>
               {% endif %}
             </dl>
           </div>

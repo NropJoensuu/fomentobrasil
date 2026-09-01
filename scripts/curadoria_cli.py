@@ -32,9 +32,11 @@ VOCAB_LINHA_DE_FOMENTO = [
     "apoio_redes_grupos_pesquisa",
 ]
 VOCAB_NATUREZA_RECURSO = ["custeio", "capital", "bolsa"]
-VOCAB_PUBLICO_ALVO = [
+# Mesma lista de app.utils.VOCABULARIO_PROPONENTE, repetida aqui de propósito: este script
+# roda sem Flask, para quando a aplicação não sobe (ver docstring do módulo).
+VOCAB_PROPONENTE_ELEGIVEL = [
     "pesquisadores", "especialistas", "mestrandos", "mestres", "doutorandos", "doutores",
-    "empresas", "startups", "ies", "ict", "governo",
+    "ies", "ict", "empresas", "startups", "governo",
 ]
 VOCAB_TIPO_INSTRUMENTO = ["chamada_publica_edital", "chamamento_publico", "premio"]
 VOCAB_AREA_PRINCIPAL = [
@@ -64,10 +66,9 @@ CAMPOS_EDITAVEIS = [
     ("linha_de_fomento",        "Linha de fomento",           "lista",       VOCAB_LINHA_DE_FOMENTO),
     ("tipo_instrumento",        "Tipo de instrumento",        "escolha",     VOCAB_TIPO_INSTRUMENTO),
     ("natureza_recurso",        "Natureza do recurso",        "lista",       VOCAB_NATUREZA_RECURSO),
-    ("publico_alvo",            "Público-alvo",               "lista",       VOCAB_PUBLICO_ALVO),
+    ("proponente_elegivel",     "Proponente elegível",        "lista",       VOCAB_PROPONENTE_ELEGIVEL),
     ("instituicao_financiadora","Instituição financiadora",   "lista_livre", None),
-    ("instituicao_executora",   "Instituição executora",      "texto",       None),
-    ("instituicao_beneficiaria","Instituição beneficiária",   "texto",       None),
+    ("instituicao_promotora",   "Instituição promotora",      "texto",       None),
     ("area_principal",          "Área principal",             "escolha",     VOCAB_AREA_PRINCIPAL),
     ("palavras_chave",          "Palavras-chave",             "lista_livre", None),
     ("nivel_formacao",          "Nível de formação",          "lista",       VOCAB_NIVEL_FORMACAO),
@@ -88,7 +89,7 @@ CAMPOS_EDITAVEIS = [
 # NULL) mas deixa o registro sem classificação. Os dois primeiros a tela web bloqueia;
 # os outros dois viram só aviso, para não travar a curadoria.
 OBRIGATORIOS = ["linha_de_fomento", "instituicao_financiadora"]
-RECOMENDADOS = ["natureza_recurso", "publico_alvo"]
+RECOMENDADOS = ["natureza_recurso", "proponente_elegivel"]
 
 
 # --------------------------------------------------------------------------- infra

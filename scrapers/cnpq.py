@@ -180,17 +180,18 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "data_publicacao": r["data_publicacao"],
                 "instituicao_financiadora": [r["instituicao_financiadora"][:200]],
+                "instituicao_promotora": "CNPq",
                 "tipo_instrumento": r["tipo_instrumento"],
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "abrangencia": "nacional",
                 # Placeholder: não dá para inferir a linha de fomento do título/descrição
                 # com confiança. Um humano corrige na curadoria, junto com area_principal.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
-                # natureza_recurso e publico_alvo são NOT NULL no schema, mas não são
+                # natureza_recurso e proponente_elegivel são NOT NULL no schema, mas não são
                 # extraíveis da página de listagem. Ficam como lista vazia — "ainda não
                 # determinado" — em vez de um chute que viraria dado errado no banco.
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "dados_extra": dados_extra,
                 "origem": "institucional",
                 "status": "pendente",  # aguarda curadoria antes de aparecer publicamente

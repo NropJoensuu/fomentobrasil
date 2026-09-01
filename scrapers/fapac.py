@@ -214,6 +214,7 @@ def salvar_no_banco(registros):
                 "data_publicacao": r["data_publicacao"],
                 "data_prazo": None,  # só existe dentro do PDF
                 "instituicao_financiadora": ["FAPAC"],
+                "instituicao_promotora": "FAPAC",
                 "tipo_instrumento": r["tipo_instrumento"],
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["AC"],
@@ -221,7 +222,7 @@ def salvar_no_banco(registros):
                 # Placeholder: não é inferível do título. Corrigido na curadoria.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "origem": "institucional",
                 "status": "pendente",
                 "dados_extra": dados_extra,

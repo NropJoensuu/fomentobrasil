@@ -179,6 +179,7 @@ def salvar_no_banco(registros):
                 # parceiros no título, mas extraí-los seria chute — o curador completa
                 # a lista, que é ARRAY justamente para isso.
                 "instituicao_financiadora": ["FAPESPA"],
+                "instituicao_promotora": "FAPESPA",
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["PA"],
@@ -186,7 +187,7 @@ def salvar_no_banco(registros):
                 # Placeholder: não é inferível do título. Corrigido na curadoria.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "origem": "institucional",
                 "status": "pendente",
             },

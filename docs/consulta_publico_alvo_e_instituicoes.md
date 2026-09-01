@@ -1,3 +1,10 @@
+> **RESOLVIDO em 2026-08-31.** As duas perguntas foram decididas: `publico_alvo` virou
+> `proponente_elegivel` (quem pode apresentar a proposta); `instituicao_executora` e
+> `instituicao_beneficiaria` foram removidas, por serem papéis pós-concessão; e foi criada
+> `instituicao_promotora`. Ver "Glossário de papéis institucionais: pré-outorga vs
+> pós-concessão" em `inventario_de_necessidades.md`. Este documento fica como registro do
+> raciocínio e dos dados que levaram à decisão.
+
 # Consulta: `publico_alvo` e os campos de instituição
 
 > Documento escrito para ser lido por inteiro como contexto de uma conversa. Ele descreve um

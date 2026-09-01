@@ -201,6 +201,7 @@ def salvar_no_banco(registros):
             campos_extras_fixos={
                 "descricao": r["descricao"],
                 "instituicao_financiadora": ["Fundação Araucária"],
+                "instituicao_promotora": "Fundação Araucária",
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
@@ -208,7 +209,7 @@ def salvar_no_banco(registros):
                 # NOT NULL no schema, mas não extraíveis com confiança da listagem:
                 # lista vazia significa "ainda não determinado", em vez de um chute.
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "uf": ["PR"],
                 "abrangencia": "estadual",
                 "origem": "institucional",

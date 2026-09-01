@@ -48,3 +48,6 @@ Thumbs.db
 # Logs
 *.log
 .claude/
+
+# Export de análise, gerado sob demanda (scripts de leitura do banco)
+curados.json

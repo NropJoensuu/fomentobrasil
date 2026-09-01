@@ -184,6 +184,7 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "data_publicacao": r["data_publicacao"],
                 "instituicao_financiadora": ["FAPEMA"],
+                "instituicao_promotora": "FAPEMA",
                 "tipo_instrumento": r["tipo_instrumento"],
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"], r["descricao"]),
                 "uf": ["MA"],
@@ -191,7 +192,7 @@ def salvar_no_banco(registros):
                 # Placeholder: não é inferível do título. Corrigido na curadoria.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "origem": "institucional",
                 "status": "pendente",
                 "dados_extra": dados_extra or None,

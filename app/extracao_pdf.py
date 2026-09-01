@@ -8,7 +8,7 @@ respectivos PDFs (2026-08-30), os campos se separam em três camadas bem distint
 2. **Inferíveis com contagem** — `natureza_recurso`: a presença de "custeio"/"capital"/
    "bolsa" acerta, mas só com limiar. Uma menção isolada não significa que a chamada
    concede aquilo (a #23 cita "bolsa" uma vez e não concede nenhuma).
-3. **Julgamento** — `publico_alvo`, `linha_de_fomento`, `abrangencia`. Aqui contar palavra
+3. **Julgamento** — `proponente_elegivel`, `linha_de_fomento`, `abrangencia`. Aqui contar palavra
    é ativamente errado: a #22 e a #215 mencionam "pesquisador" 17 e 18 vezes e o curador
    NÃO marcou `pesquisadores`, porque quem submete é a instituição. E a #118 tem
    `mestrandos`/`mestres`/`doutorandos` marcados com ZERO ocorrências dessas palavras — o

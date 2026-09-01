@@ -141,27 +141,31 @@
 
         <div class="mb-3">
           <label class="form-label">
-            Público-Alvo <span class="text-danger">*</span>
-            <span data-bs-toggle="tooltip" title="Pesquisador não é sinônimo de doutor: marque a titulação só quando o edital a exigir explicitamente. Quando o edital usar 'IES/P' (Instituições de Ensino Superior e/ou de Pesquisa), marque IES e ICT.">ℹ️</span>
+            Proponente Elegível <span class="text-danger">*</span>
+            <span data-bs-toggle="tooltip" title="Quem pode APRESENTAR a proposta, conforme a seção de elegibilidade do edital. Se quem submete é a instituição, marque a instituição — a população beneficiada específica vai em Palavras-chave.">ℹ️</span>
           </label>
-          {% for valor, rotulo in [
-            ("pesquisadores", "Pesquisadores"),
-            ("especialistas", "Especialistas (lato sensu)"),
-            ("mestrandos", "Mestrandos"),
-            ("mestres", "Mestres"),
-            ("doutorandos", "Doutorandos"),
-            ("doutores", "Doutores"),
-            ("empresas", "Empresas"),
-            ("startups", "Startups"),
-            ("ies", "IES — Instituições de Ensino Superior"),
-            ("ict", "ICT — Instituições Científicas, Tecnológicas e de Inovação"),
-            ("governo", "Governo"),
-          ] %}
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="publico_alvo" value="{{ valor }}" id="publico_{{ valor }}" {{ "checked" if valor in (o.publico_alvo or []) else "" }}>
-            <label class="form-check-label" for="publico_{{ valor }}">{{ rotulo }}</label>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="small text-muted mb-1 fw-semibold">Pessoa Física</div>
+              {% for valor, rotulo in proponente_pf %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="proponente_elegivel"
+                       value="{{ valor }}" id="pe_{{ valor }}" {{ "checked" if valor in (o.proponente_elegivel or []) else "" }}>
+                <label class="form-check-label" for="pe_{{ valor }}">{{ rotulo }}</label>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              <div class="small text-muted mb-1 fw-semibold">Pessoa Jurídica</div>
+              {% for valor, rotulo in proponente_pj %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="proponente_elegivel"
+                       value="{{ valor }}" id="pe_{{ valor }}" {{ "checked" if valor in (o.proponente_elegivel or []) else "" }}>
+                <label class="form-check-label" for="pe_{{ valor }}">{{ rotulo }}</label>
+              </div>
+              {% endfor %}
+            </div>
           </div>
-          {% endfor %}
         </div>
 
         <div class="mb-3">
@@ -233,22 +237,20 @@
 
         <div class="mb-3">
           <label class="form-label">
+            Instituição Promotora
+            <span data-bs-toggle="tooltip" title="Quem publica a chamada e recebe as propostas. Em chamadas conjuntas, várias instituições aportam recurso mas uma opera o certame — é onde o proponente submete.">ℹ️</span>
+          </label>
+          <input type="text" name="instituicao_promotora" class="form-control" value="{{ o.instituicao_promotora or '' }}">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
             Instituição(ões) Financiadora(s) <span class="text-danger">*</span>
             <span data-bs-toggle="tooltip" title="Digite e aperte Enter — pode adicionar mais de uma quando o edital for cofinanciado.">ℹ️</span>
           </label>
           <div id="tags-instituicao_financiadora" class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center">
             <input type="text" class="border-0 flex-grow-1" style="outline:none;min-width:150px;" placeholder="Digite e aperte Enter" data-campo="instituicao_financiadora">
           </div>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Instituição Executora</label>
-          <input type="text" name="instituicao_executora" class="form-control" value="{{ o.instituicao_executora or '' }}">
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Instituição Beneficiária</label>
-          <input type="text" name="instituicao_beneficiaria" class="form-control" value="{{ o.instituicao_beneficiaria or '' }}">
         </div>
 
         <div class="mb-3">

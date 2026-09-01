@@ -161,6 +161,7 @@ def salvar_no_banco(registros):
                 "data_publicacao": None,  # a listagem não mostra data em lugar nenhum
                 "data_prazo": None,  # só existe dentro do edital
                 "instituicao_financiadora": ["FAPEPI"],
+                "instituicao_promotora": "FAPEPI",
                 "tipo_instrumento": r["tipo_instrumento"],
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["PI"],
@@ -168,7 +169,7 @@ def salvar_no_banco(registros):
                 # Placeholder: não é inferível do título. Corrigido na curadoria.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "origem": "institucional",
                 "status": "pendente",
             },

@@ -25,6 +25,32 @@ def get_ufs_por_regiao(regiao):
 REGIOES = sorted(set(REGIAO_POR_UF.values()))
 
 
+# Vocabulário de `proponente_elegivel`, dividido só para a interface — no banco é um campo
+# único. A divisão existe porque a pergunta que o curador se faz é diferente dos dois lados:
+# "o edital aceita a pessoa submetendo em nome próprio?" versus "aceita a instituição?".
+PROPONENTE_PESSOA_FISICA = [
+    ("pesquisadores", "Pesquisadores"),
+    ("especialistas", "Especialistas"),
+    ("mestrandos", "Mestrandos"),
+    ("mestres", "Mestres"),
+    ("doutorandos", "Doutorandos"),
+    ("doutores", "Doutores"),
+]
+
+# Rótulos expandidos de propósito: a distinção entre IES e ICT é sutil e o curador precisa
+# lembrar dela na hora. Uma universidade federal é as duas; a Fiocruz é ICT e não é IES; uma
+# faculdade só de ensino é IES e não é ICT.
+PROPONENTE_PESSOA_JURIDICA = [
+    ("ies", "IES — Instituição de Ensino Superior"),
+    ("ict", "ICT — Instituição Científica, Tecnológica e de Inovação"),
+    ("empresas", "Empresas"),
+    ("startups", "Startups"),
+    ("governo", "Governo"),
+]
+
+VOCABULARIO_PROPONENTE = [v for v, _ in PROPONENTE_PESSOA_FISICA + PROPONENTE_PESSOA_JURIDICA]
+
+
 def parse_valor_brl(texto):
     """Converte o texto de um campo com máscara de moeda em Decimal.
 
@@ -79,7 +105,7 @@ def parse_faixas(form):
             "descricao": (form.get(f"faixa-{i}-descricao") or "").strip() or None,
             "valor_minimo": em_centavos(f"faixa-{i}-valor_minimo"),
             "valor_maximo": em_centavos(f"faixa-{i}-valor_maximo"),
-            "publico_alvo": form.getlist(f"faixa-{i}-publico_alvo") or None,
+            "proponente_elegivel": form.getlist(f"faixa-{i}-proponente_elegivel") or None,
             "area_principal": form.get(f"faixa-{i}-area_principal") or None,
         }
         if any(faixa.values()):
@@ -132,7 +158,7 @@ PLACEHOLDER_LINHA_DE_FOMENTO = ["apoio_formacao_capacitacao"]
 # para os ARRAY, `get` para os escalares.
 AVISOS_POR_CAMPO = [
     ("natureza_recurso", "Natureza do Recurso não foi marcada", True),
-    ("publico_alvo", "Público-Alvo não foi marcado", True),
+    ("proponente_elegivel", "Proponente Elegível não foi marcado", True),
     ("data_prazo", "Data Final de Submissão em branco", False),
 ]
 

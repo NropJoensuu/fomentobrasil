@@ -52,7 +52,7 @@ def listar_oportunidades():
     uf_filtro = request.args.get("uf") or ""
     linha_de_fomento = request.args.get("linha_de_fomento") or ""
     area_principal = request.args.get("area_principal") or ""
-    publico_alvo = request.args.get("publico_alvo") or ""
+    proponente_elegivel = request.args.get("proponente_elegivel") or ""
     apenas_abertas = request.args.get("apenas_abertas") == "1"
 
     if busca:
@@ -75,8 +75,8 @@ def listar_oportunidades():
         query = query.filter(Oportunidade.linha_de_fomento.any(linha_de_fomento))
     if area_principal:
         query = query.filter(Oportunidade.area_principal == area_principal)
-    if publico_alvo:
-        query = query.filter(Oportunidade.publico_alvo.any(publico_alvo))
+    if proponente_elegivel:
+        query = query.filter(Oportunidade.proponente_elegivel.any(proponente_elegivel))
     if apenas_abertas:
         hoje = datetime.utcnow().date()
         query = query.filter(
@@ -92,7 +92,7 @@ def listar_oportunidades():
         "uf": uf_filtro,
         "linha_de_fomento": linha_de_fomento,
         "area_principal": area_principal,
-        "publico_alvo": publico_alvo,
+        "proponente_elegivel": proponente_elegivel,
         "apenas_abertas": apenas_abertas,
     }
 
@@ -168,12 +168,11 @@ def nova_oportunidade():
         oportunidade = Oportunidade(
             titulo=request.form["titulo"],
             instituicao_financiadora=instituicao_financiadora,
-            instituicao_executora=request.form.get("instituicao_executora") or None,
-            instituicao_beneficiaria=request.form.get("instituicao_beneficiaria") or None,
+            instituicao_promotora=request.form.get("instituicao_promotora") or None,
             linha_de_fomento=linha_de_fomento,
             tipo_instrumento=request.form["tipo_instrumento"],
             natureza_recurso=request.form.getlist("natureza_recurso"),
-            publico_alvo=request.form.getlist("publico_alvo"),
+            proponente_elegivel=request.form.getlist("proponente_elegivel"),
             tipo_parceria=request.form.get("tipo_parceria") or None,
             modalidade_pessoa=request.form.get("modalidade_pessoa") or None,
             status_oficial=request.form.get("status_oficial") or None,
@@ -446,8 +445,7 @@ def moderar_oportunidade(id):
         oportunidade.descricao = request.form.get("descricao") or None
         oportunidade.link = request.form["link"]
         oportunidade.instituicao_financiadora = instituicao_financiadora
-        oportunidade.instituicao_executora = request.form.get("instituicao_executora") or None
-        oportunidade.instituicao_beneficiaria = request.form.get("instituicao_beneficiaria") or None
+        oportunidade.instituicao_promotora = request.form.get("instituicao_promotora") or None
         oportunidade.linha_de_fomento = linha_de_fomento
         oportunidade.tipo_instrumento = request.form["tipo_instrumento"]
         oportunidade.tipo_parceria = request.form.get("tipo_parceria") or None
@@ -460,7 +458,7 @@ def moderar_oportunidade(id):
         oportunidade.palavras_chave = request.form.getlist("palavras_chave") or None
 
         oportunidade.natureza_recurso = request.form.getlist("natureza_recurso")
-        oportunidade.publico_alvo = request.form.getlist("publico_alvo")
+        oportunidade.proponente_elegivel = request.form.getlist("proponente_elegivel")
 
         # Reatribuição (e não mutação in-place) para o SQLAlchemy detectar a mudança no
         # JSONB; `aplicar_faixas` preserva as chaves que o scraper gravou ali.

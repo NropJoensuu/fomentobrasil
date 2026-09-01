@@ -179,6 +179,7 @@ def salvar_no_banco(registros):
             campos_extras_fixos={
                 "descricao": r["descricao"],
                 "instituicao_financiadora": [r["instituicao_financiadora"][:200]],
+                "instituicao_promotora": "FAPESP",
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["SP"],
@@ -188,7 +189,7 @@ def salvar_no_banco(registros):
                 # NOT NULL no schema, mas não extraíveis da listagem: lista vazia significa
                 # "ainda não determinado", em vez de um chute que viraria dado errado.
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "origem": "institucional",
                 "status": "pendente",
                 "dados_extra": dados_extra or None,

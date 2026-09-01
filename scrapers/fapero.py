@@ -171,6 +171,7 @@ def salvar_no_banco(registros):
                 # CERTI + FAPERO), mas cada estado tem edital e prazo próprios. Não tentar
                 # deduplicar entre FAPs nem extrair os parceiros: o curador decide.
                 "instituicao_financiadora": ["FAPERO"],
+                "instituicao_promotora": "FAPERO",
                 "tipo_instrumento": r["tipo_instrumento"],
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["RO"],
@@ -178,7 +179,7 @@ def salvar_no_banco(registros):
                 # Placeholder: não é inferível do título. Corrigido na curadoria.
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "origem": "institucional",
                 "status": "pendente",
                 "dados_extra": dados_extra,

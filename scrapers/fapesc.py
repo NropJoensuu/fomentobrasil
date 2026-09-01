@@ -172,6 +172,7 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "data_publicacao": r["data_publicacao"],
                 "instituicao_financiadora": ["FAPESC"],
+                "instituicao_promotora": "FAPESC",
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.
@@ -180,7 +181,7 @@ def salvar_no_banco(registros):
                 # conteúdo: lista vazia significa "ainda não determinado", em vez de
                 # um chute.
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "uf": ["SC"],
                 "abrangencia": "estadual",
                 "origem": "institucional",

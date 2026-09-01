@@ -144,6 +144,7 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "data_prazo": None,  # não disponível na listagem, requer abrir o PDF
                 "instituicao_financiadora": ["FAPES"],
+                "instituicao_promotora": "FAPES",
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["ES"],
@@ -152,7 +153,7 @@ def salvar_no_banco(registros):
                 # requer revisão manual na curadoria (ver dados_extra["categoria_fapes"]).
                 "linha_de_fomento": ["apoio_formacao_capacitacao"],
                 "natureza_recurso": [],
-                "publico_alvo": [],
+                "proponente_elegivel": [],
                 "origem": "institucional",
                 "status": "pendente",
                 "dados_extra": dados_extra,

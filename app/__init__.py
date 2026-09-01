@@ -27,12 +27,20 @@ def create_app(iniciar_agendador=False):
     db.init_app(app)
     migrate.init_app(app, db)
 
-    from app.utils import formatar_moeda, resumo_preenchimento
+    from app.utils import (
+        formatar_moeda,
+        PROPONENTE_PESSOA_FISICA,
+        PROPONENTE_PESSOA_JURIDICA,
+        resumo_preenchimento,
+    )
 
     app.jinja_env.filters["moeda"] = formatar_moeda
-    # Global, e não passado em cada render_template: o formulário de moderação é
-    # renderizado em cinco pontos diferentes da rota (validação, avisos, GET...).
+    # Globais, e não passados em cada render_template: o formulário de moderação é
+    # renderizado em cinco pontos diferentes da rota (validação, avisos, GET...), e os
+    # vocabulários são os mesmos em todos.
     app.jinja_env.globals["resumo_preenchimento"] = resumo_preenchimento
+    app.jinja_env.globals["proponente_pf"] = PROPONENTE_PESSOA_FISICA
+    app.jinja_env.globals["proponente_pj"] = PROPONENTE_PESSOA_JURIDICA
 
     from app import models  # <-- adicionar esta linha
 

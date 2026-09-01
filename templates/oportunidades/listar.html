@@ -66,16 +66,18 @@
     </div>
 
     <div class="col-md-2">
-      <select name="publico_alvo" class="form-select form-select-sm">
-        <option value="">Público-Alvo (todos)</option>
-        <option value="pesquisadores" {{ 'selected' if filtros.publico_alvo == 'pesquisadores' else '' }}>Pesquisadores</option>
-        <option value="empresas" {{ 'selected' if filtros.publico_alvo == 'empresas' else '' }}>Empresas</option>
-        <option value="startups" {{ 'selected' if filtros.publico_alvo == 'startups' else '' }}>Startups</option>
-        <option value="ict" {{ 'selected' if filtros.publico_alvo == 'ict' else '' }}>ICT</option>
-        <option value="mestrandos" {{ 'selected' if filtros.publico_alvo == 'mestrandos' else '' }}>Mestrandos</option>
-        <option value="doutorandos" {{ 'selected' if filtros.publico_alvo == 'doutorandos' else '' }}>Doutorandos</option>
-        <option value="ies" {{ 'selected' if filtros.publico_alvo == 'ies' else '' }}>IES</option>
-        <option value="governo" {{ 'selected' if filtros.publico_alvo == 'governo' else '' }}>Governo</option>
+      <select name="proponente_elegivel" class="form-select form-select-sm">
+        <option value="">Proponente (todos)</option>
+        <optgroup label="Pessoa Física">
+          {% for valor, rotulo in proponente_pf %}
+          <option value="{{ valor }}" {{ 'selected' if filtros.proponente_elegivel == valor else '' }}>{{ rotulo }}</option>
+          {% endfor %}
+        </optgroup>
+        <optgroup label="Pessoa Jurídica">
+          {% for valor, rotulo in proponente_pj %}
+          <option value="{{ valor }}" {{ 'selected' if filtros.proponente_elegivel == valor else '' }}>{{ rotulo }}</option>
+          {% endfor %}
+        </optgroup>
       </select>
     </div>
 
@@ -90,7 +92,7 @@
       <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
     </div>
 
-    {% if filtros.busca or filtros.regiao or filtros.uf or filtros.linha_de_fomento or filtros.area_principal or filtros.publico_alvo or filtros.apenas_abertas %}
+    {% if filtros.busca or filtros.regiao or filtros.uf or filtros.linha_de_fomento or filtros.area_principal or filtros.proponente_elegivel or filtros.apenas_abertas %}
     <div class="col-12">
       <a href="{{ url_for('main.listar_oportunidades') }}" class="small">Limpar filtros</a>
     </div>

@@ -24,11 +24,14 @@ class Oportunidade(db.Model):
     # O que é efetivamente concedido na prática (pode ter mais de um valor)
     natureza_recurso = db.Column(ARRAY(db.String(50)), nullable=False)  # custeio, capital, bolsa
 
-    # Quem pode se candidatar (pode ter mais de um valor)
+    # Quem pode APRESENTAR a proposta (elegibilidade do proponente), em nome próprio
+    # (pessoa física) ou em nome de instituição (pessoa jurídica).
+    # NÃO é "quem é beneficiado" — população beneficiada específica (mães, mulheres,
+    # quilombolas) e instituição demandante vão em palavras_chave.
     # "ies" e "ict" são mantidos separados de propósito: a legislação os define em textos
     # distintos (LDB e Lei 10.973/2004). Editais que usam a sigla "IES/P" da FAPES
     # ("Instituições de Ensino Superior e/ou de Pesquisa") cobrem os dois — marcar ambos.
-    publico_alvo = db.Column(ARRAY(db.String(50)), nullable=False)  # pesquisadores, especialistas, mestrandos, mestres, doutorandos, doutores, empresas, startups, ies, ict, governo
+    proponente_elegivel = db.Column(ARRAY(db.String(50)), nullable=False)  # ver PROPONENTE_PESSOA_FISICA e PROPONENTE_PESSOA_JURIDICA em app/utils.py
 
     # Proveniência: institucional (edital top-down) vs vaga_projeto (oferta ligada a projeto já financiado)
     origem = db.Column(db.String(30), nullable=False, default="institucional")
@@ -42,8 +45,13 @@ class Oportunidade(db.Model):
     # financiadora simultaneamente (ex: "INICIATIVA AMAZÔNIA+10: CONFAP-BNDES", financiado
     # por várias FAPs + BNDES juntos).
     instituicao_financiadora = db.Column(ARRAY(db.String(200)), nullable=False)  # quem origina o recurso: ex "CNPq", "FAPESP"
-    instituicao_executora = db.Column(db.String(200), nullable=True)  # quem executa o projeto: ex "Centro Universitário FEI"
-    instituicao_beneficiaria = db.Column(db.String(200), nullable=True)  # intermediária que recebe e repassa o recurso (ex: fundação de apoio)
+
+    # Publica a chamada e recebe as propostas. Distinta das financiadoras: em chamadas
+    # conjuntas, várias instituições aportam recurso mas uma opera o certame. O edital
+    # Amazônia +10 tem aporte de várias FAPs, CONFAP e BNDES, e foi publicado pela FAPESP
+    # numa edição e pelo CNPq em outra — o proponente precisa saber ONDE submete, e isso
+    # não é derivável da lista de financiadoras.
+    instituicao_promotora = db.Column(db.String(200), nullable=True)
 
     # Lista porque uma mesma chamada costuma conceder bolsa para mais de um nível
     # (ex: mestrado e doutorado na mesma chamada). Só relevante quando
