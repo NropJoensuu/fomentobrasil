@@ -1463,3 +1463,234 @@ o valor já é, por natureza, uma lista.
 a lógica JS foi validada por execução isolada em Node (mock mínimo de `document`) contra os 
 três casos reais (#150, #151, #152) antes de ser dada como correta — não foi só revisão visual 
 do código.
+
+## Correções da recuragem dos 15 registros (2026-09-17)
+
+Achados completos em `docs/achados_recuragem.md` — a tabela do usuário não chegou ao agente,
+só os itens descritos em texto no briefing; o arquivo documenta isso explicitamente. Desta
+vez o ambiente tinha `ANTHROPIC_API_KEY` configurada, então PARTE 3 (prompt) pôde ser validada
+com chamadas reais à API, não só lida — primeira vez isso foi possível nesta série de
+briefings.
+
+### PARTE 1 — Bugs
+
+**1.1 Máscara de moeda dividia por 100 (crítico).** A máscara `.mascara-moeda` (base.html)
+trata a string do valor como um fluxo de dígitos onde os 2 últimos são centavos — convenção
+certa para digitação, mas que corrompe a ordem de grandeza de qualquer valor aplicado
+programaticamente sem exatamente 2 casas decimais (`7552000` virava R$ 75.520,00, 100x menor).
+O conserto anterior (PARTE 3 da sessão passada, blocoComparacao) tinha corrigido isso só
+localmente com `.toFixed(2)` no ponto de aplicação — o bug persistia no caminho antigo
+(botão "aplicar" da Curadoria assistida por IA, `dado.valor | tojson` sem forçar 2 casas).
+
+Conserto na raiz, não num segundo lugar: `window.definirValorMoeda(el, numero)` nova em
+`base.html`, que formata um número real diretamente (`Intl.NumberFormat`) em vez de simular
+digitação (`el.value = x; el.dispatchEvent(new Event('input'))`, que reusa a lógica de
+dígitos-são-centavos e por isso reintroduzia o bug). Os dois pontos de aplicação
+(`aplicar()` do painel de IA, `usar()` do painel de leitura de PDF) passaram a chamar essa
+função para campos de dinheiro. Ambos testados contra o registro real #21 (que tem
+`sugestao_ia.campos.orcamento_total_chamada.valor = 7552000.0` — um float Python que vira
+`"7552000"` ao ser atribuído a `.value` em JS, perdendo o `.0`) clicando no botão real
+"aplicar" via Playwright: resultado `R$ 7.552.000,00`, não `R$ 75.520,00`. Regressão
+verificada: carga inicial de um valor já formatado no banco continua certa, e digitação
+manual dígito-a-dígito continua com a convenção antiga (testado: "12345" → R$ 123,45).
+
+Varredura do banco atrás de contaminação: `orcamento_total_chamada`/`valor_minimo_proposta`/
+`valor_maximo_proposta` abaixo de R$ 10.000 — achou só #82 (`valor_maximo_proposta` =
+R$ 5.000, chamada de bolsas de pesquisa) e #379 (`valor_minimo/maximo_proposta` = R$ 300/
+R$ 5.000, idem) — ambos plausivelmente valores reais de bolsa (não de projeto), não
+contaminação. Não alterados; listados aqui para revisão manual por quem conhece o edital.
+
+**1.2 Acentos escapados na exibição da IA.** `í` em vez de "í" em `editar.html`. Não é
+dado gravado errado — confirmado direto no banco (`repr()` mostra Unicode correto,
+`"inovação"` com o "ç" de verdade) — é o filtro Jinja `tojson`, que por padrão do Flask usa
+`ensure_ascii=True`. Corrigido com `app.json.ensure_ascii = False` em `create_app()`
+(`app/__init__.py`), que também vale para `jsonify()` — decisão de nível de app, não de
+template a template. Confirmado renderizando `/moderacao/23` antes/depois.
+
+**1.3 Regra extraía data de norma citada.** `app/extracao_pdf.py` pegou 29/04/2020 (data de
+um Decreto citado na assinatura eletrônica da última página) como candidato a
+`data_publicacao` no edital #81 real (FAPEMIG 16/2026) — reproduzido baixando o PDF de
+verdade: a regra fraca `assinatura eletr[ônica]` (prioridade 5, proxy só usado quando nada
+melhor aparece — comentário do próprio módulo já avisava que é a FAPES que não tem data de
+publicação no cronograma) capturou essa data por estar dentro da janela de 240 caracteres.
+
+`NEGATIVA_ABSOLUTA_DATA` nova, mesmo padrão de `NEGATIVA_ABSOLUTA_VALOR` já existente:
+`decreto|portaria|lei|resolução|instrução normativa|medida provisória|DOU` — checado ANTES
+da classificação, então vale para qualquer campo, não só a regra que causou o bug em #81.
+
+**Desvio do texto literal do briefing:** "Diário Oficial" por extenso ficou de FORA da
+lista, apesar do briefing pedir os dois. Motivo: "Diário Oficial" é o próprio texto que
+aciona duas regras POSITIVAS de `data_publicacao` já existentes (`publicação no diário`,
+`disponibilização:`/`publicação:` — cabeçalho de DOE) — uma negativa absoluta sobre esse
+texto autoanularia essas regras sempre que acertassem, que é o caso comum documentado no
+próprio módulo (FAPERO), não a exceção. "DOU" (a sigla) não tem esse conflito — nenhuma regra
+positiva depende dela — e ficou na lista.
+
+Testado: reprocessado o PDF real de #81 (baixado de `fapemig.br`), a data de 2020 não
+aparece mais como candidato a `data_publicacao`. Regressão: o caso real do cabeçalho DOE
+(FAPERO) continua funcionando idêntico. `scripts/testar_extracao_pdf.py` (regressão contra
+os 9 editais congelados em `tests/fixtures/`) continua 29/29 encontrados, 27/29 na primeira
+sugestão — sem mudança de placar.
+
+**1.4 PDF "atualizado" trazia dados antigos — causa era uma terceira coisa, não as duas
+hipóteses do briefing.** Não é cache HTTP (hipótese a): baixado duas vezes, conteúdo
+genuinamente diferente (tamanhos de arquivo diferentes, datas diferentes). Não é sugestão
+não-regenerada (hipótese b): `sugerir_com_ia()` sempre sobrescreve `dados_extra["sugestao_ia"]`
+incondicionalmente, confirmado lendo o código.
+
+A causa real, reproduzida no #82 (FAPEMIG/SEDE 014/2026): a página da FAPEMIG lista 3 PDFs —
+o edital original, uma "Retificação do prazo" e a "Chamada Retificada" inteira. A
+`sugestao_ia` gravada tinha `_meta.url_lida` apontando para o ORIGINAL (prazo 24/08/2026);
+o campo estruturado `data_prazo` no banco já estava correto (31/08/2026) porque o sistema de
+detecção de mudanças (`mudancas_detectadas`, de uma sessão anterior) pegou a mudança numa
+coleta nova do scraper em 2026-08-25. Ou seja: o dado estruturado nunca esteve errado — só a
+sugestão da IA, presa lendo o documento superado, sem nada avisando o curador disso.
+
+Conserto: `_meta["gerado_em"]` novo em `sugerir_campos()` (timestamp UTC, mesma convenção de
+`app/scraper_utils.py`). `editar.html` compara isso contra `mudancas_detectadas` e mostra
+aviso quando algum campo mudou DEPOIS da sugestão ter sido gerada — "pode estar lendo um PDF
+que não existe mais, gere de novo". Sugestões antigas (sem `gerado_em`, geradas antes deste
+conserto) não disparam o aviso por falta de dado — não dá para saber a data delas.
+
+Testado no registro real #82: injetado `gerado_em` antes da mudança detectada → aviso
+aparece com o de-para certo (24/08 → 31/08, data do detectado_em); `gerado_em` depois →
+aviso some. Registro restaurado ao estado original (sem `gerado_em`) depois do teste.
+
+**1.5 IA não retornou `palavras_chave` em #93 — não é bug de palavras-chave.** Investigado: a
+sugestão de #93 só tem 7 de ~18 campos possíveis, não só palavras_chave faltando —
+`_meta.caracteres_analisados = 8356`. O PDF real (baixado de fapes.es.gov.br) tem 98 páginas
+com texto bem extraível ao longo de todas elas (confirmado com pdfplumber, ~600-2200
+caracteres/página, sem gap de OCR) — mas `MAX_PAGINAS_PDF = 8` corta a leitura bem antes do
+conteúdo temático (eixos, palavras-chave) que vive páginas adiante. 8356 caracteres bate com
+a soma exata das 8 primeiras páginas.
+
+Não alterado: subir `MAX_PAGINAS_PDF` é decisão de custo (mais páginas = mais tokens por
+chamada) vs. cobertura, não um bug — fica como pendência para o usuário decidir se e quanto
+subir, não uma correção deste briefing.
+
+### PARTE 2 — Schema (uma migração: `7e95a73bfd7d`)
+
+- `programa` (String(150), nullable): programa guarda-chuva nacional (Centelha, Tecnova,
+  PROFIX...). Sem backfill automático — normalização é curadoria, não regex.
+- `instituicao_promotora`: `String(200)` → `ARRAY(String(200))`. Autogenerate não detecta
+  esse tipo de mudança (confirmado de novo — mesma limitação já documentada nas conversões
+  anteriores de `uf`/`instituicao_financiadora`/`nivel_formacao`/`linha_de_fomento`);
+  migração escrita à mão com `postgresql_using` + `CASE WHEN` (nullable). Confirmado: 342
+  registros antes e depois, todos os 342 que tinham valor escalar viraram lista de 1 item,
+  nenhum NULL virou `[NULL]`.
+- `nivel_formacao`: `educacao_basica` adicionado ao vocabulário (bolsas para professores da
+  educação básica, sem categoria antes). `graduacao` também adicionado — decisão baseada em
+  evidência real, não suposição: 5 registros no banco (#330, #333, #335, #342 — "Bolsas de
+  Graduação Sanduíche para Mobilidade Internacional" da CAPES — e #310, seleção para projeto
+  de pesquisa) são bolsa de graduação que NÃO é iniciação científica (mobilidade/intercâmbio,
+  não pesquisa) — conflar com `iniciacao_cientifica` descreveria errado a natureza da bolsa.
+- `e_fomento` (Boolean, NOT NULL, default `True`, `server_default=sa.true()` na migração
+  para não quebrar os 342 registros existentes): registro é fomento à pesquisa ou outra
+  publicação da instituição pelo mesmo canal (contratação, credenciamento, seleção de
+  avaliador, processo seletivo docente). `status` volta a significar só moderação —
+  `rejeitado` é lixo (duplicata, link quebrado, erro de coleta), não mais "fora do escopo".
+  Listagem pública filtra `e_fomento=True` por padrão, com checkbox "Ver também publicações
+  fora do fomento" para incluir as demais. `outros` adicionado ao vocabulário de
+  `proponente_elegivel` para esse caso (candidato a vaga, consultor, avaliador).
+
+Migração aplicada e validada contra o banco real: `flask db upgrade`, 342 registros antes e
+depois, snapshot raw-SQL pré-migração comparado com ORM pós-migração.
+
+### PARTE 3 — Prompt (`app/curadoria_ia.py`)
+
+Cinco ajustes no `PROMPT_SISTEMA`, todos com contraste explícito (exemplo certo vs. errado),
+mesmo padrão já validado como eficaz na correção anterior de `linha_de_fomento`:
+
+1. `proponente_elegivel`: quando a evidência de elegibilidade fala em "instituições
+   proponentes"/"a proponente deverá ser uma ICT/IES", marcar SÓ a instituição — não
+   acrescentar pesquisadores/doutores/mestres por um trecho separado descrever requisito do
+   COORDENADOR, não de quem propõe.
+2. `abrangencia`: quando o edital admitir mais de uma, registrar a MAIS AMPLA ("nacional ou
+   internacional" → internacional).
+3. `uf`: só estados explicitamente listados no texto — não deduzir do nome do programa, do
+   título ou do bioma.
+4. `linha_de_fomento`: classificar pelo OBJETO do apoio, não por palavra temática do texto
+   ("inovação" aparece em quase todo edital; só é `auxilio_inovacao` quando o objeto é apoio
+   direto a produto/processo/serviço inovador — infraestrutura laboratorial continua
+   `auxilio_pesquisa` mesmo com motivação declarada de inovação).
+5. `programa` novo no schema de saída — sugere quando o edital declarar pertencer a um
+   programa guarda-chuva nacional nomeado, sem inventar.
+
+Mais: `instituicao_promotora` passou de "texto" para "lista de textos" no prompt
+(acompanhando a migração ARRAY da PARTE 2); `_validar()` ganhou coerção defensiva
+string→lista para esse campo, porque o modelo não é determinístico e uma sugestão já gerada
+sob o prompt antigo tem o formato velho (confirmado: registro real #21 tem
+`sugestao_ia.campos.instituicao_promotora.valor = "CNPq"`, string solta). Sem essa coerção,
+clicar "aplicar" nesse card específico lançaria erro JS (`"CNPq".forEach is not a function`,
+já que `inicializarTags` espera array) — achado e corrigido durante a validação, não estava
+no briefing.
+
+**Validado com chamadas reais à API** (`ANTHROPIC_API_KEY` configurada nesta sessão — primeira
+vez possível): regenerada a sugestão dos registros #23, #34, #83 via `/moderacao/<id>/
+sugerir-ia` de verdade.
+- #23: `abrangencia` passou de `nacional` para `internacional`; `proponente_elegivel` passou
+  de `["ict", "pesquisadores"]` para `["ict"]` — os dois exatamente como o achado descrevia.
+- #34: `programa` extraído corretamente (`"Amazônia+10"`, com evidência literal). `uf`
+  continuou com as 9 UFs da Amazônia Legal — mas agora com evidência textual explícita
+  citada ("Área que abrange 9 estados do Brasil (AC, AP, AM, MA, MT, PA, RO, RR e TO)... ")
+  em vez de dedução a partir do nome do programa. Como o PDF real desse edital especificamente
+  lista os 9 estados no texto, marcá-los é o comportamento CERTO agora — a regra virou "exija
+  citação textual", não "nunca marque essas UFs".
+- #83: `linha_de_fomento` passou de `auxilio_inovacao` para `auxilio_pesquisa`, evidência
+  citando a infraestrutura de laboratórios certificadores como objeto.
+
+Os três registros foram restaurados ao estado anterior (snapshot completo de `dados_extra`
+salvo antes, reaplicado depois) — são registros do conjunto de 15 referências do gabarito de
+calibração, e recurar/sobrescrever esse conjunto está explicitamente fora do escopo deste
+briefing (ver `docs/achados_recuragem.md` e a instrução "NÃO recurar os 15 registros" de um
+briefing anterior).
+
+### PARTE 4 — Interface
+
+**4.1 Tooltip no botão Rejeitar** explicando o que ele faz (some da listagem pública e da
+fila, sem apagar o registro) e quando usar (lixo — duplicata, link quebrado, erro de coleta)
+vs. quando não usar (edital fora do fomento mas legítimo — desmarcar "É fomento à pesquisa"
+em vez de rejeitar).
+
+**Desvio do texto literal do briefing:** o texto de 4.1 pedia "exibir sugestão explícita de
+rejeitar" quando a IA retorna `e_fomento: false`. Isso contradiz diretamente a PARTE 2.4 do
+MESMO briefing, que redefine `rejeitado` como só lixo e cria `e_fomento` exatamente para não
+precisar rejeitar publicações fora do escopo ("Rejeitar descarta informação de interesse
+real"). Implementado consistente com 2.4, não com o texto literal de 4.1: o alerta "A IA
+acha que isto não é fomento" ganhou um botão "aplicar" que desmarca a caixa `e_fomento` (não
+sugere clicar em Rejeitar), com texto explicando a diferença.
+
+### Achado crítico fora do briefing: os 19 scrapers quebrariam silenciosamente
+
+Depois de converter `instituicao_promotora` para `ARRAY` (PARTE 2.2), uma varredura por
+`"instituicao_promotora":` em `scrapers/*.py` achou os 19 scrapers gravando o campo como
+string solta (`"instituicao_promotora": "FAPESB"`), igual ao padrão anterior à migração —
+nenhum deles usava a lista `["FAPESB"]` já usada em `instituicao_financiadora` no mesmo dict.
+
+Testado contra o banco real antes de mexer em qualquer scraper: inserir um registro de teste
+com `instituicao_promotora="FAPESB"` (string) numa coluna `ARRAY` **não dá erro** — o
+adaptador do psycopg2/Postgres itera a string caractere a caractere e grava
+`['F', 'A', 'P', 'E', 'S', 'B']`. Silencioso, sem exceção, sem log — só apareceria numa
+inspeção manual do dado gravado. Teria corrompido a coluna de todo registro novo ou
+atualizado a partir do próximo `rodar_scrapers_agora`/execução do agendador, nos 19 scrapers.
+
+Corrigido nos 19 arquivos (`"instituicao_promotora": "X"` → `["X"]`). Validado três vezes:
+(1) inserção sintética de teste confirmando `['FAPESB']` e não `['F','A','P','E','S','B']`;
+(2) `py_compile` limpo nos 19 arquivos; (3) rodado `scrapers/fapergs.py` de ponta a ponta
+contra o banco real (coleta + `salvar_no_banco`) — os 4 registros já existentes da FAPERGS
+mostram `instituicao_promotora=['FAPERGS']` corretamente, `0 novos/0 atualizados` (idempotente,
+como esperado para um scraper rodado sobre editais já coletados).
+
+Isto não estava no briefing — foi achado fazendo a mesma varredura de referências órfãs já
+praticada nas migrações anteriores deste projeto (ver o `grep '"premio"'` da sessão passada).
+Reforça o padrão: toda conversão de tipo de coluna precisa dessa varredura, porque
+autogenerate não pega o tipo e os scrapers não passam por `_validar()` nem por nenhuma
+checagem de schema antes do INSERT.
+
+### Validação geral
+
+Todos os 9 itens da lista de validação do briefing foram cumpridos contra o banco real —
+alguns puderam usar a API de verdade (6, 7, 8), os demais usaram o banco de produção com
+registros descartáveis restaurados depois. `scripts/testar_extracao_pdf.py` (regressão da
+extração por regra) continua 29/29 / 27/29 depois de todas as mudanças. `py_compile` limpo em
+todos os módulos Python tocados.

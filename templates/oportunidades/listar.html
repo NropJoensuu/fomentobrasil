@@ -82,10 +82,31 @@
       </select>
     </div>
 
-    <div class="col-md-1 d-flex align-items-center">
+    {% if programas_disponiveis %}
+    <div class="col-md-2">
+      <select name="programa" class="form-select form-select-sm">
+        <option value="">Programa (todos)</option>
+        {% for p in programas_disponiveis %}
+        <option value="{{ p }}" {{ 'selected' if filtros.programa == p else '' }}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+
+    <div class="col-md-2 d-flex align-items-center">
       <div class="form-check">
         <input type="checkbox" name="apenas_abertas" value="1" class="form-check-input" id="apenasAbertas" {{ 'checked' if filtros.apenas_abertas else '' }}>
         <label class="form-check-label small" for="apenasAbertas">Só abertas</label>
+      </div>
+    </div>
+
+    <div class="col-md-3 d-flex align-items-center">
+      <div class="form-check">
+        <input type="checkbox" name="mostrar_nao_fomento" value="1" class="form-check-input" id="mostrarNaoFomento" {{ 'checked' if filtros.mostrar_nao_fomento else '' }}>
+        <label class="form-check-label small" for="mostrarNaoFomento" data-bs-toggle="tooltip"
+               title="Inclui publicações que a instituição divulgou pelo mesmo canal mas não são fomento à pesquisa: contratação de pessoal, credenciamento de consultoria ad hoc, seleção de avaliadores, processo seletivo docente.">
+          Ver também publicações fora do fomento
+        </label>
       </div>
     </div>
 
@@ -93,7 +114,7 @@
       <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
     </div>
 
-    {% if filtros.busca or filtros.regiao or filtros.uf or filtros.linha_de_fomento or filtros.area_principal or filtros.proponente_elegivel or filtros.apenas_abertas %}
+    {% if filtros.busca or filtros.regiao or filtros.uf or filtros.linha_de_fomento or filtros.area_principal or filtros.proponente_elegivel or filtros.programa or filtros.apenas_abertas or filtros.mostrar_nao_fomento %}
     <div class="col-12">
       <a href="{{ url_for('main.listar_oportunidades') }}" class="small">Limpar filtros</a>
     </div>

@@ -33,6 +33,7 @@ import io
 import json
 import os
 import re
+from datetime import datetime
 from urllib.parse import urljoin
 
 import pdfplumber
@@ -59,9 +60,11 @@ VOCAB_TIPO_INSTRUMENTO = ["chamada_publica_edital", "chamamento_publico"]
 VOCAB_NATUREZA_RECURSO = ["custeio", "capital", "bolsa"]
 VOCAB_PROPONENTE = [
     "pesquisadores", "especialistas", "mestrandos", "mestres", "doutorandos", "doutores",
-    "ies", "ict", "empresas", "startups", "governo",
+    "ies", "ict", "empresas", "startups", "governo", "outros",
 ]
-VOCAB_NIVEL_FORMACAO = ["mestrado", "doutorado", "pos_doutorado", "iniciacao_cientifica"]
+VOCAB_NIVEL_FORMACAO = [
+    "educacao_basica", "graduacao", "iniciacao_cientifica", "mestrado", "doutorado", "pos_doutorado",
+]
 VOCAB_MODALIDADE_PESSOA = ["atracao", "fixacao", "capacitacao_exterior"]
 VOCAB_AREA_PRINCIPAL = [
     "Ciências Exatas e da Terra", "Ciências Biológicas", "Engenharias",
@@ -90,7 +93,7 @@ VOCABULARIO_POR_CAMPO = {
 CAMPOS_ESPERADOS = [
     "linha_de_fomento", "tipo_instrumento", "natureza_recurso", "proponente_elegivel",
     "nivel_formacao", "modalidade_pessoa", "area_principal", "tipo_parceria",
-    "abrangencia", "instituicao_promotora", "instituicao_financiadora", "uf",
+    "abrangencia", "programa", "instituicao_promotora", "instituicao_financiadora", "uf",
     "data_publicacao", "data_prazo", "data_resultado_previsto",
     "orcamento_total_chamada", "valor_minimo_proposta", "valor_maximo_proposta",
     "palavras_chave",
@@ -98,7 +101,7 @@ CAMPOS_ESPERADOS = [
 
 CAMPOS_DE_LISTA = {
     "linha_de_fomento", "natureza_recurso", "proponente_elegivel", "nivel_formacao",
-    "uf", "instituicao_financiadora", "palavras_chave",
+    "uf", "instituicao_promotora", "instituicao_financiadora", "palavras_chave",
 }
 
 
@@ -129,6 +132,13 @@ def _validar(sugestao):
         if valor in (None, "", []):
             campos.pop(campo)
             continue
+
+        # O prompt pede lista para instituicao_promotora (migrou de campo único em
+        # 2026-09), mas o modelo às vezes devolve string solta mesmo assim — mesma
+        # tolerância que o resto do módulo já tem para "pedir não é garantir".
+        if campo in CAMPOS_DE_LISTA and isinstance(valor, str):
+            valor = [valor]
+            dado["valor"] = valor
 
         vocabulario = VOCABULARIO_POR_CAMPO.get(campo)
         if vocabulario:
@@ -304,17 +314,31 @@ equipe" -> auxilio_pesquisa (bolsa é meio). natureza_recurso inclui bolsa.
 Marque MAIS DE UMA linha quando a chamada tiver objetivos distintos e explícitos. Não marque \
 uma linha por dedução a partir dos instrumentos.
 
+Classifique pelo OBJETO do apoio, não por palavras temáticas do texto. Quase todo edital de \
+fomento menciona "inovação" em algum trecho; isso sozinho não o torna auxilio_inovacao. \
+auxilio_inovacao é para apoio DIRETO ao desenvolvimento de produto, processo ou serviço \
+inovador, geralmente com empresa envolvida. Apoio a infraestrutura laboratorial ou a rede de \
+pesquisa, mesmo quando a motivação declarada é fomentar inovação no estado, é auxilio_pesquisa \
+(e também apoio_redes_grupos_pesquisa se o objeto for justamente estruturar a rede).
+
 premiacao: use quando a chamada reconhece resultado já alcançado (prêmio, concurso de \
 trabalhos, menção honrosa) em vez de apoiar atividade futura.
 
 proponente_elegivel — QUEM PODE APRESENTAR A PROPOSTA.
 Pessoa física: pesquisadores, especialistas, mestrandos, mestres, doutorandos, doutores.
 Pessoa jurídica: ies, ict, empresas, startups, governo.
+outros: publicações fora do fomento (ver e_fomento) que ainda assim têm um "proponente" — \
+candidato a vaga, consultor, avaliador.
 ATENÇÃO: marque quem SUBMETE, não quem é beneficiado. Se a proposta é submetida por uma \
 instituição e a bolsa vai para estudantes, marque a instituição (ies ou ict), não os \
 estudantes. IES e ICT se sobrepõem sem coincidir: uma universidade federal é as duas; a \
 Fiocruz é ICT e não IES; uma faculdade só de ensino é IES e não ICT. Um edital que diga \
 "IES/P" cobre as duas — marque ambas.
+Quando a evidência de elegibilidade falar em "instituições proponentes", "a proponente deverá \
+ser uma ICT/IES" ou equivalente, marque APENAS a instituição. Não acrescente pesquisadores, \
+doutores ou mestres porque outro trecho do edital descreve requisitos do COORDENADOR ou da \
+EQUIPE do projeto — requisito de quem coordena não é elegibilidade de quem propõe. Só marque \
+pessoa física quando o edital permitir submissão por pessoa física em nome próprio.
 
 modalidade_pessoa — só quando linha_de_fomento incluir apoio_formacao_capacitacao. \
 Editais de seleção ou concurso de PESQUISADOR são fomento, e a modalidade é fixacao.
@@ -325,7 +349,19 @@ quilombolas, pessoas com deficiência)
 - a instituição demandante nomeada no edital (ex.: PROCON-SC)
 - os eixos, temas ou linhas temáticas listados no edital
 
-uf — siglas de duas letras, só quando a abrangência for estadual ou regional.
+abrangencia — quando o edital admitir mais de uma abrangência, registre a MAIS AMPLA. \
+"Eventos de abrangência nacional ou internacional" -> internacional, não nacional.
+
+uf — siglas de duas letras, só quando a abrangência for estadual ou regional. Preencha \
+APENAS com estados explicitamente listados no texto do edital. NÃO deduza a partir do nome \
+do programa, da região mencionada no título ou do bioma (ex.: um programa com "Amazônia" no \
+nome não implica os nove estados da Amazônia Legal — outras FAPs podem aderir ao mesmo \
+programa sem que o edital as liste). Se o edital não listar os estados, deixe o campo de fora.
+
+programa — identifique o programa guarda-chuva NACIONAL ao qual a chamada pertence, quando o \
+próprio edital declarar pertencer a um (ex.: Centelha, Tecnova, PROFIX, PPSUS, Universal, \
+Amazônia +10). Não invente: só preencha quando o nome do programa aparecer no texto. Sem a \
+edição nem a UF — "Centelha", não "Centelha 3 – Rondônia".
 
 Datas em AAAA-MM-DD. Se o cronograma der só o mês ("até dezembro de 2026"), use o dia 01 e \
 diga isso na evidência. Valores como número decimal, sem símbolo nem separador de milhar.
@@ -356,8 +392,11 @@ apoio_formacao_capacitacao, apoio_redes_grupos_pesquisa, premiacao
 - tipo_instrumento: chamada_publica_edital, chamamento_publico
 - natureza_recurso (lista): custeio, capital, bolsa
 - proponente_elegivel (lista): pesquisadores, especialistas, mestrandos, mestres, doutorandos, \
-doutores, ies, ict, empresas, startups, governo
-- nivel_formacao (lista): mestrado, doutorado, pos_doutorado, iniciacao_cientifica
+doutores, ies, ict, empresas, startups, governo, outros
+- nivel_formacao (lista): educacao_basica, graduacao, iniciacao_cientifica, mestrado, \
+doutorado, pos_doutorado. graduacao é para bolsa que NÃO é iniciação à pesquisa (ex.: \
+mobilidade/intercâmbio de graduação sanduíche) — bolsa de pesquisa para estudante de \
+graduação continua iniciacao_cientifica
 - modalidade_pessoa: atracao, fixacao, capacitacao_exterior
 - area_principal: "Ciências Exatas e da Terra", "Ciências Biológicas", "Engenharias", \
 "Ciências da Saúde", "Ciências Agrárias", "Ciências Sociais Aplicadas", "Ciências Humanas", \
@@ -366,8 +405,11 @@ doutores, ies, ict, empresas, startups, governo
 - abrangencia: nacional, estadual, regional, internacional
 
 Campo livre:
-- instituicao_promotora: texto — quem publica a chamada e recebe as propostas. Use a SIGLA \
-sozinha ("FAPEMIG", "CNPq", "FAPES"), nunca o nome por extenso nem sigla mais nome
+- programa: texto — programa guarda-chuva nacional, só quando o edital declarar pertencer a um
+- instituicao_promotora: lista de textos — quem publica a chamada e recebe as propostas. \
+Normalmente uma só, mas chamadas multilaterais podem distribuir o ato de promover entre mais \
+de uma instituição. Use a SIGLA sozinha ("FAPEMIG", "CNPq", "FAPES"), nunca o nome por \
+extenso nem sigla mais nome
 - instituicao_financiadora: lista de textos — quem aporta recurso. Siglas, mesma regra
 - uf: lista de siglas de duas letras
 - data_publicacao: "AAAA-MM-DD" — quando o edital foi publicado
@@ -443,5 +485,11 @@ def sugerir_campos(oportunidade):
         "caracteres_analisados": len(texto),
         "tokens_entrada": resposta.usage.input_tokens,
         "tokens_saida": resposta.usage.output_tokens,
+        # Usado por editar.html para avisar quando `mudancas_detectadas` (o scraper
+        # notando que um campo mudou numa nova coleta) é mais recente que esta sugestão —
+        # achado #82: a sugestão ficava presa lendo o PDF antigo mesmo depois do prazo
+        # mudar de 24/08 para 31/08 numa retificação. Mesma convenção de
+        # app/scraper_utils.py (UTC, isoformat, sem timezone).
+        "gerado_em": datetime.utcnow().isoformat(),
     }
     return sugestao

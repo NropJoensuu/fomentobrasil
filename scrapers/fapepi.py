@@ -166,7 +166,7 @@ def salvar_no_banco(registros):
                 "data_publicacao": None,  # a listagem não mostra data em lugar nenhum
                 "data_prazo": None,  # só existe dentro do edital
                 "instituicao_financiadora": ["FAPEPI"],
-                "instituicao_promotora": "FAPEPI",
+                "instituicao_promotora": ["FAPEPI"],
                 "tipo_instrumento": "chamada_publica_edital" if e_premio else r["tipo_instrumento"],
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["PI"],

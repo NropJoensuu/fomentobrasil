@@ -180,7 +180,7 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "data_publicacao": r["data_publicacao"],
                 "instituicao_financiadora": [r["instituicao_financiadora"][:200]],
-                "instituicao_promotora": "CNPq",
+                "instituicao_promotora": ["CNPq"],
                 "tipo_instrumento": r["tipo_instrumento"],
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "abrangencia": "nacional",

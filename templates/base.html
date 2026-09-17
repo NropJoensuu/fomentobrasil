@@ -75,6 +75,22 @@
       });
     };
 
+    // Para código que aplica um valor já calculado (sugestão da IA, extração de PDF,
+    // "aplicar todas"...), não simular digitação. formatarMoeda() lê os últimos 2 dígitos
+    // da string como centavos — convenção certa para quem está digitando, mas que corrompe
+    // a ordem de grandeza de qualquer valor que não chegue com exatamente 2 casas decimais
+    // (bug real: 7552000 virava R$ 75.520,00, 100x menor). Todo código que define o valor
+    // de um .mascara-moeda a partir de um número (não de teclado) deve chamar esta função,
+    // não `el.value = x; el.dispatchEvent(new Event('input'))` — que reusa a lógica de
+    // digitação e reintroduz o mesmo bug.
+    window.definirValorMoeda = function (el, numero) {
+      if (numero === null || numero === undefined || numero === '') {
+        el.value = '';
+        return;
+      }
+      el.value = 'R$ ' + formatadorMoeda.format(Number(numero));
+    };
+
     document.querySelectorAll('.mascara-moeda').forEach(window.aplicarMascaraMoeda);
   </script>
   {% block extra_scripts %}{% endblock %}

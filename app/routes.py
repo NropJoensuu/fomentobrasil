@@ -53,8 +53,18 @@ def listar_oportunidades():
     linha_de_fomento = request.args.get("linha_de_fomento") or ""
     area_principal = request.args.get("area_principal") or ""
     proponente_elegivel = request.args.get("proponente_elegivel") or ""
+    programa_filtro = request.args.get("programa") or ""
     apenas_abertas = request.args.get("apenas_abertas") == "1"
+    mostrar_nao_fomento = request.args.get("mostrar_nao_fomento") == "1"
 
+    # Fora do fomento (contratação, credenciamento, seleção de avaliador...) não aparece
+    # na listagem pública por padrão — é sobre outra coisa que quem procura financiamento,
+    # mas não é "lixo": continua no banco e pode ser visto com o filtro explícito.
+    if not mostrar_nao_fomento:
+        query = query.filter(Oportunidade.e_fomento.is_(True))
+
+    if programa_filtro:
+        query = query.filter(Oportunidade.programa == programa_filtro)
     if busca:
         termo = f"%{busca}%"
         query = query.filter(
@@ -93,8 +103,17 @@ def listar_oportunidades():
         "linha_de_fomento": linha_de_fomento,
         "area_principal": area_principal,
         "proponente_elegivel": proponente_elegivel,
+        "programa": programa_filtro,
         "apenas_abertas": apenas_abertas,
+        "mostrar_nao_fomento": mostrar_nao_fomento,
     }
+
+    # Lista fechada não existe — programa é texto normalizado pela curadoria, não
+    # vocabulário fixo — então o filtro oferece só o que já apareceu em algum registro.
+    programas_disponiveis = sorted(
+        v for (v,) in db.session.query(Oportunidade.programa.distinct())
+        if v
+    )
 
     return render_template(
         "oportunidades/listar.html",
@@ -102,6 +121,7 @@ def listar_oportunidades():
         filtros=filtros,
         regioes=REGIOES,
         ufs_disponiveis=sorted(REGIAO_POR_UF.keys()),
+        programas_disponiveis=programas_disponiveis,
     )
 
 
@@ -167,8 +187,9 @@ def nova_oportunidade():
 
         oportunidade = Oportunidade(
             titulo=request.form["titulo"],
+            programa=request.form.get("programa") or None,
             instituicao_financiadora=instituicao_financiadora,
-            instituicao_promotora=request.form.get("instituicao_promotora") or None,
+            instituicao_promotora=request.form.getlist("instituicao_promotora") or None,
             linha_de_fomento=linha_de_fomento,
             tipo_instrumento=request.form["tipo_instrumento"],
             natureza_recurso=request.form.getlist("natureza_recurso"),
@@ -543,10 +564,12 @@ def moderar_oportunidade(id):
 
         oportunidade.titulo = request.form["titulo"]
         oportunidade.descricao = request.form.get("descricao") or None
+        oportunidade.programa = request.form.get("programa") or None
         oportunidade.link = request.form["link"]
         oportunidade.instituicao_financiadora = instituicao_financiadora
-        oportunidade.instituicao_promotora = request.form.get("instituicao_promotora") or None
+        oportunidade.instituicao_promotora = request.form.getlist("instituicao_promotora") or None
         oportunidade.linha_de_fomento = linha_de_fomento
+        oportunidade.e_fomento = "e_fomento" in request.form
         oportunidade.tipo_instrumento = request.form["tipo_instrumento"]
         oportunidade.tipo_parceria = request.form.get("tipo_parceria") or None
         oportunidade.modalidade_pessoa = request.form.get("modalidade_pessoa") or None

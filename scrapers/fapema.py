@@ -189,7 +189,7 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "data_publicacao": r["data_publicacao"],
                 "instituicao_financiadora": ["FAPEMA"],
-                "instituicao_promotora": "FAPEMA",
+                "instituicao_promotora": ["FAPEMA"],
                 "tipo_instrumento": "chamada_publica_edital" if e_premio else r["tipo_instrumento"],
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"], r["descricao"]),
                 "uf": ["MA"],

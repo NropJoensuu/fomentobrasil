@@ -173,7 +173,7 @@ def salvar_no_banco(registros):
                 "data_prazo": None,  # não aparece na listagem
                 "data_resultado_previsto": None,  # rótulo existe no site, mas vem vazio
                 "instituicao_financiadora": ["FAPESB"],
-                "instituicao_promotora": "FAPESB",
+                "instituicao_promotora": ["FAPESB"],
                 "tipo_instrumento": "chamada_publica_edital" if e_premio else r["tipo_instrumento"],
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["BA"],

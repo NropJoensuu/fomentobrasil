@@ -88,7 +88,7 @@ def salvar_no_banco(registros):
             campos_extras_fixos={
                 "descricao": r["descricao"],
                 "instituicao_financiadora": ["FAPERGS"],
-                "instituicao_promotora": "FAPERGS",
+                "instituicao_promotora": ["FAPERGS"],
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 # Placeholder: não é inferível do título/descrição. Ver docs — sempre revisar.

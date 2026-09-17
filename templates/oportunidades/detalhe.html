@@ -65,8 +65,8 @@
         {% endif %}
 
         {% if o.instituicao_promotora %}
-        <dt class="col-sm-4">Promotora</dt>
-        <dd class="col-sm-8">{{ o.instituicao_promotora }}</dd>
+        <dt class="col-sm-4">Promotora{{ 's' if o.instituicao_promotora | length > 1 else '' }}</dt>
+        <dd class="col-sm-8">{{ o.instituicao_promotora | join(', ') }}</dd>
         {% endif %}
 
         <dt class="col-sm-4">Financiadoras</dt>

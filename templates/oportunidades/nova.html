@@ -34,6 +34,14 @@
 
         <div class="mb-3">
           <label class="form-label">
+            Programa
+            <span data-bs-toggle="tooltip" title="Programa guarda-chuva nacional executado de forma descentralizada por várias FAPs, quando o edital declarar pertencer a um. Ex: Centelha, Tecnova, PROFIX. Sem a edição/UF — isso já está no título.">ℹ️</span>
+          </label>
+          <input type="text" name="programa" class="form-control" value="{{ prefill.programa if prefill else '' }}" placeholder="ex: Centelha, Tecnova, PROFIX">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
             Tipo de Instrumento <span class="text-danger">*</span>
             <span data-bs-toggle="tooltip" title="Instrumento administrativo/legal usado para veicular a chamada, distinto da linha de fomento.">ℹ️</span>
           </label>
@@ -107,6 +115,15 @@
               {% endfor %}
             </div>
           </div>
+          <div class="mt-2">
+            {% for valor, rotulo in proponente_outros %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="proponente_elegivel"
+                     value="{{ valor }}" id="pe_{{ valor }}">
+              <label class="form-check-label" for="pe_{{ valor }}">{{ rotulo }}</label>
+            </div>
+            {% endfor %}
+          </div>
         </div>
 
         <div class="mb-3">
@@ -150,6 +167,8 @@
             <small class="text-muted">(pode marcar mais de um)</small>
           </label>
           {% for valor, rotulo in [
+              ("educacao_basica", "Educação Básica"),
+              ("graduacao", "Graduação"),
               ("iniciacao_cientifica", "Iniciação Científica"),
               ("mestrado", "Mestrado"),
               ("doutorado", "Doutorado"),
@@ -182,10 +201,12 @@
 
         <div class="mb-3">
           <label class="form-label">
-            Instituição Promotora
-            <span data-bs-toggle="tooltip" title="Quem publica a chamada e recebe as propostas. Em chamadas conjuntas, várias instituições aportam recurso mas uma opera o certame — é onde o proponente submete.">ℹ️</span>
+            Instituição(ões) Promotora(s)
+            <span data-bs-toggle="tooltip" title="Quem publica a chamada e recebe as propostas. Em chamadas conjuntas, várias instituições aportam recurso mas uma opera o certame — é onde o proponente submete. Em chamadas multilaterais o ato de promover pode ser distribuído — por isso aceita mais de uma.">ℹ️</span>
           </label>
-          <input type="text" name="instituicao_promotora" class="form-control">
+          <div id="tags-instituicao_promotora" class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center">
+            <input type="text" class="border-0 flex-grow-1" style="outline:none;min-width:150px;" placeholder="Digite e aperte Enter" data-campo="instituicao_promotora">
+          </div>
         </div>
 
         <div class="mb-3">
@@ -415,5 +436,6 @@
 
   inicializarTags('palavras_chave', []);
   inicializarTags('instituicao_financiadora', []);
+  inicializarTags('instituicao_promotora', []);
 </script>
 {% endblock %}

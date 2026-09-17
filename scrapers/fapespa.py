@@ -179,7 +179,7 @@ def salvar_no_banco(registros):
                 # parceiros no título, mas extraí-los seria chute — o curador completa
                 # a lista, que é ARRAY justamente para isso.
                 "instituicao_financiadora": ["FAPESPA"],
-                "instituicao_promotora": "FAPESPA",
+                "instituicao_promotora": ["FAPESPA"],
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["PA"],

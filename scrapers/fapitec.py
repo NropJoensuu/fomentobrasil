@@ -130,7 +130,7 @@ def salvar_no_banco(registros):
                 "data_publicacao": r["data_publicacao"],
                 "data_prazo": None,  # só existe dentro do edital
                 "instituicao_financiadora": ["FAPITEC"],
-                "instituicao_promotora": "FAPITEC",
+                "instituicao_promotora": ["FAPITEC"],
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["SE"],

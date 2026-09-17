@@ -172,7 +172,7 @@ def salvar_no_banco(registros):
                 "data_publicacao": r["data_publicacao"],
                 "data_prazo": None,  # só existe dentro do PDF
                 "instituicao_financiadora": ["FACEPE"],
-                "instituicao_promotora": "FACEPE",
+                "instituicao_promotora": ["FACEPE"],
                 "tipo_instrumento": "chamada_publica_edital" if e_premio else r["tipo_instrumento"],
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["PE"],

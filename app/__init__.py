@@ -27,10 +27,16 @@ def create_app(iniciar_agendador=False):
     db.init_app(app)
     migrate.init_app(app, db)
 
+    # Flask serializa JSON (jsonify, e o filtro |tojson usado em editar.html para mostrar
+    # a sugestão da IA) com ensure_ascii=True por padrão, escapando acento como í. O
+    # dado em si está correto (JSONB no Postgres não guarda o escape) — é só exibição.
+    app.json.ensure_ascii = False
+
     from app.utils import (
         formatar_moeda,
         PROPONENTE_PESSOA_FISICA,
         PROPONENTE_PESSOA_JURIDICA,
+        PROPONENTE_OUTROS,
         resumo_preenchimento,
     )
 
@@ -41,6 +47,7 @@ def create_app(iniciar_agendador=False):
     app.jinja_env.globals["resumo_preenchimento"] = resumo_preenchimento
     app.jinja_env.globals["proponente_pf"] = PROPONENTE_PESSOA_FISICA
     app.jinja_env.globals["proponente_pj"] = PROPONENTE_PESSOA_JURIDICA
+    app.jinja_env.globals["proponente_outros"] = PROPONENTE_OUTROS
 
     from app import models  # <-- adicionar esta linha
 

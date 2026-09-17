@@ -153,7 +153,7 @@ def salvar_no_banco(registros):
                 "data_publicacao": data_publicacao,
                 "data_prazo": None,  # não disponível na listagem
                 "instituicao_financiadora": ["FAPEAL"],
-                "instituicao_promotora": "FAPEAL",
+                "instituicao_promotora": ["FAPEAL"],
                 "tipo_instrumento": "chamada_publica_edital" if e_premio else r["tipo_instrumento"],
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["AL"],

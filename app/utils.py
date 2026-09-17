@@ -49,7 +49,16 @@ PROPONENTE_PESSOA_JURIDICA = [
     ("governo", "Governo"),
 ]
 
-VOCABULARIO_PROPONENTE = [v for v, _ in PROPONENTE_PESSOA_FISICA + PROPONENTE_PESSOA_JURIDICA]
+# Não é pessoa física nem jurídica no sentido de "quem propõe um projeto" — existe para não
+# descartar publicações fora do fomento (ver `e_fomento`): contratação de pessoal,
+# credenciamento de consultoria ad hoc, seleção de avaliadores, processo seletivo docente.
+PROPONENTE_OUTROS = [
+    ("outros", "Outros (consultores, docentes, prestadores — publicações fora do fomento)"),
+]
+
+VOCABULARIO_PROPONENTE = [
+    v for v, _ in PROPONENTE_PESSOA_FISICA + PROPONENTE_PESSOA_JURIDICA + PROPONENTE_OUTROS
+]
 
 
 def parse_valor_brl(texto):

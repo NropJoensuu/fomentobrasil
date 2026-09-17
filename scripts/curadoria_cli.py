@@ -37,7 +37,7 @@ VOCAB_NATUREZA_RECURSO = ["custeio", "capital", "bolsa"]
 # roda sem Flask, para quando a aplicação não sobe (ver docstring do módulo).
 VOCAB_PROPONENTE_ELEGIVEL = [
     "pesquisadores", "especialistas", "mestrandos", "mestres", "doutorandos", "doutores",
-    "ies", "ict", "empresas", "startups", "governo",
+    "ies", "ict", "empresas", "startups", "governo", "outros",
 ]
 VOCAB_TIPO_INSTRUMENTO = ["chamada_publica_edital", "chamamento_publico"]
 VOCAB_AREA_PRINCIPAL = [
@@ -46,7 +46,8 @@ VOCAB_AREA_PRINCIPAL = [
     "Ciências Humanas", "Linguística, Letras e Artes",
 ]
 VOCAB_NIVEL_FORMACAO = [
-    "mestrado", "doutorado", "pos_doutorado", "iniciacao_cientifica", "nao_aplicavel",
+    "educacao_basica", "graduacao", "iniciacao_cientifica", "mestrado", "doutorado",
+    "pos_doutorado", "nao_aplicavel",
 ]
 VOCAB_ABRANGENCIA = ["nacional", "estadual", "regional", "internacional"]
 VOCAB_TIPO_PARCERIA = ["nacional", "regional", "internacional"]
@@ -64,12 +65,13 @@ CAMPOS_EDITAVEIS = [
     ("titulo",                  "Título",                     "texto",       None),
     ("descricao",               "Descrição",                  "texto_longo", None),
     ("link",                    "Link do edital",             "texto",       None),
+    ("programa",                "Programa",                   "texto",       None),
     ("linha_de_fomento",        "Linha de fomento",           "lista",       VOCAB_LINHA_DE_FOMENTO),
     ("tipo_instrumento",        "Tipo de instrumento",        "escolha",     VOCAB_TIPO_INSTRUMENTO),
     ("natureza_recurso",        "Natureza do recurso",        "lista",       VOCAB_NATUREZA_RECURSO),
     ("proponente_elegivel",     "Proponente elegível",        "lista",       VOCAB_PROPONENTE_ELEGIVEL),
     ("instituicao_financiadora","Instituição financiadora",   "lista_livre", None),
-    ("instituicao_promotora",   "Instituição promotora",      "texto",       None),
+    ("instituicao_promotora",   "Instituição promotora",      "lista_livre", None),
     ("area_principal",          "Área principal",             "escolha",     VOCAB_AREA_PRINCIPAL),
     ("palavras_chave",          "Palavras-chave",             "lista_livre", None),
     ("nivel_formacao",          "Nível de formação",          "lista",       VOCAB_NIVEL_FORMACAO),

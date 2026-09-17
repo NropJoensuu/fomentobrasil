@@ -150,6 +150,22 @@ NEGATIVA_ABSOLUTA_VALOR = re.compile(
     r"faturamento|receita\s+bruta|porte\s+d[ao]\s+empresa", re.IGNORECASE
 )
 
+# Datas coladas a uma citação de norma (decreto/lei/portaria) nunca são etapa do
+# cronograma da própria chamada. A #81 (FAPEMIG 16/2026) tem "nos termos do... Decreto
+# estadual n. 47.931, de 29 de abril de 2020" na assinatura da última página — sem esta
+# negativa, a regra fraca "assinatura eletr[ônica]" (proxy de publicação, só vence quando
+# nada melhor aparece) pegava essa data de 2020 como se fosse a publicação da chamada.
+#
+# "Diário Oficial" por extenso fica de FORA de propósito: é o próprio gatilho positivo de
+# data_publicacao ("publicação no diário", "disponibilização:" — ver REGRAS_DATA). Uma
+# negativa absoluta sobre esse texto autoanularia essa regra sempre que acertasse, que é o
+# caso comum, não a exceção. "DOU" (a sigla) não tem esse conflito — nenhuma regra positiva
+# depende dela — e entra na lista.
+NEGATIVA_ABSOLUTA_DATA = re.compile(
+    r"decreto|portaria|\blei\b|resolu[çc][ãa]o|instru[çc][ãa]o\s+normativa|medida\s+provis[óo]ria|\bdou\b",
+    re.IGNORECASE
+)
+
 REGRAS_VALOR = [
     ("orcamento_total_chamada", 30, r"valor\s+(?:global|total)|montante\s+(?:global|total)|recursos?\s+(?:financeiros?\s+)?(?:total|global)", None),
     ("orcamento_total_chamada", 20, r"dota[çc][ãa]o\s+or[çc]ament|total\s+d[eo]s?\s+recursos|totalizando", None),
@@ -320,6 +336,9 @@ def _candidatos_de_data(paginas):
             limite_seguinte = grupos[i + 1][0][0] if i + 1 < len(grupos) else len(texto)
             antes = texto[max(limite_anterior, inicio - JANELA_ANTES):inicio]
             depois = texto[fim:min(limite_seguinte, fim + JANELA_DEPOIS)]
+
+            if NEGATIVA_ABSOLUTA_DATA.search(f"{antes} {depois}"):
+                continue
 
             campo, prioridade = _classificar(antes, depois, REGRAS_DATA)
             if not campo:

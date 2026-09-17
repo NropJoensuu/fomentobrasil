@@ -88,6 +88,36 @@
   {% set sugestao = (o.dados_extra or {}).get("sugestao_ia") %}
   {% set sugestao_erro = (o.dados_extra or {}).get("sugestao_ia_erro") %}
 
+  {# A sugestão fica gravada até alguém gerar de novo. Se o scraper detectou, numa coleta
+     mais recente, que algum campo mudou (retificação de prazo, por exemplo — achado #82:
+     a sugestão continuava mostrando 24/08 depois do prazo virar 31/08), a sugestão pode
+     estar lendo um PDF que não existe mais. Sem `gerado_em` (sugestões antigas, de antes
+     desta checagem existir) não dá para saber — nesse caso não avisa, por falta de dado. #}
+  {% set gerado_em = sugestao.get("_meta", {}).get("gerado_em") if sugestao else None %}
+  {% set mudancas_depois = [] %}
+  {% if gerado_em %}
+    {% for m in (o.dados_extra or {}).get("mudancas_detectadas") or [] %}
+      {% if m.detectado_em > gerado_em %}
+        {% set _ = mudancas_depois.append(m) %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  {% if mudancas_depois %}
+  <div class="alert alert-warning">
+    <strong>A sugestão da IA pode estar desatualizada.</strong>
+    O scraper detectou mudança em campo(s) depois que esta sugestão foi gerada — pode ter
+    sido uma retificação do edital:
+    <ul class="mb-0 mt-2">
+      {% for m in mudancas_depois %}
+      <li>{{ m.campo }}: {{ m.valor_anterior }} → {{ m.valor_novo }}
+        <span class="text-muted">(detectado em {{ m.detectado_em[:10] }})</span></li>
+      {% endfor %}
+    </ul>
+    Gere a sugestão de novo antes de confiar nela.
+  </div>
+  {% endif %}
+
   {# Formulário PRÓPRIO: aninhar <form> dentro do principal é inválido em HTML e o botão
      acabaria submetendo a moderação inteira. #}
   <form method="POST" action="{{ url_for('main.sugerir_com_ia', id=o.id) }}" id="form-ia" class="mb-4">
@@ -117,9 +147,15 @@
 
         {% if sugestao %}
           {% if not sugestao.e_fomento %}
-          <div class="alert alert-danger py-2 mt-3 mb-0 small">
-            <strong>A IA acha que isto não é fomento à pesquisa.</strong>
-            {{ sugestao.observacao or "" }}
+          <div class="alert alert-danger py-2 mt-3 mb-0 small d-flex justify-content-between align-items-center gap-2">
+            <div>
+              <strong>A IA acha que isto não é fomento à pesquisa.</strong>
+              {{ sugestao.observacao or "" }}
+              Isso não é motivo para rejeitar — desmarque “É fomento à pesquisa” em
+              Identificação; o registro continua aprovável, só sai da listagem pública padrão.
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 ia-aplicar text-nowrap"
+                    data-campo="e_fomento" data-valor="false">aplicar</button>
           </div>
           {% endif %}
 
@@ -182,6 +218,14 @@
         </div>
 
         <div class="mb-3">
+          <label class="form-label">
+            Programa
+            <span data-bs-toggle="tooltip" title="Programa guarda-chuva nacional executado de forma descentralizada por várias FAPs, quando o edital declarar pertencer a um. Ex: Centelha, Tecnova, PROFIX. Sem a edição/UF — isso já está no título.">ℹ️</span>
+          </label>
+          <input type="text" name="programa" class="form-control" value="{{ o.programa or '' }}" placeholder="ex: Centelha, Tecnova, PROFIX">
+        </div>
+
+        <div class="mb-3">
           <label class="form-label">Tipo de Instrumento <span class="text-danger">*</span></label>
           <select name="tipo_instrumento" class="form-select" required>
             {% for valor, rotulo in [
@@ -191,6 +235,14 @@
             <option value="{{ valor }}" {{ "selected" if o.tipo_instrumento == valor else "" }}>{{ rotulo }}</option>
             {% endfor %}
           </select>
+        </div>
+
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="e_fomento" value="1" id="e_fomento" {{ "checked" if o.e_fomento else "" }}>
+          <label class="form-check-label" for="e_fomento">
+            É fomento à pesquisa
+            <span data-bs-toggle="tooltip" title="Desmarque para publicações que a instituição divulgou pelo mesmo canal mas não são fomento: contratação de pessoal, credenciamento de consultoria ad hoc, seleção de avaliadores, processo seletivo docente. O registro continua aprovável — só some da listagem pública padrão, ficando visível para quem pedir especificamente por ela.">ℹ️</span>
+          </label>
         </div>
       </div>
     </div>
@@ -243,6 +295,15 @@
               {% endfor %}
             </div>
           </div>
+          <div class="mt-2">
+            {% for valor, rotulo in proponente_outros %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="proponente_elegivel"
+                     value="{{ valor }}" id="pe_{{ valor }}" {{ "checked" if valor in (o.proponente_elegivel or []) else "" }}>
+              <label class="form-check-label" for="pe_{{ valor }}">{{ rotulo }}</label>
+            </div>
+            {% endfor %}
+          </div>
         </div>
 
         <div class="mb-3">
@@ -280,8 +341,11 @@
           <label class="form-label">
             Nível de Formação
             <small class="text-muted">(pode marcar mais de um — é comum a mesma chamada conceder bolsa para vários níveis)</small>
+            <span data-bs-toggle="tooltip" title="Graduação é para bolsa que NÃO é iniciação à pesquisa — ex: mobilidade/intercâmbio de graduação sanduíche. Bolsa de pesquisa para estudante de graduação continua Iniciação Científica.">ℹ️</span>
           </label>
           {% for valor, rotulo in [
+              ("educacao_basica", "Educação Básica"),
+              ("graduacao", "Graduação"),
               ("iniciacao_cientifica", "Iniciação Científica"),
               ("mestrado", "Mestrado"),
               ("doutorado", "Doutorado"),
@@ -314,10 +378,12 @@
 
         <div class="mb-3">
           <label class="form-label">
-            Instituição Promotora
-            <span data-bs-toggle="tooltip" title="Quem publica a chamada e recebe as propostas. Em chamadas conjuntas, várias instituições aportam recurso mas uma opera o certame — é onde o proponente submete.">ℹ️</span>
+            Instituição(ões) Promotora(s)
+            <span data-bs-toggle="tooltip" title="Quem publica a chamada e recebe as propostas. Em chamadas conjuntas, várias instituições aportam recurso mas uma opera o certame — é onde o proponente submete. Em chamadas multilaterais o ato de promover pode ser distribuído (ex: proposta internacional vai a um lugar, a parte brasileira a outro) — por isso aceita mais de uma.">ℹ️</span>
           </label>
-          <input type="text" name="instituicao_promotora" class="form-control" value="{{ o.instituicao_promotora or '' }}">
+          <div id="tags-instituicao_promotora" class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center">
+            <input type="text" class="border-0 flex-grow-1" style="outline:none;min-width:150px;" placeholder="Digite e aperte Enter" data-campo="instituicao_promotora">
+          </div>
         </div>
 
         <div class="mb-3">
@@ -437,7 +503,8 @@
         <label class="form-check-label small" for="confirmar_avisos">Aprovar mesmo assim</label>
       </div>
       {% endif %}
-      <button type="submit" name="acao" value="rejeitar" class="btn btn-danger">Rejeitar</button>
+      <button type="submit" name="acao" value="rejeitar" class="btn btn-danger" data-bs-toggle="tooltip"
+              title="Remove da listagem pública e da fila de pendentes, sem apagar o registro. Use para lixo: duplicata, link quebrado, erro de coleta. Para um edital fora do fomento mas legítimo (contratação, credenciamento, seleção de avaliador), desmarque “É fomento à pesquisa” acima em vez de rejeitar — assim o registro continua visível para quem procurar especificamente por isso.">Rejeitar</button>
     </div>
   </form>
 {% endblock %}
@@ -454,8 +521,9 @@
 
     // Campos que são lista de checkboxes: aplicar significa marcar exatamente o sugerido.
     const CAIXAS = ['linha_de_fomento', 'natureza_recurso', 'proponente_elegivel', 'nivel_formacao', 'uf'];
-    const TAGS = ['palavras_chave', 'instituicao_financiadora'];
+    const TAGS = ['palavras_chave', 'instituicao_financiadora', 'instituicao_promotora'];
     const MOEDA = ['orcamento_total_chamada', 'valor_minimo_proposta', 'valor_maximo_proposta'];
+    const BOOLEANOS = ['e_fomento'];
 
     function aplicar(campo, valor) {
       if (valor === null || valor === undefined) return;
@@ -468,15 +536,31 @@
       }
 
       if (TAGS.includes(campo)) {
-        // Reaproveita o componente de tags já existente no formulário.
-        if (typeof inicializarTags === 'function') inicializarTags(campo, valor);
+        // Reaproveita o componente de tags já existente no formulário. instituicao_promotora
+        // migrou de texto único para lista (2026-09) — uma sugestão gerada antes disso ainda
+        // pode estar salva como string solta, e inicializarTags espera array (.forEach).
+        const lista = Array.isArray(valor) ? valor : [valor];
+        if (typeof inicializarTags === 'function') inicializarTags(campo, lista);
+        return;
+      }
+
+      if (BOOLEANOS.includes(campo)) {
+        // Checkbox: é `.checked` que importa, não `.value` — só mudar `.value` não
+        // marca/desmarca nada na tela.
+        const input = document.querySelector(`[name="${campo}"]`);
+        if (!input) return;
+        input.checked = Boolean(valor);
+        input.classList.add('border-success');
         return;
       }
 
       const input = document.querySelector(`[name="${campo}"]`);
       if (!input) return;
-      input.value = valor;
-      if (MOEDA.includes(campo)) input.dispatchEvent(new Event('input'));
+      if (MOEDA.includes(campo)) {
+        window.definirValorMoeda(input, valor);
+      } else {
+        input.value = valor;
+      }
       input.classList.add('border-success');
     }
 
@@ -536,13 +620,11 @@
     }
 
     // Formato para o atributo data-valor que `usar()` consome. Data já é ISO (o <input
-    // type=date> quer isso). Dinheiro PRECISA de duas casas decimais fixas — a máscara de
-    // moeda lê os dois últimos dígitos como centavos (ver base.html), então "180000" (sem
-    // decimais, o que Number.toString() produz para um valor inteiro) viraria R$ 1.800,00
-    // em vez de R$ 180.000,00. toFixed(2) garante as duas casas sempre.
+    // type=date> quer isso); dinheiro só precisa ser um número válido — quem formata é
+    // window.definirValorMoeda (base.html), não mais dependente de casas decimais fixas.
     function valorParaAtributo(campo, valor) {
       if (valor === null || valor === undefined) return '';
-      return campo.startsWith('data') ? valor : Number(valor).toFixed(2);
+      return campo.startsWith('data') ? valor : String(valor);
     }
 
     function usar(campo, valor) {
@@ -551,9 +633,7 @@
       if (campo.startsWith('data')) {
         input.value = valor;                     // <input type="date"> quer ISO
       } else {
-        // Campos de dinheiro passam pela máscara, que lê centavos: "50000.00" -> R$ 50.000,00
-        input.value = valor;
-        input.dispatchEvent(new Event('input'));
+        window.definirValorMoeda(input, Number(valor));
       }
       input.classList.add('border-success');
       input.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -775,5 +855,6 @@
 
   inicializarTags('palavras_chave', {{ (o.palavras_chave or []) | tojson }});
   inicializarTags('instituicao_financiadora', {{ (o.instituicao_financiadora or []) | tojson }});
+  inicializarTags('instituicao_promotora', {{ (o.instituicao_promotora or []) | tojson }});
 </script>
 {% endblock %}

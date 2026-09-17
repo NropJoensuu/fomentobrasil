@@ -214,7 +214,7 @@ def salvar_no_banco(registros):
                 "data_publicacao": r["data_publicacao"],
                 "data_prazo": None,  # só existe dentro do PDF
                 "instituicao_financiadora": ["FAPAC"],
-                "instituicao_promotora": "FAPAC",
+                "instituicao_promotora": ["FAPAC"],
                 "tipo_instrumento": r["tipo_instrumento"],
                 "tipo_parceria": r["tipo_parceria"],
                 "uf": ["AC"],

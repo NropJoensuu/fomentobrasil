@@ -223,7 +223,7 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "data_publicacao": r["data_publicacao"],
                 "instituicao_financiadora": ["FAPEMIG"],
-                "instituicao_promotora": "FAPEMIG",
+                "instituicao_promotora": ["FAPEMIG"],
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["MG"],

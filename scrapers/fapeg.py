@@ -212,7 +212,7 @@ def salvar_no_banco(registros):
                 "data_publicacao": r["data_publicacao"],
                 "data_prazo": None,  # só existe dentro do PDF do edital
                 "instituicao_financiadora": [i[:200] for i in r["instituicao_financiadora"]],
-                "instituicao_promotora": "FAPEG",
+                "instituicao_promotora": ["FAPEG"],
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["GO"],

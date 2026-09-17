@@ -179,7 +179,7 @@ def salvar_no_banco(registros):
             campos_extras_fixos={
                 "descricao": r["descricao"],
                 "instituicao_financiadora": [r["instituicao_financiadora"][:200]],
-                "instituicao_promotora": "FAPESP",
+                "instituicao_promotora": ["FAPESP"],
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["SP"],

@@ -204,7 +204,7 @@ def salvar_no_banco(registros):
                 # Parcerias (Fundect/CNPq/CAPES, Fundect/CONFAP) aparecem no título, mas
                 # extraí-las automaticamente seria chute — o curador completa a lista.
                 "instituicao_financiadora": ["FUNDECT"],
-                "instituicao_promotora": "FUNDECT",
+                "instituicao_promotora": ["FUNDECT"],
                 "tipo_instrumento": "chamada_publica_edital" if e_premio else r["tipo_instrumento"],
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["MS"],

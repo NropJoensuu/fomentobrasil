@@ -144,7 +144,7 @@ def salvar_no_banco(registros):
                 "descricao": r["descricao"],
                 "data_prazo": None,  # não disponível na listagem, requer abrir o PDF
                 "instituicao_financiadora": ["FAPES"],
-                "instituicao_promotora": "FAPES",
+                "instituicao_promotora": ["FAPES"],
                 "tipo_instrumento": "chamada_publica_edital",
                 "tipo_parceria": detectar_tipo_parceria(r["titulo"]),
                 "uf": ["ES"],

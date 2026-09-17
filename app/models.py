@@ -14,6 +14,12 @@ class Oportunidade(db.Model):
     titulo = db.Column(db.String(300), nullable=False)
     descricao = db.Column(db.Text, nullable=True)
 
+    # Programa guarda-chuva nacional ao qual a chamada pertence, quando houver — várias FAPs
+    # executam a mesma edição sucessiva de forma descentralizada (Centelha em vários estados,
+    # Tecnova, PROFIX). Normalizado sem a edição/UF: "Centelha", não "Centelha 3 – Rondônia"
+    # (isso já está no título). Curadoria manual; a IA sugere, não é preenchido por regex.
+    programa = db.Column(db.String(150), nullable=True)  # ex: "Centelha", "Tecnova", "PROFIX", "PPSUS", "Amazônia +10", "Universal"
+
     # Linha de fomento: o que a chamada oferece em termos de finalidade. Lista porque uma
     # chamada pode ter mais de uma simultaneamente (ex: FAPEMIG-SEDE 013/2026 tem três).
     # `premiacao` (2026-09-01) é a exceção retrospectiva às outras cinco, que são todas
@@ -41,7 +47,19 @@ class Oportunidade(db.Model):
 
     # Proveniência: institucional (edital top-down) vs vaga_projeto (oferta ligada a projeto já financiado)
     origem = db.Column(db.String(30), nullable=False, default="institucional")
+    # Moderação/curadoria interna — não decide mais se é fomento (ver `e_fomento`).
+    # `rejeitado` volta a significar só lixo: duplicata, link quebrado, erro de coleta.
+    # Publicação fora do escopo de fomento (contratação, credenciamento, seleção de
+    # avaliador) é `e_fomento=False`, não rejeição — continua aprovável e visível para
+    # quem procura especificamente por isso.
     status = db.Column(db.String(30), nullable=False, default="aprovado")  # rascunho, pendente, aprovado, rejeitado (moderação/curadoria interna)
+
+    # Se o registro é fomento à pesquisa ou outra coisa que a instituição publicou como
+    # "edital" no mesmo canal: contratação de pessoal, credenciamento de consultoria ad hoc,
+    # seleção de avaliadores, processo seletivo docente. Default True porque a esmagadora
+    # maioria é fomento — o booleano existe para não jogar fora o que não é, não para
+    # marcar a exceção como regra. A IA sugere; o curador confirma.
+    e_fomento = db.Column(db.Boolean, nullable=False, default=True)
 
     # Status oficial declarado pela instituição sobre o edital em si (distinto de `status`, que é moderação).
     # Quando None (caso normal), aberta/encerrada é calculado a partir de data_prazo. Quando preenchido, tem prioridade sobre esse cálculo.
@@ -57,12 +75,15 @@ class Oportunidade(db.Model):
     # Amazônia +10 tem aporte de várias FAPs, CONFAP e BNDES, e foi publicado pela FAPESP
     # numa edição e pelo CNPq em outra — o proponente precisa saber ONDE submete, e isso
     # não é derivável da lista de financiadoras.
-    instituicao_promotora = db.Column(db.String(200), nullable=True)
+    # Lista (2026-09) porque em chamadas multilaterais o ato de promover pode ser
+    # distribuído: a proposta internacional vai a um lugar, a parte brasileira a outro
+    # (ex: FAPESQ/CONFAP/Bélgica). Mesma solução já adotada para instituicao_financiadora.
+    instituicao_promotora = db.Column(ARRAY(db.String(200)), nullable=True)
 
     # Lista porque uma mesma chamada costuma conceder bolsa para mais de um nível
     # (ex: mestrado e doutorado na mesma chamada). Só relevante quando
     # natureza_recurso inclui bolsa.
-    nivel_formacao = db.Column(ARRAY(db.String(50)), nullable=True)  # mestrado, doutorado, pos_doutorado, iniciacao_cientifica, nao_aplicavel
+    nivel_formacao = db.Column(ARRAY(db.String(50)), nullable=True)  # graduacao, iniciacao_cientifica, educacao_basica, mestrado, doutorado, pos_doutorado, nao_aplicavel
 
     area_principal = db.Column(db.String(100), nullable=True)  # Grande Área da Tabela CNPq/CAPES (lista fechada, ver formulário)
     palavras_chave = db.Column(ARRAY(db.String(150)), nullable=True)  # livre, suporta múltiplos valores
