@@ -60,8 +60,12 @@ VOCAB_TIPO_INSTRUMENTO = ["chamada_publica_edital", "chamamento_publico"]
 VOCAB_NATUREZA_RECURSO = ["custeio", "capital", "bolsa"]
 VOCAB_PROPONENTE = [
     "pesquisadores", "especialistas", "mestrandos", "mestres", "doutorandos", "doutores",
-    "ies", "ict", "empresas", "startups", "governo", "outros",
+    "ies", "ict", "empresas", "startups", "governo",
 ]
+# "outros" (ver app.utils.PROPONENTE_OUTROS) fica de propósito FORA deste vocabulário: é
+# uma categoria de catálogo para o curador marcar manualmente quando sabe que o registro é
+# candidato a vaga/consultor/avaliador, não algo que a IA deva inferir por conta própria — a
+# IA já tem e_fomento para sinalizar "isto não é fomento" com evidência.
 VOCAB_NIVEL_FORMACAO = [
     "educacao_basica", "graduacao", "iniciacao_cientifica", "mestrado", "doutorado", "pos_doutorado",
 ]
@@ -327,8 +331,6 @@ trabalhos, menção honrosa) em vez de apoiar atividade futura.
 proponente_elegivel — QUEM PODE APRESENTAR A PROPOSTA.
 Pessoa física: pesquisadores, especialistas, mestrandos, mestres, doutorandos, doutores.
 Pessoa jurídica: ies, ict, empresas, startups, governo.
-outros: publicações fora do fomento (ver e_fomento) que ainda assim têm um "proponente" — \
-candidato a vaga, consultor, avaliador.
 ATENÇÃO: marque quem SUBMETE, não quem é beneficiado. Se a proposta é submetida por uma \
 instituição e a bolsa vai para estudantes, marque a instituição (ies ou ict), não os \
 estudantes. IES e ICT se sobrepõem sem coincidir: uma universidade federal é as duas; a \
@@ -392,7 +394,7 @@ apoio_formacao_capacitacao, apoio_redes_grupos_pesquisa, premiacao
 - tipo_instrumento: chamada_publica_edital, chamamento_publico
 - natureza_recurso (lista): custeio, capital, bolsa
 - proponente_elegivel (lista): pesquisadores, especialistas, mestrandos, mestres, doutorandos, \
-doutores, ies, ict, empresas, startups, governo, outros
+doutores, ies, ict, empresas, startups, governo
 - nivel_formacao (lista): educacao_basica, graduacao, iniciacao_cientifica, mestrado, \
 doutorado, pos_doutorado. graduacao é para bolsa que NÃO é iniciação à pesquisa (ex.: \
 mobilidade/intercâmbio de graduação sanduíche) — bolsa de pesquisa para estudante de \
@@ -410,7 +412,10 @@ Campo livre:
 Normalmente uma só, mas chamadas multilaterais podem distribuir o ato de promover entre mais \
 de uma instituição. Use a SIGLA sozinha ("FAPEMIG", "CNPq", "FAPES"), nunca o nome por \
 extenso nem sigla mais nome
-- instituicao_financiadora: lista de textos — quem aporta recurso. Siglas, mesma regra
+- instituicao_financiadora: lista de textos — quem aporta recurso. Siglas, mesma regra. \
+FUNDOS (FNDCT, FUNTTEL, FUST) são fonte de recurso, não instituição — não entram aqui nem em \
+instituicao_promotora. Quem financia com dinheiro do FNDCT, por exemplo, é o órgão que opera \
+o edital (CNPq, MCTI), não "FNDCT"
 - uf: lista de siglas de duas letras
 - data_publicacao: "AAAA-MM-DD" — quando o edital foi publicado
 - data_prazo: "AAAA-MM-DD" — data-LIMITE de submissão
@@ -423,6 +428,93 @@ chamar de "valor global"
 que se SOMAM no mesmo projeto (ex.: até R$ 80.000 de subvenção mais até R$ 50.000 em bolsas), \
 informe a soma
 - palavras_chave: lista de textos
+
+## Exemplos de classificação correta
+
+Estes exemplos vêm de editais reais classificados por um curador humano. Quando um caso novo \
+se parecer com algum deles, siga o mesmo raciocínio — não decore os títulos, generalize o \
+porquê.
+
+Exemplo 1 — proponente institucional, apesar de outro trecho mencionar pesquisador
+Título: Chamada FAPEMIG/SEDE 15/2026 - Laboratórios Certificadores
+Evidência: "Serão consideradas elegíveis as propostas apresentadas por ICTs-MG cadastradas \
+na FAPEMIG"
+Resposta correta: proponente_elegivel = ["ict"]
+Por quê: a elegibilidade de quem SUBMETE é institucional. Outro trecho do mesmo edital pode \
+descrever requisitos do coordenador (titulação, currículo Lattes) sem que isso vire pessoa \
+física em proponente_elegivel — requisito de quem coordena não é elegibilidade de quem propõe.
+
+Exemplo 2 — proponente pessoa física, mesmo com titulação específica exigida do coordenador
+Título: Chamada Pública CNPq/MCTI nº 15/2026 - PROAFRICA
+Evidência: "O(a) responsável pela apresentação da proposta será o(a) coordenador(a) do \
+projeto que deverá, obrigatoriamente: a) ter seu currículo cadastrado na Plataforma Lattes; \
+b) possuir o título de doutor(a)"
+Resposta correta: proponente_elegivel = ["pesquisadores"] — NÃO ["doutores"], apesar do \
+item (b) exigir doutorado
+Por quê: titulação específica no requisito do coordenador é uma condição a cumprir, não a \
+categoria de proponente. Use o nível específico (doutores/mestres/...) só quando o próprio \
+edital DEFINE quem pode submeter por faixa de titulação (ex.: "esta modalidade é destinada a \
+mestres; aquela, a doutores" — categorias paralelas e explícitas). Quando é só um requisito a \
+mais do coordenador dentro de uma elegibilidade de pessoa física única, marque o amplo \
+"pesquisadores".
+
+Exemplo 2b — pessoa E instituição juntas (não é sempre um ou outro)
+Título: Chamada de Propostas - Programa Desafios da Amazônia
+Evidência: "financiará projetos de pesquisa, desenvolvimento e inovação (PD&I), apresentados \
+por pesquisadores de ICTs, em parceria com Organizações Socioprodutivas (OSPs)"
+Resposta correta: proponente_elegivel = ["pesquisadores", "ict"] — os DOIS
+Por quê: "pesquisadores de ICTs" amarra a pessoa à instituição — a proposta é apresentada \
+POR um pesquisador QUE ESTÁ vinculado a uma ICT. Isso não é o mesmo padrão do Exemplo 1 (só \
+instituição, pessoa nem aparece como sujeito de "apresentar") nem do Exemplo 2 (só pessoa, \
+sem menção a vínculo institucional) — quando o texto liga explicitamente pessoa e instituição \
+como sujeito conjunto de "apresentar/submeter", marque os dois.
+
+Exemplo 3 — não acrescentar pessoa física quando a evidência já nomeia "instituições proponentes"
+Título: Chamada CNPq/SETEC/MCTI N° 13/2026 - Apoio a Eventos de Promoção do Empreendedorismo
+Evidência: "Tenham como instituições proponentes entidades científicas, tecnológicas e/ou de \
+inovação nacionais públicas ou privadas, sem fins lucrativos"
+Resposta correta: proponente_elegivel = ["ict"] (SEM pesquisadores)
+Por quê: quando a evidência de elegibilidade já usa a expressão "instituições proponentes", \
+isso é a resposta — acrescentar pessoa física por conta própria é o erro mais comum medido \
+neste campo.
+
+Exemplo 4 — linha_de_fomento pelo objeto do apoio, não por palavra temática
+Título: Chamada FAPEMIG/SEDE 15/2026 - Laboratórios Certificadores (mesmo edital do Exemplo 1)
+Evidência: "APOIO A PROJETOS VOLTADOS AO FORTALECIMENTO DA INFRAESTRUTURA DE LABORATÓRIOS \
+CERTIFICADORES"
+Resposta correta: linha_de_fomento = ["auxilio_pesquisa"] — NÃO inclui auxilio_inovacao, \
+mesmo que o edital mencione inovação, qualificação ou certificação em outros trechos
+Por quê: o objeto é infraestrutura laboratorial. auxilio_inovacao é para apoio DIRETO a \
+produto/processo/serviço inovador, normalmente com empresa na cadeia — não para qualquer \
+edital que cite a palavra "inovação".
+
+Contraste — aqui SIM é auxilio_inovacao:
+Título: Programa Centelha 3 – Rondônia
+Resposta correta: linha_de_fomento = ["auxilio_inovacao"]; programa = "Centelha"
+Por quê: apoio direto a empreendedores e startups desenvolverem produto/processo/serviço — o \
+objeto é a inovação em si, não uma infraestrutura de apoio a ela.
+
+Exemplo 5 — abrangência: a mais ampla quando o edital admitir mais de uma
+Título: Chamada CNPq/SETEC/MCTI N° 13/2026 (mesmo do Exemplo 3)
+Evidência: "Selecionar propostas de eventos de abrangência nacional ou internacional a serem \
+realizados no Brasil"
+Resposta correta: abrangencia = "internacional"
+
+Exemplo 6 — uf: não confundir o território que o programa BENEFICIA com quem pode SUBMETER
+Título: Chamada de Propostas - Programa Desafios da Amazônia; programa = "Desafios da Amazônia"
+Evidência: "Área que abrange 9 estados do Brasil (AC, AP, AM, MA, MT, PA, RO, RR e TO), \
+conforme definido pelo IBGE"
+Resposta correta: NÃO preencha uf a partir desse trecho
+Por quê: essa frase descreve a abrangência geográfica do IMPACTO do programa (a Amazônia \
+Legal), não os estados de onde o proponente pode vir — a rede reúne FAPs de fora dessa lista \
+também. Só marque uf quando o edital disser explicitamente QUEM PODE SUBMETER por estado.
+
+Exemplo 7 — e_fomento false
+Título: EDITAL Nº 51/2026 – Processo Seletivo de Professores
+Evidência (observação do curador): "processo seletivo para formação de cadastro de reserva \
+de professores(as)... com remuneração por hora/atividade de ensino... análoga a contratação \
+de pessoal/oficineiros, fora do escopo de fomento à pesquisa"
+Resposta correta: e_fomento = false
 
 Exemplo do formato (os campos mostrados são ilustrativos, não a lista completa):
 

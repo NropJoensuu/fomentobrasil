@@ -1694,3 +1694,96 @@ alguns puderam usar a API de verdade (6, 7, 8), os demais usaram o banco de prod
 registros descartáveis restaurados depois. `scripts/testar_extracao_pdf.py` (regressão da
 extração por regra) continua 29/29 / 27/29 depois de todas as mudanças. `py_compile` limpo em
 todos os módulos Python tocados.
+
+## Few-shot no prompt da curadoria assistida (2026-09-18)
+
+Sete exemplos reais adicionados a `PROMPT_SISTEMA`, extraídos dos registros já aprovados
+(`status="aprovado"`, 17 no momento — os 15 originais mais 2 aprovados depois), com evidência
+literal tirada do PDF de cada edital (baixado e conferido, não citado de memória): #83 e #23
+(proponente institucional), #22 (proponente pessoa física, com o requisito de titulação do
+coordenador incluído por inteiro — ver adiante por quê isso importou), #34 (proponente
+pessoa+instituição juntos; uf não é o território que o programa beneficia), #376 (contraste
+positivo de `auxilio_inovacao`; `programa`), #300 (`e_fomento=false`, observação real do
+curador). Regra nova sobre fundos (FNDCT/FUNTTEL/FUST não são instituição) ancorada em #22,
+que cita "recursos oriundos do... FNDCT" explicitamente.
+
+**`outros` removido do vocabulário da IA** (`VOCAB_PROPONENTE` em `curadoria_ia.py`), achado
+corrigindo este próprio briefing: a instrução anterior (correções da recuragem, mesma sessão)
+tinha acrescentado `outros` tanto no vocabulário do formulário (`app/utils.py`, correto) quanto
+no vocabulário que a IA usa (incorreto) — a IA nunca deveria sugerir essa categoria, que é
+decisão humana de catálogo. `_validar()` descarta com segurança se o modelo devolver mesmo
+assim (testado).
+
+### Primeira calibração pós-few-shot: regressão real em `proponente_elegivel`
+
+Custo do prompt medido pelo tokenizer real da API (`messages.count_tokens`), não estimativa
+por caractere: 4.213 → 6.323 tokens de sistema (+50%, ~US$ 0,0063/chamada a mais, ~US$ 0,95
+para os 150 pendentes se cada um gerar sugestão uma vez).
+
+`scripts/calibrar_ia.py` contra os 17 aprovados deu resultado misto e um problema sério:
+
+| campo | antes (linha de base) | com few-shot (1ª rodada) |
+|---|---|---|
+| `linha_de_fomento` | 33% | **53%** (melhora real) |
+| `instituicao_promotora` | 80% (inflado) | 76% (estável) |
+| `proponente_elegivel` | 20% | **6%** (regrediu) |
+
+`proponente_elegivel` piorando de 20% para 6% não foi commitado — é regressão sistemática, não
+ruído de amostra pequena (13 de 16 casos avaliados divergiram). Investigando a evidência
+COMPLETA (não truncada) de cada divergência contra o texto real do PDF, dois vieses novos,
+opostos, ambos introduzidos pelos próprios exemplos:
+
+1. **Titulação do coordenador virou categoria.** O Exemplo 2 usava o trecho de #22 truncado
+   antes de um requisito real mais adiante ("b) possuir o título de doutor(a)"). A IA citava
+   esse requisito genuíno e concluía `doutores`; o curador tinha registrado `pesquisadores`
+   (categoria ampla). Mesmo padrão em #93, #118, #160, #215, #291 — a IA passou a extrair a
+   titulação exigida do coordenador como se fosse a categoria do proponente.
+2. **Instituição deixou de coexistir com pessoa.** Em #34, #81, #377 a IA passou a marcar só
+   `pesquisadores`, mesmo quando o gabarito tem `pesquisadores` E a instituição juntos (ex:
+   "pesquisadores de ICTs" — a pessoa vinculada à instituição, os dois ao mesmo tempo). Os
+   Exemplos 1/3 ("prefira instituição") pareceram empurrar demais nessa direção em casos onde
+   pessoa e instituição coexistem, não se excluem.
+
+### Revisão e segunda calibração
+
+Exemplo 2 reescrito com a evidência completa de #22 (incluindo o requisito de doutorado) e a
+lição corrigida: titulação exigida do coordenador é uma condição a cumprir, não a categoria de
+proponente — só usar nível específico quando o próprio edital DEFINE faixas paralelas de
+submissão por titulação. Exemplo 2b novo (#34): quando o texto liga pessoa e instituição como
+sujeito conjunto de "apresentar" ("pesquisadores de ICTs"), marcar os dois.
+
+| campo | linha de base | 1ª rodada (regressão) | 2ª rodada (revisado) |
+|---|---|---|---|
+| `proponente_elegivel` | 20% | 6% | **44%** |
+| `linha_de_fomento` | 33% | 53% | 56% |
+| `instituicao_promotora` | 80% (inflado) | 76% | 50%* |
+
+*`instituicao_promotora` caiu na 2ª rodada, mas não por causa do few-shot — nenhum exemplo
+dele foi tocado na revisão. Inspecionando as 8 divergências: a maioria é a IA encontrando uma
+SEGUNDA instituição promotora real que o gabarito (herdado de backfill, não de curadoria fina
+— como já avisado) só lista uma (ex: #82/#83 "FAPEMIG, SEDE" — confirmado no PDF real que a
+SEDE é copromotora — contra "FAPEMIG" sozinho no banco). Não é regressão nova; é o mesmo viés
+de gabarito incompleto já documentado, só que apareceu mais nesta rodada — plausivelmente
+variação normal de chamada a chamada (o modelo não é determinístico).
+
+**Confirmação de generalização (não decoreba):** nos registros da 2ª rodada que NÃO são
+exemplo do prompt, `proponente_elegivel` acertou em cheio #81, #93, #215 e #291 — inclusive o
+padrão pessoa+instituição do Exemplo 2b generalizando para evidência totalmente diferente da
+de #34. `ict` não virou resposta padrão: está ausente, corretamente, em #118, #377, #379.
+
+**Achado à parte, não corrigido nesta rodada:** o valor gravado de `linha_de_fomento` do
+registro #83 no banco (`['auxilio_pesquisa', 'auxilio_inovacao', 'apoio_redes_grupos_pesquisa']`)
+inclui `auxilio_inovacao`, que as duas últimas instruções escritas do usuário (a de correções
+da recuragem e esta) dizem explicitamente que NÃO deveria estar lá — a IA já não marca mais
+(daí a "divergência" nesse campo para #83 na calibração), mas o registro em si nunca foi
+re-salvo pelo curador para refletir isso. Fica como pendência para revisão manual futura, não
+alterado aqui porque esta instrução foi sobre o prompt, não sobre reeditar dados já aprovados.
+
+### Validação
+
+1. Generalização confirmada (#81/#93/#215/#291, fora dos exemplos, acertaram em cheio).
+2. `ict` não virou resposta padrão — confirmado ausente em vários casos corretos (#118, #377,
+   #379).
+3. `outros` confirmado fora do enum da IA (e removido de onde tinha entrado por engano).
+4. Custo por edital medido na calibração real: US$ 0,1262 (17→16 registros, 1 falha de parsing
+   de JSON em #300, não relacionada às mudanças — erro de formatação pontual do modelo).
