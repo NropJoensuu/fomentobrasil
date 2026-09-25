@@ -164,11 +164,11 @@ def coletar_chamadas_fapeg(html=None, posts=None):
         # Sem a API, monta o título a partir da tabela — pior, mas melhor que nada.
         titulo = titulo_api or f"{linha['tipo']} nº {linha['numero']} – {linha['descricao']}"
 
-        documentos = _limpar((post.get("content") or {}).get("rendered", ""))
+        documentos_texto = _limpar((post.get("content") or {}).get("rendered", ""))
 
         # A FAPEG retifica com muita frequência (vários editais têm 2ª e 3ª retificação).
         # Sinalizar isso poupa o curador de descobrir só ao abrir o PDF.
-        retificada = "retifica" in documentos.lower()
+        retificada = "retifica" in documentos_texto.lower()
 
         resultados.append(
             {
@@ -178,7 +178,7 @@ def coletar_chamadas_fapeg(html=None, posts=None):
                 "data_publicacao": _texto_por_extenso_para_data(post.get("date")),
                 "numero_edital": linha["numero"],
                 "tipo_fapeg": linha["tipo"],
-                "documentos": documentos or None,
+                "documentos_texto": documentos_texto or None,
                 "status_oficial": "retificada" if retificada else None,
                 "instituicao_financiadora": _instituicoes_da_origem(linha["origem"]),
             }
@@ -196,8 +196,8 @@ def salvar_no_banco(registros):
 
     for r in registros:
         dados_extra = {"numero_edital": r["numero_edital"], "tipo_fapeg": r["tipo_fapeg"]}
-        if r["documentos"]:
-            dados_extra["documentos"] = r["documentos"]
+        if r["documentos_texto"]:
+            dados_extra["documentos_texto"] = r["documentos_texto"]
 
         resultado = processar_registro(
             dados_novos={

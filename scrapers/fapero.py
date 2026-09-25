@@ -32,7 +32,13 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import detectar_tipo_parceria, processar_registro
+from app.scraper_utils import (
+    coletar_documentos,
+    deduzir_status_oficial,
+    detectar_tipo_parceria,
+    escolher_link_principal,
+    processar_registro,
+)
 
 # >>> Atualizar quando virar o ano (ver "ORGANIZAÇÃO POR ANO" na docstring). <<<
 ANO = 2026
@@ -41,41 +47,11 @@ URL_PUBLICACOES = f"https://rondonia.ro.gov.br/fapero/publicacoes/{ANO}-2/"
 
 USER_AGENT = "fomentobrasil-scraper/1.0 (+https://fomentobrasil.com.br)"
 
-PADRAO_CANCELAMENTO = re.compile(r"cancelament|cancelad[ao]", re.IGNORECASE)
-PADRAO_RETIFICACAO = re.compile(r"retifica", re.IGNORECASE)
-PADRAO_EDITAL = re.compile(r"edital", re.IGNORECASE)
 PADRAO_CHAMAMENTO = re.compile(r"chamamento\s+p[úu]blico|credenciamento", re.IGNORECASE)
 
 
 def _limpar(texto):
     return re.sub(r"\s+", " ", texto or "").strip()
-
-
-def _status_oficial(rotulos):
-    """Deduz o status a partir dos rótulos dos documentos.
-
-    Cancelamento tem prioridade sobre retificação: uma chamada cancelada pode ter sido
-    retificada antes, e o que interessa ao usuário é que ela não vale mais.
-    """
-    texto = " ".join(rotulos)
-    if PADRAO_CANCELAMENTO.search(texto):
-        return "cancelada"
-    if PADRAO_RETIFICACAO.search(texto):
-        return "retificada"
-    return None
-
-
-def _escolher_link_principal(documentos):
-    """Devolve (url, sem_link_edital).
-
-    Prefere o documento cujo rótulo mencione "Edital". Quando não há nenhum — caso real do
-    "Credenciamento de Aceleradoras", que só tem "Resultado Preliminar" —, usa o primeiro
-    disponível e sinaliza: é sinal de que o edital saiu de cartaz e só restou o resultado.
-    """
-    for doc in documentos:
-        if PADRAO_EDITAL.search(doc["rotulo"]):
-            return doc["url"], False
-    return documentos[0]["url"], True
 
 
 def coletar_chamadas_fapero(html=None):
@@ -101,12 +77,7 @@ def coletar_chamadas_fapero(html=None):
         if not titulo:
             continue
 
-        documentos = []
-        for link in section.find_all("a", href=True):
-            rotulo = _limpar(link.get_text(" ", strip=True))
-            if not rotulo:
-                continue
-            documentos.append({"rotulo": rotulo, "url": urljoin(URL_PUBLICACOES, link["href"])})
+        documentos = coletar_documentos(section, URL_PUBLICACOES)
 
         if not documentos:
             continue  # sem nenhum documento não há o que apontar
@@ -120,8 +91,7 @@ def coletar_chamadas_fapero(html=None):
         ]
         descricao = " ".join(p for p in partes if p) or None
 
-        link_principal, sem_link_edital = _escolher_link_principal(documentos)
-        rotulos = [d["rotulo"] for d in documentos]
+        link_principal, sem_link_edital = escolher_link_principal(documentos)
 
         resultados.append(
             {
@@ -130,7 +100,7 @@ def coletar_chamadas_fapero(html=None):
                 "descricao": descricao,
                 "documentos": documentos,
                 "sem_link_edital": sem_link_edital,
-                "status_oficial": _status_oficial(rotulos),
+                "status_oficial": deduzir_status_oficial(documentos),
                 "tipo_instrumento": (
                     "chamamento_publico"
                     if PADRAO_CHAMAMENTO.search(f"{titulo} {descricao or ''}")

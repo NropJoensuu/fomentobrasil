@@ -19,6 +19,7 @@ dentro de <div>s irmãos. Por isso o parsing localiza os contêineres por seleto
 em vez de procurar um <p> irmão.
 """
 
+import logging
 import re
 from datetime import datetime
 
@@ -26,7 +27,14 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import detectar_tipo_parceria, processar_registro
+from app.scraper_utils import (
+    coletar_documentos,
+    deduzir_status_oficial,
+    detectar_tipo_parceria,
+    processar_registro,
+)
+
+logger = logging.getLogger(__name__)
 
 URL_CHAMADAS_ABERTAS = "https://www.gov.br/cnpq/pt-br/chamadas/abertas-para-submissao"
 
@@ -78,7 +86,34 @@ def _texto_normalizado(elemento):
     return elemento.get_text(" ", strip=True).replace("\xa0", " ")
 
 
-def coletar_chamadas_cnpq(html=None):
+def _documentos_da_chamada(link_chamada):
+    """Busca a página da chamada e lista seus documentos.
+
+    Uma requisição extra por chamada, e o volume justifica: são cinco chamadas abertas por
+    vez. O custo compra o que o listing não dá — a existência de retificação. A chamada
+    19/2026 (Asas para o Futuro) teve o cronograma retificado e o sistema continuou lendo o
+    edital original, com prazo 10/08 quando o vigente era 31/08.
+
+    O filtro é geométrico, não textual: a página da chamada mora em
+    `.../chamada-no-19-2026/chamada-publica-cnpq-N-19-2026` e os documentos ficam ao lado,
+    no mesmo diretório. Tudo que está fora dele é navegação, rodapé ou carta de serviços.
+    """
+    try:
+        resp = requests.get(link_chamada, timeout=45, headers={"User-Agent": USER_AGENT})
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        logger.warning("CNPq: não consegui abrir %s (%s)", link_chamada, type(e).__name__)
+        return []
+
+    diretorio = link_chamada.rsplit("/", 1)[0] + "/"
+    sopa = BeautifulSoup(resp.content, "html.parser")
+    return coletar_documentos(
+        sopa, link_chamada,
+        filtro_href=lambda u: u.startswith(diretorio) and u != link_chamada,
+    )
+
+
+def coletar_chamadas_cnpq(html=None, buscar_documentos=True):
     """Coleta as chamadas abertas e devolve uma lista de dicts prontos para inserção.
 
     `html` permite testar o parsing offline, sem bater na rede.
@@ -140,10 +175,14 @@ def coletar_chamadas_cnpq(html=None):
         # (ex.: chamada CNPq/ERC 21/2026 — publicada 04/08, inscrições desde 03/08).
         data_publicacao = parse_data((publicado_em or "").split()[0] if publicado_em else None)
 
+        documentos = _documentos_da_chamada(link) if buscar_documentos else []
+
         resultados.append(
             {
                 "titulo": titulo,
                 "link": link,
+                "documentos": documentos,
+                "status_oficial": deduzir_status_oficial(documentos),
                 "descricao": descricao,
                 "data_publicacao": data_publicacao,
                 "data_prazo": data_prazo,
@@ -166,15 +205,18 @@ def salvar_no_banco(registros):
     for r in registros:
         # O início do período de inscrição não tem coluna própria no modelo; fica em
         # dados_extra para não se perder até que exista (ou seja descartado na curadoria).
-        dados_extra = None
+        dados_extra = {}
         if r["inscricao_inicio"]:
-            dados_extra = {"inscricao_inicio": r["inscricao_inicio"].isoformat()}
+            dados_extra["inscricao_inicio"] = r["inscricao_inicio"].isoformat()
 
         resultado = processar_registro(
             dados_novos={
                 "link": r["link"][:500],
                 "titulo": r["titulo"][:300],
                 "data_prazo": r["data_prazo"],
+                # status_oficial é monitorado: uma retificação publicada depois da curadoria
+                # reabre o registro para revisão em vez de passar despercebida.
+                "status_oficial": r["status_oficial"],
             },
             campos_extras_fixos={
                 "descricao": r["descricao"],
@@ -192,10 +234,11 @@ def salvar_no_banco(registros):
                 # determinado" — em vez de um chute que viraria dado errado no banco.
                 "natureza_recurso": [],
                 "proponente_elegivel": [],
-                "dados_extra": dados_extra,
+                "dados_extra": dados_extra or None,
                 "origem": "institucional",
                 "status": "pendente",  # aguarda curadoria antes de aparecer publicamente
             },
+            dados_extra_sempre={"documentos": r["documentos"]} if r["documentos"] else None,
         )
         if resultado == "novo":
             novos += 1

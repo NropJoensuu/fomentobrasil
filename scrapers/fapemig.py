@@ -21,7 +21,12 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import detectar_tipo_parceria, processar_registro
+from app.scraper_utils import (
+    classificar_retificacao,
+    deduzir_status_oficial,
+    detectar_tipo_parceria,
+    processar_registro,
+)
 
 API_BASE = "https://api.site.fapemig.br/wp-json/fapemig-chamadas-e-editais/v1/chamadas"
 
@@ -106,6 +111,38 @@ def _rotulos_selecionados(campo):
     ]
 
 
+def _documentos_do_item(item):
+    """Converte `anexos` da API no formato padrão de documentos do projeto.
+
+    A FAPEMIG entrega os anexos na mesma resposta — sem requisição extra — e com
+    `tamanho_kb`, que é o desempate de `classificar_retificacao` entre substitutiva e
+    incremental. É a fonte mais rica do acervo neste ponto.
+
+    O booleano `retificacao` da API, porém, NÃO é confiável: a chamada 014/2026 (Cientista
+    Empreendedor) traz "Chamada Retificada Cientista Empreendedor" com `retificacao: false`.
+    Por isso o rótulo é a fonte primária e a bandeira entra só como confirmação — quando ela
+    afirma que é retificação e o rótulo não deixa claro, vale como incremental, que é o lado
+    seguro (exige ler o edital também).
+    """
+    documentos = []
+    for anexo in item.get("anexos") or []:
+        url = anexo.get("url_anexo")
+        if not url:
+            continue
+        doc = {
+            "rotulo": (anexo.get("descricao") or anexo.get("nome_original") or "").strip(),
+            "url": url,
+            "tamanho_kb": anexo.get("tamanho_kb"),
+        }
+        tipo_retificacao = classificar_retificacao(doc)
+        if not tipo_retificacao and anexo.get("retificacao"):
+            tipo_retificacao = "incremental"
+        if tipo_retificacao:
+            doc["retificacao"] = tipo_retificacao
+        documentos.append(doc)
+    return documentos
+
+
 def coletar_chamadas_fapemig(apenas_abertas=True):
     """Percorre todas as páginas da API e devolve dicts prontos para inserção.
 
@@ -158,6 +195,7 @@ def coletar_chamadas_fapemig(apenas_abertas=True):
             )
 
             status_chamada = item.get("status_chamada")
+            documentos = _documentos_do_item(item)
 
             resultados.append(
                 {
@@ -168,8 +206,14 @@ def coletar_chamadas_fapemig(apenas_abertas=True):
                     "data_prazo": extrair_data(item.get("data_fim_submissao")),
                     "data_resultado_previsto": resultado_previsto,
                     "orcamento_total_chamada": orcamento,
-                    "status_oficial": STATUS_OFICIAL_POR_STATUS_CHAMADA.get(status_chamada),
+                    # `status_chamada` da API tem prioridade — é declaração da própria
+                    # FAPEMIG. Só quando ela não diz nada é que os documentos falam.
+                    "status_oficial": (
+                        STATUS_OFICIAL_POR_STATUS_CHAMADA.get(status_chamada)
+                        or deduzir_status_oficial(documentos)
+                    ),
                     "proponente_elegivel": mapear_publico_alvo(item.get("publico_alvo")),
+                    "documentos": documentos,
                     "dados_extra": {
                         "numero_chamada": item.get("numero"),
                         "status_chamada_fapemig": status_chamada,
@@ -239,6 +283,7 @@ def salvar_no_banco(registros):
                 "status": "pendente",
                 "dados_extra": r["dados_extra"],
             },
+            dados_extra_sempre={"documentos": r["documentos"]} if r["documentos"] else None,
         )
         if resultado == "novo":
             novos += 1

@@ -1311,6 +1311,70 @@ confirmar que o PROMPT ajustado (segundo item acima) de fato reduz os falsos-pos
 `apoio_formacao_capacitacao` num edital real, e ver uma divergência genuína (não simulada)
 entre regra e IA. Fica para quando a chave estiver configurada.
 
+### Retificações, parte 1: coletar todos os documentos da chamada (2026-09-25)
+
+**O problema, medido.** Em 3 dos 15 registros curados (#21 CNPq, #82 FAPEMIG, #118 FAPESC) o
+sistema lia o edital ORIGINAL havendo retificação publicada. No #82 isso produziu um prazo de
+submissão **já vencido** com toda a aparência de correto — o pior modo de falha do projeto,
+porque é silencioso e cai no campo mais consultado. Nenhum ajuste de prompt resolve: é seleção
+de documento, e o modelo não pode ler o que não recebeu.
+
+**A distinção que estrutura tudo** — e que aparece nos dados, não só na teoria:
+
+- **Substitutiva** — o órgão republica o texto completo já corrigido. Ler esse documento basta.
+- **Incremental** — documento curto listando só o que mudou; a chamada continua como estava.
+  Aqui é preciso ler os dois.
+
+A chamada FAPEMIG EVENTECH 009/2026 tem as duas ao mesmo tempo, e o tamanho confirma a leitura
+do rótulo: "Chamada Retificada" (947 kB) e "Edital Retificado" (361 kB) são substitutivas;
+"Ato Retificação" (156 kB) e "Prorrogação do prazo" (57 kB) são incrementais.
+`classificar_retificacao` usa o rótulo como sinal primário e o tamanho como desempate — e na
+dúvida devolve "incremental", que é o lado seguro, porque exige ler o edital também.
+
+**O que foi feito.** A lógica de documentos da FAPERO virou função compartilhada em
+`app/scraper_utils.py` — `coletar_documentos`, `escolher_link_principal`,
+`deduzir_status_oficial`, `documentos_retificadores`, `classificar_retificacao` — movida sem
+reescrita, porque já estava validada contra dados reais. A FAPERO passou a consumi-la e
+produz resultado idêntico.
+
+Aplicada aos três casos conhecidos:
+
+| fonte | custo | resultado |
+|---|---|---|
+| **FAPEMIG** | zero — a API já traz `anexos` com `tamanho_kb` | 64 de 191 chamadas com retificação detectada |
+| **FAPESC** | zero — o HTML do post vem na resposta da API | 4 de 9 chamadas abertas, todas incrementais |
+| **CNPq** | 1 requisição por chamada (são 5 abertas) | #21 confirmado: detecta a "Retificação", marca `retificada` |
+
+**Três armadilhas encontradas no caminho:**
+
+- **A bandeira `retificacao` da API da FAPEMIG não é confiável.** A chamada 014/2026
+  (Cientista Empreendedor) traz "Chamada Retificada Cientista Empreendedor" com
+  `retificacao: false`. Confiar nela detectava 1 retificação em 191; usar o rótulo como fonte
+  primária e a bandeira só como confirmação detecta 64.
+- **Âncoras internas viravam documento.** Os links de acessibilidade do gov.br
+  (`href="#content"`, "Ir para o Conteúdo") resolvem para a própria página no `urljoin` e
+  passavam em qualquer filtro. `coletar_documentos` agora descarta `#`, `javascript:`,
+  `mailto:` e `tel:`.
+- **`documentos` tinha dois formatos incompatíveis.** FAPEG e FAPEAL gravavam TEXTO sob a mesma
+  chave que os scrapers estruturados usam para LISTA de `{rotulo, url}` — 15 registros contra
+  26. Qualquer consumidor que iterasse quebraria (`len()` numa string devolvia "153
+  documentos"). O texto passou a `documentos_texto`, nos scrapers e nos registros existentes.
+
+**`dados_extra_sempre`, canal novo em `processar_registro`.** Documentos são material de
+referência, não campo curado: precisam atualizar a cada passada sem marcar
+`revisao_pendente`. Sem esse canal, um registro já existente nunca receberia seus documentos,
+porque a função só grava quando detecta mudança monitorada. O que de fato exige revisão é
+`status_oficial` virar "retificada" — e esse já está em `CAMPOS_MONITORADOS`, então a
+retificação publicada depois da curadoria reabre o registro sozinha.
+
+**Prorrogação de prazo conta como retificação.** Está em `PADRAO_DOC_RETIFICACAO` de
+propósito: muda a data de submissão, que é justamente o campo que estraga silenciosamente. A
+própria FAPEMIG trata assim.
+
+**Falta a parte 2** (escolher qual documento ler e como combinar incremental + edital) **e a
+parte 3** (os outros treze scrapers). Só FAPERO, CNPq, FAPESC e FAPEMIG coletam lista
+estruturada hoje. Araucária e FACEPE não coletam nada; FAPEG, FAPEAL e FUNDECT só têm texto.
+
 ## `status` vs `status_oficial` — não confundir
 
 Dois campos parecidos, com significados completamente diferentes:

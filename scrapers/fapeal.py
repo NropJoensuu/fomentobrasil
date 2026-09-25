@@ -17,7 +17,8 @@ SOBRE `descricao`: fica `None` de propósito. O `excerpt`/`content` desses posts
 descrição** — é a lista de nomes dos documentos anexos ("Chamada", "Chamada original
 Diretrizes da Fapeal", "RESULTADO FINAL ... EDITAL Anexo I"). Gravar isso como descrição
 colocaria a palavra "Chamada" como resumo público da oportunidade. O texto vai para
-`dados_extra["documentos"]`, onde serve de referência para a curadoria.
+`dados_extra["documentos_texto"]` — nome distinto de `documentos`, que nos scrapers
+estruturados é uma LISTA de `{rotulo, url}`. Aqui é texto corrido, sem os links.
 """
 
 import re
@@ -105,7 +106,7 @@ def coletar_chamadas_fapeal(categorias=None, posts=None):
                 "titulo": titulo,
                 "link": link,
                 "data_publicacao": (post.get("date") or "")[:10] or None,
-                "documentos": _limpar((post.get("excerpt") or {}).get("rendered", "")) or None,
+                "documentos_texto": _limpar((post.get("excerpt") or {}).get("rendered", "")) or None,
                 "tipo_parceria": "internacional" if internacional else None,
                 "tipo_instrumento": _tipo_instrumento(titulo),
             }
@@ -134,9 +135,9 @@ def salvar_no_banco(registros):
             data_publicacao = None
 
         dados_extra = {}
-        if r["documentos"]:
+        if r["documentos_texto"]:
             # Não é descrição — é a lista de anexos do post. Ver docstring do módulo.
-            dados_extra["documentos"] = r["documentos"]
+            dados_extra["documentos_texto"] = r["documentos_texto"]
 
         # Prêmio não é tipo_instrumento (é o que está sendo oferecido, não o
         # procedimento) — vira linha_de_fomento própria, e o instrumento que veicula

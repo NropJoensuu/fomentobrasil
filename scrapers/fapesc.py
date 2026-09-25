@@ -36,7 +36,12 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import detectar_tipo_parceria, processar_registro
+from app.scraper_utils import (
+    coletar_documentos,
+    deduzir_status_oficial,
+    detectar_tipo_parceria,
+    processar_registro,
+)
 
 API_BASE = "https://fapesc.sc.gov.br/wp-json/wp/v2/posts"
 
@@ -120,7 +125,16 @@ def coletar_chamadas_fapesc():
             if not link or not titulo:
                 continue
 
-            texto_completo = limpar_html((item.get("content") or {}).get("rendered")) or ""
+            conteudo_html = (item.get("content") or {}).get("rendered") or ""
+            texto_completo = limpar_html(conteudo_html) or ""
+
+            # Os documentos estão no próprio HTML do post, que a API já devolveu — nenhuma
+            # requisição extra. O edital 54/2026 mostra por que isso importa: traz
+            # "RETIFICAÇÃO" e "RETIFICAÇÃO II", e sem elas o sistema leria a versão original.
+            documentos = coletar_documentos(
+                BeautifulSoup(conteudo_html, "html.parser"), link,
+                filtro_href=lambda u: u.lower().split("?")[0].endswith(".pdf"),
+            )
             descricao, data_prazo, inscricao_inicio = extrair_descricao_e_prazo(texto_completo)
 
             data_publicacao = None
@@ -142,6 +156,8 @@ def coletar_chamadas_fapesc():
                     "descricao": descricao,
                     "data_publicacao": data_publicacao,
                     "data_prazo": data_prazo,
+                    "status_oficial": deduzir_status_oficial(documentos),
+                    "documentos": documentos,
                     "dados_extra": dados_extra or None,
                 }
             )
@@ -167,6 +183,8 @@ def salvar_no_banco(registros):
                 "link": r["link"][:500],
                 "titulo": r["titulo"][:300],
                 "data_prazo": r["data_prazo"],
+                # Monitorado: retificação publicada depois da curadoria reabre o registro.
+                "status_oficial": r["status_oficial"],
             },
             campos_extras_fixos={
                 "descricao": r["descricao"],
@@ -188,6 +206,7 @@ def salvar_no_banco(registros):
                 "status": "pendente",
                 "dados_extra": r["dados_extra"],
             },
+            dados_extra_sempre={"documentos": r["documentos"]} if r["documentos"] else None,
         )
         if resultado == "novo":
             novos += 1
