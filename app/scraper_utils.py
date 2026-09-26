@@ -223,7 +223,7 @@ def coletar_documentos(bloco_html, url_base, filtro_href=None):
             continue
         vistos.add(url)
         documentos.append({"rotulo": rotulo, "url": url})
-    return documentos
+    return classificar_documentos(documentos)
 
 
 def escolher_link_principal(documentos):
@@ -256,51 +256,149 @@ def deduzir_status_oficial(documentos):
     return None
 
 
-def documentos_retificadores(documentos):
-    """Os documentos cujo rótulo indica retificação, na ordem da página.
-
-    Separado de `deduzir_status_oficial` porque as duas perguntas são diferentes: uma é "esta
-    chamada mudou?", a outra é "QUAIS documentos preciso ler para saber o que vale hoje?".
-    """
-    return [d for d in documentos if PADRAO_DOC_RETIFICACAO.search(d["rotulo"])]
-
-
-# Um documento de retificação pode ser de dois tipos, e a diferença muda o que precisa ser
-# lido (ver o briefing de retificações em docs/):
+# Tipos de documento de uma chamada. A classificação é HEURÍSTICA: ordena a interface e
+# alimenta a proposta de leitura, nunca decide sozinha.
 #
-#   substitutiva — o órgão republica o texto COMPLETO já corrigido. Ler esse basta.
-#   incremental  — documento curto que lista só o que mudou. Precisa dele E do edital.
+#   chamada_retificada — retificação SUBSTITUTIVA: texto completo já corrigido. Ler basta.
+#   retificacao        — retificação INCREMENTAL: só lista o que mudou. Precisa dela E da
+#                        chamada.
+#   resultado          — divulgação de resultado, homologação. Não é o edital.
+#   anexo              — formulário, declaração, modelo. Apoio, não o texto da chamada.
+#   chamada            — o resto: o edital em si.
 #
-# O rótulo separa os dois na prática. Numa mesma chamada da FAPEMIG (EVENTECH 009/2026)
-# convivem "Chamada Retificada" e "Edital Retificado" (substitutivos, particípio descrevendo
-# o próprio documento) com "Ato Retificação" e "Prorrogação do prazo" (incrementais, o ato
-# que altera). O tamanho confirma quando disponível: texto completo é grande, ato é curto.
-PADRAO_RETIFICACAO_SUBSTITUTIVA = re.compile(
-    r"retificad[ao]|consolidad[ao]|atualizad[ao]|nova\s+vers[ãa]o", re.IGNORECASE
+# A distinção entre as duas primeiras muda o que precisa ser lido, e aparece nos dados: a
+# chamada FAPEMIG EVENTECH 009/2026 tem as duas ao mesmo tempo, e o tamanho confirma a
+# leitura do rótulo — "Chamada Retificada" (947 kB) e "Edital Retificado" (361 kB) contra
+# "Ato Retificação" (156 kB) e "Prorrogação do prazo" (57 kB).
+
+PADRAO_DOC_SUBSTITUTIVO = re.compile(
+    r"chamada[-_\s]*retificad|edital[-_\s]*retificad|consolidad|nova\s+vers[ãa]o",
+    re.IGNORECASE,
 )
-PADRAO_RETIFICACAO_INCREMENTAL = re.compile(
-    r"ato\s+(?:de\s+)?retifica|aviso\s+de\s+retifica|prorroga|errata|comunicado", re.IGNORECASE
+PADRAO_DOC_INCREMENTAL = re.compile(
+    r"retifica|errata|aditivo|prorroga|ato\s+(?:de\s+)?altera", re.IGNORECASE
+)
+# Rótulos que dizem explicitamente "este documento é o ATO que altera", e não o texto
+# alterado. Vencem o desempate por tamanho: o "Ato Retificação" da EVENTECH tem 156 kB, acima
+# do limite, e ainda assim é incremental — o que manda é o que o rótulo declara ser.
+PADRAO_DOC_ATO_RETIFICADOR = re.compile(
+    r"ato\s+(?:de\s+)?retifica|aviso\s+(?:de\s+)?retifica|prorroga|errata|comunicado"
+    r"|extrato\s+de\s+retifica",
+    re.IGNORECASE,
 )
 
-# Abaixo disto, um PDF não carrega um edital inteiro. Usado só como desempate.
+PADRAO_DOC_RESULTADO = re.compile(
+    r"resultado|homologa|deferid|indeferid|classificad|selecionad", re.IGNORECASE
+)
+PADRAO_DOC_ANEXO = re.compile(
+    r"\banexo\b|formul[áa]rio|declara[çc][ãa]o|modelo|termo\s+de|carta\s+de"
+    r"|planilha|roteiro|\bfaq\b|manual|cartilha|orienta[çc][õo]es",
+    re.IGNORECASE,
+)
+
+# Abaixo disto, um PDF não carrega um edital inteiro. Usado só como desempate quando o
+# rótulo diz "retificação" sem dizer de que tipo.
 LIMITE_KB_DOCUMENTO_CURTO = 120
 
 
-def classificar_retificacao(documento):
-    """"substitutiva", "incremental" ou None (não é retificação).
+def classificar_documento(rotulo, url="", tamanho_kb=None):
+    """"chamada_retificada", "retificacao", "resultado", "anexo" ou "chamada".
 
-    Proposta, não veredito: só o conteúdo decide de fato, e por isso a curadoria confirma.
+    A precedência é deliberada e não é alfabética:
+
+    1. Substitutivo primeiro, porque "Chamada Retificada" casa TAMBÉM com o padrão
+       incremental (contém "retifica"). Testar na ordem inversa classificaria toda
+       substitutiva como incremental — que é o erro caro, porque faria o sistema ler dois
+       documentos quando um bastava, e pior, concatenar texto revogado.
+    2. Incremental antes de resultado: "Retificação do resultado preliminar" é retificação.
+    3. Resultado antes de anexo: "Anexo — Resultado Final" é resultado.
+
+    `tamanho_kb` desempata APENAS quando o rótulo diz retificação sem dizer de que tipo
+    ("Retificação 1"): documento curto é o ato, documento grande é o texto inteiro. Um rótulo
+    que se declara ato ("Ato Retificação", "Prorrogação") ignora o tamanho — o da EVENTECH
+    tem 156 kB, acima do limite, e é incremental assim mesmo. Sem tamanho e sem rótulo
+    explícito, fica incremental: o lado seguro, que exige ler a chamada também.
     """
-    rotulo = documento.get("rotulo") or ""
-    if not PADRAO_DOC_RETIFICACAO.search(rotulo):
-        return None
+    alvo = f"{rotulo or ''} {url or ''}"
 
-    if PADRAO_RETIFICACAO_INCREMENTAL.search(rotulo):
-        return "incremental"
-    if PADRAO_RETIFICACAO_SUBSTITUTIVA.search(rotulo):
-        return "substitutiva"
+    if PADRAO_DOC_SUBSTITUTIVO.search(alvo):
+        return "chamada_retificada"
 
-    tamanho = documento.get("tamanho_kb")
-    if tamanho is not None:
-        return "incremental" if tamanho < LIMITE_KB_DOCUMENTO_CURTO else "substitutiva"
-    return "incremental"  # na dúvida, exige ler os dois — errar para o lado seguro
+    if PADRAO_DOC_INCREMENTAL.search(alvo):
+        # Rótulo explícito de ato vence o tamanho; só o rótulo vago é desempatado por ele.
+        if PADRAO_DOC_ATO_RETIFICADOR.search(alvo):
+            return "retificacao"
+        if tamanho_kb is not None and tamanho_kb >= LIMITE_KB_DOCUMENTO_CURTO:
+            return "chamada_retificada"
+        return "retificacao"
+
+    if PADRAO_DOC_RESULTADO.search(alvo):
+        return "resultado"
+    if PADRAO_DOC_ANEXO.search(alvo):
+        return "anexo"
+    return "chamada"
+
+
+def classificar_documentos(documentos):
+    """Acrescenta `tipo` a cada documento da lista, in-place, e devolve a lista.
+
+    Gravado junto com o documento, não em campo separado: quem lê a lista precisa do tipo
+    junto, e separar convidaria as duas a saírem de sincronia.
+    """
+    for doc in documentos:
+        doc["tipo"] = classificar_documento(
+            doc.get("rotulo"), doc.get("url"), doc.get("tamanho_kb")
+        )
+    return documentos
+
+
+TIPOS_DOCUMENTO_RETIFICADOR = ("chamada_retificada", "retificacao")
+
+
+def escolher_documentos_para_leitura(documentos):
+    """Quais documentos precisam ser lidos para saber o que vale HOJE.
+
+    Devolve lista de `{"origem": ..., "rotulo": ..., "url": ...}` na ordem de leitura, em que
+    `origem` é o tipo do documento. A ordem importa: quando há retificação incremental, ela
+    vem PRIMEIRO, porque prevalece sobre o texto original.
+
+    Três casos, e a diferença entre eles é o ponto de toda a parte 1 deste trabalho:
+
+    1. **Existe retificação substitutiva** (`chamada_retificada`) — o órgão republicou o
+       texto completo já corrigido. Um documento basta, e é a mais recente delas. Ler também
+       a chamada original seria pior que inútil: colocaria texto revogado na frente do
+       modelo.
+    2. **Existe retificação incremental** (`retificacao`) — ela só lista o que mudou, e o
+       texto da chamada continua valendo no resto. Precisa dos dois, retificações primeiro,
+       da mais recente para a mais antiga.
+    3. **Só a chamada** — comportamento de sempre.
+
+    "Mais recente" é a última da lista: `coletar_documentos` preserva a ordem da página, que
+    é cronológica na prática (a FAPESC publica "RETIFICAÇÃO" e depois "RETIFICAÇÃO II").
+    """
+    if not documentos:
+        return []
+
+    def _do_tipo(tipo):
+        return [d for d in documentos if d.get("tipo") == tipo]
+
+    def _como(origem, doc):
+        return {"origem": origem, "rotulo": doc.get("rotulo"), "url": doc.get("url")}
+
+    substitutivas = _do_tipo("chamada_retificada")
+    if substitutivas:
+        return [_como("chamada_retificada", substitutivas[-1])]
+
+    chamadas = _do_tipo("chamada")
+    incrementais = _do_tipo("retificacao")
+
+    leitura = [_como("retificacao", d) for d in reversed(incrementais)]
+    if chamadas:
+        leitura.append(_como("chamada", chamadas[0]))
+    elif not leitura:
+        # Nem chamada nem retificação: sobra o que houver, para não devolver lista vazia
+        # tendo documento. É o caso do "Credenciamento de Aceleradoras" da FAPERO, que só
+        # tem resultado publicado.
+        leitura.append(_como(documentos[0].get("tipo", "chamada"), documentos[0]))
+
+    return leitura

@@ -21,6 +21,7 @@ from app.utils import (
     REGIOES,
     url_real_do_pdf,
 )
+from app.scraper_utils import escolher_documentos_para_leitura
 
 main = Blueprint("main", __name__)
 
@@ -375,40 +376,89 @@ def extrair_do_pdf(id):
     extraível — e por quê.
     """
     oportunidade = Oportunidade.query.get_or_404(id)
-    url = url_real_do_pdf((request.form.get("url_pdf") or oportunidade.link or "").strip())
-    if not url:
+
+    # Precedência máxima ao curador: o que ele colou à mão sempre ganha.
+    colada = (request.form.get("url_pdf") or "").strip()
+    if colada:
+        leitura = [{"origem": "manual", "rotulo": "URL informada", "url": colada}]
+    else:
+        leitura = escolher_documentos_para_leitura(
+            (oportunidade.dados_extra or {}).get("documentos") or []
+        )
+    if not leitura and oportunidade.link:
+        leitura = [{"origem": "chamada", "rotulo": None, "url": oportunidade.link}]
+    if not leitura:
         return jsonify({"ok": False, "erro": "Sem URL para ler."}), 400
 
-    try:
-        resposta = requests.get(
-            url, timeout=90, verify=False,
-            headers={"User-Agent": "fomentobrasil-curadoria/1.0"},
-        )
-        resposta.raise_for_status()
-    except requests.RequestException as e:
-        return jsonify({"ok": False, "erro": f"Não consegui baixar: {type(e).__name__}"}), 502
+    # Extrai de CADA documento separadamente e rotula por origem, em vez de concatenar.
+    # Concatenar quebraria a extração por regra: ela trabalha por página e por vizinhança de
+    # texto, sem noção de precedência, e enxergaria as duas datas — propondo provavelmente a
+    # revogada. Separado, o curador vê exatamente o que mudou:
+    # "na retificação: 15/10/2026" contra "no texto original: 24/08/2026".
+    por_origem = []
+    erros = []
+    for doc in leitura:
+        url = url_real_do_pdf(doc["url"])
+        try:
+            resposta = requests.get(
+                url, timeout=90, verify=False,
+                headers={"User-Agent": "fomentobrasil-curadoria/1.0"},
+            )
+            resposta.raise_for_status()
+        except requests.RequestException as e:
+            erros.append(f"{doc['rotulo'] or url}: não consegui baixar ({type(e).__name__})")
+            continue
 
-    if resposta.content[:4] != b"%PDF":
-        return jsonify({
-            "ok": False,
-            "erro": "A URL não devolveu um PDF. Se o link da oportunidade aponta para uma "
-                    "página de listagem, cole aqui a URL do PDF do edital.",
-        }), 415
+        if resposta.content[:4] != b"%PDF":
+            erros.append(
+                f"{doc['rotulo'] or url}: a URL não devolveu um PDF. Se o link aponta para "
+                "uma página de listagem, cole aqui a URL do PDF do edital."
+            )
+            continue
 
-    try:
-        paginas = extrair_paginas(resposta.content)
-    except Exception as e:
-        return jsonify({"ok": False, "erro": f"Não consegui ler o PDF: {type(e).__name__}"}), 422
+        try:
+            paginas_doc = extrair_paginas(resposta.content)
+        except Exception as e:
+            erros.append(f"{doc['rotulo'] or url}: não consegui ler o PDF ({type(e).__name__})")
+            continue
 
-    if not any(p.strip() for p in paginas):
-        return jsonify({
-            "ok": False,
-            "erro": "O PDF não tem camada de texto (provavelmente é digitalizado). "
-                    "Preenchimento manual.",
-        }), 422
+        if not any(p.strip() for p in paginas_doc):
+            erros.append(
+                f"{doc['rotulo'] or url}: PDF sem camada de texto (provavelmente "
+                "digitalizado). Preenchimento manual."
+            )
+            continue
 
-    candidatos = extrair_candidatos(paginas)
+        por_origem.append({
+            "origem": doc["origem"],
+            "rotulo": doc["rotulo"],
+            "url": url,
+            "paginas": paginas_doc,
+        })
 
+    if not por_origem:
+        return jsonify({"ok": False, "erro": " / ".join(erros) or "Nada legível."}), 422
+
+    # Extração por documento, e MESCLA com precedência para o painel principal: campo a
+    # campo, vale o primeiro documento do plano que tiver resposta. A retificação vem
+    # primeiro, então o que ela alterou prevalece; o que ela não menciona cai para o texto
+    # original, que continua valendo no resto.
+    #
+    # Sem a mescla, o painel principal ficaria VAZIO num caso real: a RETIFICAÇÃO II da
+    # FAPESC 54/2026 tem 2 páginas e nenhuma data, enquanto a chamada tem 41 páginas e
+    # todas — mostrar só a de maior precedência esconderia a informação que existe.
+    for d in por_origem:
+        d["candidatos"] = extrair_candidatos(d["paginas"])
+
+    candidatos = {}
+    origem_do_campo = {}
+    for d in por_origem:
+        for campo, lista in d["candidatos"].items():
+            if campo not in candidatos:
+                candidatos[campo] = lista
+                origem_do_campo[campo] = d["origem"]
+
+    paginas = por_origem[0]["paginas"]
     # PARTE 3: compara contra a sugestão da IA já persistida (se houver), nos campos que os
     # dois mecanismos cobrem — datas e valores. Não suprime a sugestão da IA nesses campos
     # (ela continua vindo na mesma chamada, sem custo extra); só muda como os dois resultados
@@ -444,6 +494,26 @@ def extrair_do_pdf(id):
             campo: [c.como_dict() for c in lista] for campo, lista in candidatos.items()
         },
         "comparacao": comparacao,
+        "avisos": erros,
+        # De qual documento veio cada campo do painel principal. Só interessa quando houve
+        # mais de um documento — aí o curador precisa saber se o valor é da retificação ou
+        # do texto que ela alterou.
+        "origem_do_campo": origem_do_campo if len(por_origem) > 1 else {},
+        # Um bloco por documento lido, para a tela mostrar lado a lado o que a retificação
+        # diz e o que o texto original dizia.
+        "documentos_lidos": [
+            {
+                "origem": d["origem"],
+                "rotulo": d["rotulo"],
+                "url": d["url"],
+                "paginas": len(d["paginas"]),
+                "candidatos": {
+                    campo: [c.como_dict() for c in lista]
+                    for campo, lista in d["candidatos"].items()
+                },
+            }
+            for d in por_origem
+        ],
     })
 
 

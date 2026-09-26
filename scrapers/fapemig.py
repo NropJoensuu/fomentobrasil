@@ -22,10 +22,11 @@ from bs4 import BeautifulSoup
 
 from app import db
 from app.scraper_utils import (
-    classificar_retificacao,
+    classificar_documentos,
     deduzir_status_oficial,
     detectar_tipo_parceria,
     processar_registro,
+    TIPOS_DOCUMENTO_RETIFICADOR,
 )
 
 API_BASE = "https://api.site.fapemig.br/wp-json/fapemig-chamadas-e-editais/v1/chamadas"
@@ -115,7 +116,7 @@ def _documentos_do_item(item):
     """Converte `anexos` da API no formato padrão de documentos do projeto.
 
     A FAPEMIG entrega os anexos na mesma resposta — sem requisição extra — e com
-    `tamanho_kb`, que é o desempate de `classificar_retificacao` entre substitutiva e
+    `tamanho_kb`, que é o desempate de `classificar_documento` entre substitutiva e
     incremental. É a fonte mais rica do acervo neste ponto.
 
     O booleano `retificacao` da API, porém, NÃO é confiável: a chamada 014/2026 (Cientista
@@ -134,12 +135,16 @@ def _documentos_do_item(item):
             "url": url,
             "tamanho_kb": anexo.get("tamanho_kb"),
         }
-        tipo_retificacao = classificar_retificacao(doc)
-        if not tipo_retificacao and anexo.get("retificacao"):
-            tipo_retificacao = "incremental"
-        if tipo_retificacao:
-            doc["retificacao"] = tipo_retificacao
         documentos.append(doc)
+
+    classificar_documentos(documentos)
+
+    # A bandeira da API só entra como rede de segurança: quando ela afirma retificação e o
+    # rótulo não denunciou nada, o documento vira "retificacao" (incremental), que é o lado
+    # seguro. O caminho inverso não vale — a bandeira é falsa demais para derrubar o rótulo.
+    for anexo, doc in zip(item.get("anexos") or [], documentos):
+        if anexo.get("retificacao") and doc["tipo"] not in TIPOS_DOCUMENTO_RETIFICADOR:
+            doc["tipo"] = "retificacao"
     return documentos
 
 

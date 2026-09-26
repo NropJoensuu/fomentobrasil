@@ -1375,6 +1375,63 @@ própria FAPEMIG trata assim.
 parte 3** (os outros treze scrapers). Só FAPERO, CNPq, FAPESC e FAPEMIG coletam lista
 estruturada hoje. Araucária e FACEPE não coletam nada; FAPEG, FAPEAL e FUNDECT só têm texto.
 
+### Retificações, partes 2 e 3: classificar os documentos e ler o que vale hoje (2026-09-25)
+
+**Parte 2 — `classificar_documento`.** Cada documento coletado recebe um `tipo`, gravado
+junto com ele e não em campo separado: quem lê a lista precisa do tipo junto, e separar
+convidaria os dois a saírem de sincronia.
+
+Cinco tipos: `chamada_retificada` (retificação substitutiva, texto completo já corrigido),
+`retificacao` (incremental, só lista o que mudou), `resultado`, `anexo`, `chamada`.
+
+**A ordem de precedência não é arbitrária e é onde estava o erro.** Substitutivo é testado
+PRIMEIRO porque "Chamada Retificada" casa também com o padrão incremental — contém
+"retifica". Testar na ordem inversa classificaria toda substitutiva como incremental, que é o
+erro caro: faria o sistema ler dois documentos quando um bastava e, pior, concatenar texto
+revogado. Depois vem incremental antes de resultado ("Retificação do resultado preliminar" é
+retificação) e resultado antes de anexo ("Anexo — Resultado Final" é resultado).
+
+**Rótulo explícito vence o tamanho.** O desempate por `tamanho_kb` só entra quando o rótulo
+diz retificação sem dizer de que tipo ("Retificação 1"). Um rótulo que se declara ato ("Ato
+Retificação", "Prorrogação") é incremental mesmo tendo 156 kB, acima do limite de 120 — foi
+o primeiro bug da implementação, pego contra a EVENTECH 009/2026.
+
+Resultado no caso que motivou tudo, a FAPEMIG 014/2026: 11 anexos, 1 `chamada` (362 kB),
+1 `retificacao` (70 kB, "Retificação do prazo de prorrogação") e 1 `chamada_retificada`
+(353 kB, "Chamada Retificada Cientista Empreendedor").
+
+**Parte 3 — `escolher_documentos_para_leitura`.** Devolve o plano de leitura em ordem de
+precedência, e a precedência máxima continua sendo do curador: URL colada à mão sempre ganha.
+
+| situação | o que é lido |
+|---|---|
+| existe `chamada_retificada` | só ela, a mais recente. Ler também a original poria texto revogado na frente do modelo |
+| existe `retificacao` | retificações primeiro (da mais recente para a mais antiga), depois a chamada |
+| só `chamada` | comportamento de sempre |
+
+**Para a IA, texto concatenado com marcação de precedência** (`=== RETIFICAÇÃO (prevalece
+sobre o texto original abaixo) ===`), e `PROMPT_SISTEMA` ganhou a instrução correspondente,
+incluindo citar como evidência o trecho da retificação e não o revogado. Documento único não
+leva marca: sem dois textos não há precedência a declarar, e a marca só gastaria contexto.
+
+**Para a extração por regra, a opção (b) do briefing** — extrair de cada documento
+separadamente e rotular por origem, em vez de concatenar. Concatenar quebraria a regra, que
+trabalha por página e vizinhança de texto, sem noção de precedência: enxergaria as duas datas
+e proporia provavelmente a revogada.
+
+**Uma decisão que o teste mudou: o painel principal MESCLA com precedência.** A primeira
+versão mostrava só o documento de maior precedência, e num caso real isso deixaria o painel
+vazio — a RETIFICAÇÃO II da FAPESC 54/2026 tem 2 páginas e nenhuma data, enquanto a chamada
+tem 41 páginas e todas. Agora, campo a campo, vale o primeiro documento do plano que tiver
+resposta: o que a retificação alterou prevalece, o que ela não menciona cai para o texto
+original. Cada candidato carrega um selo dizendo de onde veio.
+
+**Achado do teste: retificação publicada como imagem.** A primeira RETIFICAÇÃO da FAPESC
+54/2026 é PDF digitalizado, sem camada de texto. O pipeline degrada sem quebrar — lê os
+outros documentos e registra a falha —, mas isso é justamente o caso em que o curador PRECISA
+saber que não foi lido, porque a alteração pode estar ali. A tela mostra o aviso em destaque e
+lista os documentos efetivamente lidos.
+
 ## `status` vs `status_oficial` — não confundir
 
 Dois campos parecidos, com significados completamente diferentes:

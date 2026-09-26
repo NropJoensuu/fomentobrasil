@@ -159,12 +159,34 @@
           </div>
           {% endif %}
 
+          {% set lidos = sugestao._meta.documentos_lidos or [] %}
+          {% if lidos %}
+          <div class="mt-2 small">
+            <span class="text-muted">Documentos lidos:</span>
+            <ul class="mb-0">
+              {% for d in lidos %}
+              <li class="{{ 'text-danger' if d.erro else 'text-muted' }}">
+                <code>{{ d.origem }}</code> {{ d.rotulo or d.url }}
+                {% if d.erro %}
+                  — <strong>não foi lido:</strong> {{ d.erro }}
+                {% else %}
+                  — {{ d.caracteres }} caracteres
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
           {% set com_valor = sugestao.campos.items() | selectattr("1.valor") | list %}
           <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
             <span class="small text-muted">
               {{ com_valor | length }} campo(s) sugerido(s) ·
               {{ sugestao._meta.tipo_fonte }} ·
               {{ sugestao._meta.caracteres_analisados }} caracteres
+              {% if sugestao._meta.texto_concatenado %}
+              · <span class="badge text-bg-info">retificação + texto original</span>
+              {% endif %}
             </span>
             <button type="button" class="btn btn-sm btn-outline-success py-0" id="ia-aplicar-todas">
               Aplicar todas
@@ -704,7 +726,35 @@
       }
 
       const comparacao = dados.comparacao || {};
-      let html = `<p class="small text-muted mb-2">${dados.paginas} páginas lidas.</p>`;
+      const ROTULO_ORIGEM = {
+        retificacao: 'retificação',
+        chamada_retificada: 'chamada retificada',
+        chamada: 'texto original',
+        resultado: 'resultado',
+        manual: 'URL que você colou',
+      };
+
+      let html = '';
+
+      // Quando houve mais de um documento, dizer QUAIS foram lidos e em que ordem é a
+      // informação mais importante da tela: é o que separa "o prazo mudou" de "o prazo é
+      // esse mesmo". A retificação vem primeiro e prevalece.
+      const lidos = dados.documentos_lidos || [];
+      if (lidos.length > 1) {
+        html += `<div class="alert alert-info py-2 mb-2 small">
+          <strong>Esta chamada foi retificada.</strong> Li ${lidos.length} documentos; o que a
+          retificação altera prevalece sobre o texto original.
+          <ul class="mb-0 mt-1">` +
+          lidos.map(d => `<li><code>${ROTULO_ORIGEM[d.origem] || d.origem}</code> — ` +
+            `${escapeHtml(d.rotulo || d.url)} (${d.paginas} pág.)</li>`).join('') +
+          `</ul></div>`;
+      } else {
+        html += `<p class="small text-muted mb-2">${dados.paginas} páginas lidas.</p>`;
+      }
+
+      for (const aviso of dados.avisos || []) {
+        html += `<div class="alert alert-warning py-2 mb-2 small">${escapeHtml(aviso)}</div>`;
+      }
 
       // Resumo regra-vs-IA primeiro (só para quem tem algo dos dois lados pra comparar).
       for (const campo of CAMPOS_COMPARAVEIS) {
@@ -732,9 +782,13 @@
           const aviso = c.mes_sem_dia
             ? ' <span class="badge text-bg-warning">o edital só dá o mês — dia 1 por convenção</span>'
             : '';
+          const origem = (dados.origem_do_campo || {})[campo];
+          const selo = origem
+            ? ` <span class="badge text-bg-${origem === 'chamada' ? 'secondary' : 'info'}">${ROTULO_ORIGEM[origem] || origem}</span>`
+            : '';
           html += `<div class="border rounded p-2 mt-1 small">
             <div class="d-flex justify-content-between align-items-center gap-2">
-              <span><code>${mostrado}</code>${aviso}
+              <span><code>${mostrado}</code>${selo}${aviso}
                 <span class="text-muted">· pág. ${c.pagina}</span></span>
               <button type="button" class="btn btn-sm btn-outline-success py-0 usar-candidato"
                       data-campo="${campo}" data-valor="${c.valor}">usar</button>

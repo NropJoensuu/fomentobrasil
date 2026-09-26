@@ -41,6 +41,7 @@ import requests
 from anthropic import Anthropic
 from bs4 import BeautifulSoup
 
+from app.scraper_utils import escolher_documentos_para_leitura
 from app.utils import url_real_do_pdf
 
 MODELO = "claude-sonnet-5"
@@ -368,6 +369,14 @@ edição nem a UF — "Centelha", não "Centelha 3 – Rondônia".
 Datas em AAAA-MM-DD. Se o cronograma der só o mês ("até dezembro de 2026"), use o dia 01 e \
 diga isso na evidência. Valores como número decimal, sem símbolo nem separador de milhar.
 
+## Texto retificado
+Quando o texto começar com uma seção marcada como RETIFICAÇÃO, os valores dela PREVALECEM \
+sobre os do texto original que vem depois. Uma data ou valor alterado pela retificação \
+substitui o original. Cite como evidência o trecho da retificação, não o do texto revogado.
+
+A retificação costuma ser curta e mudar poucos campos: para todos os demais, o texto \
+original continua valendo e é dele que a informação deve sair.
+
 ## Cuidados críticos
 
 data_prazo é a data-LIMITE de submissão — não a de publicação, não a de resultado. \
@@ -532,9 +541,60 @@ Exemplo do formato (os campos mostrados são ilustrativos, não a lista completa
 """
 
 
+MARCA_RETIFICACAO = "=== RETIFICAÇÃO (prevalece sobre o texto original abaixo) ==="
+MARCA_ORIGINAL = "=== TEXTO ORIGINAL DA CHAMADA ==="
+
+
+def montar_texto_da_chamada(oportunidade):
+    """Texto a enviar ao modelo, já resolvido o problema da retificação.
+
+    Devolve `(texto, meta)`. Três caminhos, conforme `escolher_documentos_para_leitura`:
+
+    - Retificação SUBSTITUTIVA: um documento só, o texto completo já corrigido.
+    - Retificação INCREMENTAL: retificação primeiro, chamada depois, separadas por marcas
+      explícitas. A ordem não é estética — o modelo precisa saber qual texto prevalece, e
+      PROMPT_SISTEMA instrui a citar como evidência o trecho da retificação, não o revogado.
+    - Sem documentos: o comportamento de sempre, seguindo o `link` do registro.
+    """
+    documentos = (oportunidade.dados_extra or {}).get("documentos") or []
+    leitura = escolher_documentos_para_leitura(documentos)
+
+    if not leitura:
+        texto, tipo_fonte, url_lida = extrair_texto(oportunidade.link)
+        return texto, {"tipo_fonte": tipo_fonte, "url_lida": url_lida, "documentos_lidos": []}
+
+    partes = []
+    lidos = []
+    for doc in leitura:
+        try:
+            texto_doc, tipo_fonte, url_lida = extrair_texto(doc["url"])
+        except Exception as e:
+            lidos.append({"origem": doc["origem"], "rotulo": doc["rotulo"],
+                          "erro": f"{type(e).__name__}: {e}"})
+            continue
+        marca = MARCA_RETIFICACAO if doc["origem"] == "retificacao" else MARCA_ORIGINAL
+        # Documento único (substitutiva ou chamada sozinha) não precisa de marca: sem dois
+        # textos não há precedência a declarar, e a marca só gastaria contexto.
+        partes.append(f"{marca}\n{texto_doc}" if len(leitura) > 1 else texto_doc)
+        lidos.append({"origem": doc["origem"], "rotulo": doc["rotulo"],
+                      "url": url_lida, "tipo_fonte": tipo_fonte,
+                      "caracteres": len(texto_doc)})
+
+    if not partes:
+        erros = "; ".join(d.get("erro", "") for d in lidos if d.get("erro"))
+        raise ValueError(f"Não consegui ler nenhum documento da chamada. {erros}")
+
+    return "\n\n".join(partes)[:MAX_CARACTERES], {
+        "tipo_fonte": lidos[0].get("tipo_fonte"),
+        "url_lida": lidos[0].get("url"),
+        "documentos_lidos": lidos,
+        "texto_concatenado": len(partes) > 1,
+    }
+
+
 def sugerir_campos(oportunidade):
     """Chama o modelo e devolve o dicionário de sugestões, já validado contra o esquema."""
-    texto, tipo_fonte, url_lida = extrair_texto(oportunidade.link)
+    texto, meta_leitura = montar_texto_da_chamada(oportunidade)
 
     cliente = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     resposta = cliente.messages.create(
@@ -571,9 +631,8 @@ def sugerir_campos(oportunidade):
     descartados = _validar(sugestao)
     sugestao["_meta"] = {
         "valores_descartados": descartados,
+        **meta_leitura,
         "modelo": MODELO,
-        "tipo_fonte": tipo_fonte,
-        "url_lida": url_lida,
         "caracteres_analisados": len(texto),
         "tokens_entrada": resposta.usage.input_tokens,
         "tokens_saida": resposta.usage.output_tokens,
