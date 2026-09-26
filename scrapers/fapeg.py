@@ -28,6 +28,7 @@ LIMITAÇÃO CONHECIDA: `data_prazo` não aparece em lugar nenhum da listagem nem
 está dentro do PDF do edital. Fica `None`, como em FAPES e FACEPE.
 """
 
+import logging
 import re
 from datetime import datetime
 from html import unescape
@@ -36,7 +37,13 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import detectar_tipo_parceria, processar_registro
+from app.scraper_utils import (
+    deduzir_status_oficial,
+    detectar_tipo_parceria,
+    documentos_da_pagina,
+    processar_registro,
+    so_pdf,
+)
 
 URL_INSCRICOES_ABERTAS = "https://goias.gov.br/fapeg/editais/inscricoes-abertas/"
 API_POSTS = "https://goias.gov.br/fapeg/wp-json/wp/v2/posts"
@@ -187,6 +194,20 @@ def coletar_chamadas_fapeg(html=None, posts=None):
     return resultados
 
 
+logger = logging.getLogger(__name__)
+
+SELETOR_CONTEUDO = "article .entry-content"
+
+
+def _documentos_do_item(link):
+    """Documentos da chamada, buscados na página do item.
+
+    Uma requisição extra por item. Escopar importa aqui: a página inteira devolvia seis 'documentos' que eram leis e
+    # decretos do menu institucional.
+    """
+    return documentos_da_pagina(link, SELETOR_CONTEUDO, filtro_href=so_pdf, logger=logger)
+
+
 def salvar_no_banco(registros):
     """Insere registros novos, atualiza existentes se um campo monitorado mudou
     (ver app.scraper_utils), ou ignora quando nada mudou. Dedup/match por link."""
@@ -195,6 +216,8 @@ def salvar_no_banco(registros):
     ja_existentes = 0
 
     for r in registros:
+        documentos = _documentos_do_item(r["link"])
+
         dados_extra = {"numero_edital": r["numero_edital"], "tipo_fapeg": r["tipo_fapeg"]}
         if r["documentos_texto"]:
             dados_extra["documentos_texto"] = r["documentos_texto"]
@@ -225,6 +248,7 @@ def salvar_no_banco(registros):
                 "status": "pendente",
                 "dados_extra": dados_extra,
             },
+            dados_extra_sempre={"documentos": documentos} if documentos else None,
         )
         if resultado == "novo":
             novos += 1

@@ -28,6 +28,7 @@ duplicação antes.
 LIMITAÇÃO: `descricao` e `data_prazo` não aparecem na listagem.
 """
 
+import logging
 import re
 from datetime import datetime
 
@@ -35,8 +36,14 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import (detectar_possivel_nao_fomento, detectar_tipo_parceria,
-                               processar_registro)
+from app.scraper_utils import (
+    deduzir_status_oficial,
+    detectar_possivel_nao_fomento,
+    detectar_tipo_parceria,
+    documentos_da_pagina,
+    processar_registro,
+    so_pdf,
+)
 
 URL_EDITAIS_ABERTOS = "https://fapitec.se.gov.br/editais-abertos/"
 
@@ -108,6 +115,19 @@ def coletar_chamadas_fapitec(html=None):
     return resultados
 
 
+logger = logging.getLogger(__name__)
+
+SELETOR_CONTEUDO = "div.entry-content"
+
+
+def _documentos_do_item(link):
+    """Documentos da chamada, buscados na página do item.
+
+    Uma requisição extra por item. Contêiner padrão do tema WordPress.
+    """
+    return documentos_da_pagina(link, SELETOR_CONTEUDO, filtro_href=so_pdf, logger=logger)
+
+
 def salvar_no_banco(registros):
     """Insere registros novos, atualiza existentes se um campo monitorado mudou
     (ver app.scraper_utils), ou ignora quando nada mudou. Dedup/match por link."""
@@ -116,6 +136,8 @@ def salvar_no_banco(registros):
     ja_existentes = 0
 
     for r in registros:
+        documentos = _documentos_do_item(r["link"])
+
         dados_extra = {}
         if r["possivel_nao_fomento"]:
             dados_extra["possivel_nao_fomento"] = True
@@ -124,6 +146,8 @@ def salvar_no_banco(registros):
             dados_novos={
                 "link": r["link"][:500],
                 "titulo": r["titulo"][:300],
+                # Monitorado: retificação publicada depois da curadoria reabre o registro.
+                "status_oficial": deduzir_status_oficial(documentos),
             },
             campos_extras_fixos={
                 "descricao": None,  # não disponível na listagem
@@ -143,6 +167,7 @@ def salvar_no_banco(registros):
                 "status": "pendente",
                 "dados_extra": dados_extra or None,
             },
+            dados_extra_sempre={"documentos": documentos} if documentos else None,
         )
         if resultado == "novo":
             novos += 1

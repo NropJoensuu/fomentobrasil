@@ -13,6 +13,9 @@ from datetime import datetime, date
 from decimal import Decimal
 from urllib.parse import urljoin
 
+import requests
+from bs4 import BeautifulSoup
+
 from app import db
 from app.models import Oportunidade
 
@@ -276,14 +279,19 @@ PADRAO_DOC_SUBSTITUTIVO = re.compile(
     re.IGNORECASE,
 )
 PADRAO_DOC_INCREMENTAL = re.compile(
-    r"retifica|errata|aditivo|prorroga|ato\s+(?:de\s+)?altera", re.IGNORECASE
+    r"retifica|errata|aditivo|prorroga|ato\s+(?:de\s+)?altera|adequa[çc][ãa]o", re.IGNORECASE
 )
+PADRAO_DOC_ANEXO_NO_INICIO = re.compile(r"anexo\b|ap[êe]ndice\b", re.IGNORECASE)
+
 # Rótulos que dizem explicitamente "este documento é o ATO que altera", e não o texto
 # alterado. Vencem o desempate por tamanho: o "Ato Retificação" da EVENTECH tem 156 kB, acima
 # do limite, e ainda assim é incremental — o que manda é o que o rótulo declara ser.
 PADRAO_DOC_ATO_RETIFICADOR = re.compile(
     r"ato\s+(?:de\s+)?retifica|aviso\s+(?:de\s+)?retifica|prorroga|errata|comunicado"
-    r"|extrato\s+de\s+retifica",
+    r"|extrato\s+de\s+retifica"
+    # "Ato DEFA 231/2024: Adequação" — a Fundação Araucária publica seus atos assim, e
+    # eles são sempre o documento que altera, nunca o texto alterado.
+    r"|\bato\s+\w+\s+\d+/\d{4}",
     re.IGNORECASE,
 )
 
@@ -292,7 +300,7 @@ PADRAO_DOC_RESULTADO = re.compile(
 )
 PADRAO_DOC_ANEXO = re.compile(
     r"\banexo\b|formul[áa]rio|declara[çc][ãa]o|modelo|termo\s+de|carta\s+de"
-    r"|planilha|roteiro|\bfaq\b|manual|cartilha|orienta[çc][õo]es",
+    r"|planilha|roteiro|\bfaq\b|manual|cartilha|orienta[çc][õo]es|diretrizes",
     re.IGNORECASE,
 )
 
@@ -334,7 +342,15 @@ def classificar_documento(rotulo, url="", tamanho_kb=None):
 
     if PADRAO_DOC_RESULTADO.search(alvo):
         return "resultado"
-    if PADRAO_DOC_ANEXO.search(alvo):
+    # "ANEXO II - EDITAL DE CHAMAMENTO" é anexo, não edital: o rótulo começa dizendo o que
+    # o documento é, e o resto é a que edital ele pertence.
+    if PADRAO_DOC_ANEXO_NO_INICIO.match((rotulo or "").strip()):
+        return "anexo"
+    # "Diretrizes" sozinho é documento de apoio ("Diretrizes da Fapeal", que acompanha todas
+    # as chamadas daquela fonte). Mas a FAPESB batiza o próprio edital de "DIRETRIZES
+    # ESPECÍFICAS DA FAPESB – CHAMADA BIODIVERSA": quando o rótulo também diz chamada ou
+    # edital, é a chamada, e o "diretrizes" é só como aquela casa chama seus editais.
+    if PADRAO_DOC_ANEXO.search(alvo) and not PADRAO_DOC_EDITAL.search(alvo):
         return "anexo"
     return "chamada"
 
@@ -395,10 +411,47 @@ def escolher_documentos_para_leitura(documentos):
     leitura = [_como("retificacao", d) for d in reversed(incrementais)]
     if chamadas:
         leitura.append(_como("chamada", chamadas[0]))
-    elif not leitura:
-        # Nem chamada nem retificação: sobra o que houver, para não devolver lista vazia
-        # tendo documento. É o caso do "Credenciamento de Aceleradoras" da FAPERO, que só
-        # tem resultado publicado.
-        leitura.append(_como(documentos[0].get("tipo", "chamada"), documentos[0]))
 
+    # Só anexo e resultado não formam plano: devolver lista vazia faz quem chamou voltar ao
+    # `link` do registro, que é uma aposta melhor que ler um formulário de inscrição ou as
+    # "Diretrizes da Fapeal" no lugar do edital. Era o comportamento anterior e continua
+    # certo quando a fonte não expõe o edital como documento separado.
     return leitura
+
+
+USER_AGENT_PADRAO = "fomentobrasil-scraper/1.0 (+https://fomentobrasil.com.br)"
+
+
+def documentos_da_pagina(url, seletor, filtro_href=None, user_agent=USER_AGENT_PADRAO,
+                         logger=None, timeout=45):
+    """Busca a página do item e coleta os documentos DENTRO do contêiner `seletor`.
+
+    O escopo não é detalhe: a página inteira traz barra lateral e rodapé, e ali moram links
+    de outros editais. Na FAPESB isso produzia oito "retificações" que eram erratas de
+    chamadas diferentes, rotuladas "clique aqui"; na FAPEG, seis "documentos" que eram leis e
+    decretos do menu institucional. Escopado ao corpo do post, sobra o que é da chamada.
+
+    Devolve [] em qualquer falha — de rede, de seletor ausente ou de página sem documento.
+    Uma chamada sem documentos coletados é o estado anterior do sistema, não uma regressão;
+    derrubar o scraper inteiro por causa de uma página fora do ar seria.
+    """
+    try:
+        resp = requests.get(url, timeout=timeout, headers={"User-Agent": user_agent})
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        if logger:
+            logger.warning("não consegui abrir %s (%s)", url, type(e).__name__)
+        return []
+
+    container = BeautifulSoup(resp.content, "html.parser").select_one(seletor)
+    if container is None:
+        if logger:
+            logger.warning("seletor %r não encontrado em %s", seletor, url)
+        return []
+
+    return coletar_documentos(container, url, filtro_href=filtro_href)
+
+
+def so_pdf(url):
+    """Filtro de href para `coletar_documentos`: aceita apenas PDF."""
+    return url.lower().split("?")[0].endswith(".pdf")

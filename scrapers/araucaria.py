@@ -39,7 +39,13 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import detectar_tipo_parceria, processar_registro
+from app.scraper_utils import (
+    coletar_documentos,
+    deduzir_status_oficial,
+    detectar_tipo_parceria,
+    processar_registro,
+    so_pdf,
+)
 
 URL_ARAUCARIA = "https://www.fappr.pr.gov.br/Programas-Abertos"
 
@@ -113,6 +119,10 @@ def coletar_secao(soup, nome_secao):
             descricao = paragrafo.get_text(" ", strip=True).replace("\xa0", " ")
             descricao = re.sub(r"\s+", " ", descricao).strip() or None
 
+        # A <ul> do item lista TODOS os documentos; até aqui só o primeiro era aproveitado
+        # como `link` e o resto se perdia — inclusive eventuais retificações.
+        documentos = coletar_documentos(main, URL_ARAUCARIA, filtro_href=so_pdf)
+
         link_tag = main.find("a", href=True)
         link = link_tag["href"] if link_tag else None
         if link and not link.startswith("http"):
@@ -143,6 +153,8 @@ def coletar_secao(soup, nome_secao):
         resultados.append(
             {
                 "titulo": titulo[:300],
+                "documentos": documentos,
+                "status_oficial": deduzir_status_oficial(documentos),
                 "link": link[:500],
                 "descricao": descricao,
                 "data_prazo": data_prazo,
@@ -195,6 +207,8 @@ def salvar_no_banco(registros):
         resultado = processar_registro(
             dados_novos={
                 "link": r["link"],
+                # Monitorado: retificação publicada depois da curadoria reabre o registro.
+                "status_oficial": r["status_oficial"],
                 "titulo": r["titulo"],
                 "data_prazo": r["data_prazo"],
             },
@@ -216,6 +230,7 @@ def salvar_no_banco(registros):
                 "status": "pendente",
                 "dados_extra": dados_extra,
             },
+            dados_extra_sempre={"documentos": r["documentos"]} if r["documentos"] else None,
         )
         if resultado == "novo":
             novos += 1

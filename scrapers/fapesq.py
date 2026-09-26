@@ -23,6 +23,7 @@ quando virar 2027 (a URL passa a ser `/editais/2027/colecao-de-editais-2027`). A
 anteriores são histórico encerrado e não devem ser coletados.
 """
 
+import logging
 import re
 from datetime import datetime
 from urllib.parse import urljoin
@@ -31,8 +32,14 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import (detectar_possivel_nao_fomento, detectar_tipo_parceria,
-                               processar_registro)
+from app.scraper_utils import (
+    deduzir_status_oficial,
+    detectar_possivel_nao_fomento,
+    detectar_tipo_parceria,
+    documentos_da_pagina,
+    processar_registro,
+    so_pdf,
+)
 
 # >>> Atualizar quando virar o ano (ver "MANUTENÇÃO ANUAL" na docstring). <<<
 ANO = 2026
@@ -131,6 +138,19 @@ def coletar_chamadas_fapesq(paginas_html=None):
     return resultados
 
 
+logger = logging.getLogger(__name__)
+
+SELETOR_CONTEUDO = "div#parent-fieldname-text"
+
+
+def _documentos_do_item(link):
+    """Documentos da chamada, buscados na página do item.
+
+    Uma requisição extra por item. Contêiner de corpo do Plone — o mesmo que o scraper do CNPq usa no gov.br.
+    """
+    return documentos_da_pagina(link, SELETOR_CONTEUDO, filtro_href=so_pdf, logger=logger)
+
+
 def salvar_no_banco(registros):
     """Insere registros novos, atualiza existentes se um campo monitorado mudou
     (ver app.scraper_utils), ou ignora quando nada mudou. Dedup/match por link."""
@@ -139,6 +159,8 @@ def salvar_no_banco(registros):
     ja_existentes = 0
 
     for r in registros:
+        documentos = _documentos_do_item(r["link"])
+
         dados_extra = {}
         if r["possivel_nao_fomento"]:
             dados_extra["possivel_nao_fomento"] = True
@@ -147,6 +169,8 @@ def salvar_no_banco(registros):
             dados_novos={
                 "link": r["link"][:500],
                 "titulo": r["titulo"][:300],
+                # Monitorado: retificação publicada depois da curadoria reabre o registro.
+                "status_oficial": deduzir_status_oficial(documentos),
             },
             campos_extras_fixos={
                 "descricao": r["descricao"],
@@ -166,6 +190,7 @@ def salvar_no_banco(registros):
                 "status": "pendente",
                 "dados_extra": dados_extra or None,
             },
+            dados_extra_sempre={"documentos": documentos} if documentos else None,
         )
         if resultado == "novo":
             novos += 1

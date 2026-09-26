@@ -27,11 +27,18 @@ import re
 from datetime import datetime
 from html import unescape
 
+import logging
+
 import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import processar_registro
+from app.scraper_utils import (
+    deduzir_status_oficial,
+    documentos_da_pagina,
+    processar_registro,
+    so_pdf,
+)
 
 URL_EDITAIS = "https://www.fapesb.ba.gov.br/category/edital/"
 API_POSTS = "https://www.fapesb.ba.gov.br/wp-json/wp/v2/posts"
@@ -149,6 +156,19 @@ def coletar_chamadas_fapesb(html=None, datas_por_slug=None):
     return resultados
 
 
+logger = logging.getLogger(__name__)
+
+# `article` e não a página inteira: a barra lateral da FAPESB lista as erratas mais
+# recentes de TODAS as chamadas, rotuladas "clique aqui". Sem o escopo, uma chamada sem
+# retificação nenhuma herdava oito retificações alheias.
+SELETOR_CONTEUDO = "article"
+
+
+def _documentos_do_item(link):
+    """Documentos da chamada, buscados na página do item. Uma requisição extra por item."""
+    return documentos_da_pagina(link, SELETOR_CONTEUDO, filtro_href=so_pdf, logger=logger)
+
+
 def salvar_no_banco(registros):
     """Insere registros novos, atualiza existentes se um campo monitorado mudou
     (ver app.scraper_utils), ou ignora quando nada mudou. Dedup/match por link."""
@@ -157,6 +177,8 @@ def salvar_no_banco(registros):
     ja_existentes = 0
 
     for r in registros:
+        documentos = _documentos_do_item(r["link"])
+
         # Prêmio não é tipo_instrumento (é o que está sendo oferecido, não o
         # procedimento) — vira linha_de_fomento própria, e o instrumento que veicula
         # o prêmio é um edital como qualquer outro.
@@ -166,6 +188,8 @@ def salvar_no_banco(registros):
             dados_novos={
                 "link": r["link"][:500],
                 "titulo": r["titulo"][:300],
+                # Monitorado: retificação publicada depois da curadoria reabre o registro.
+                "status_oficial": deduzir_status_oficial(documentos),
             },
             campos_extras_fixos={
                 "descricao": r["descricao"],
@@ -186,6 +210,7 @@ def salvar_no_banco(registros):
                 "origem": "institucional",
                 "status": "pendente",
             },
+            dados_extra_sempre={"documentos": documentos} if documentos else None,
         )
         if resultado == "novo":
             novos += 1

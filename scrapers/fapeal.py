@@ -28,7 +28,11 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import processar_registro
+from app.scraper_utils import (
+    coletar_documentos,
+    deduzir_status_oficial,
+    processar_registro,
+)
 
 API_BASE = "https://www.fapeal.br/wp-json/wp/v2"
 SLUG_CATEGORIA = "chamadas-abertas"
@@ -101,12 +105,19 @@ def coletar_chamadas_fapeal(categorias=None, posts=None):
             PADRAO_INTERNACIONAL.search(titulo)
         )
 
+        documentos = coletar_documentos(
+            BeautifulSoup((post.get("content") or {}).get("rendered") or "", "html.parser"),
+            post.get("link") or "", filtro_href=lambda u: u.lower().split("?")[0].endswith(".pdf"),
+        )
+
         resultados.append(
             {
                 "titulo": titulo,
                 "link": link,
                 "data_publicacao": (post.get("date") or "")[:10] or None,
                 "documentos_texto": _limpar((post.get("excerpt") or {}).get("rendered", "")) or None,
+                "documentos": documentos,
+                "status_oficial": deduzir_status_oficial(documentos),
                 "tipo_parceria": "internacional" if internacional else None,
                 "tipo_instrumento": _tipo_instrumento(titulo),
             }
@@ -148,6 +159,7 @@ def salvar_no_banco(registros):
             dados_novos={
                 "link": r["link"][:500],
                 "titulo": r["titulo"][:300],
+                "status_oficial": r["status_oficial"],
             },
             campos_extras_fixos={
                 "descricao": None,  # a fonte não publica descrição (ver docstring)
@@ -168,6 +180,7 @@ def salvar_no_banco(registros):
                 "status": "pendente",
                 "dados_extra": dados_extra or None,
             },
+            dados_extra_sempre={"documentos": r["documentos"]} if r["documentos"] else None,
         )
         if resultado == "novo":
             novos += 1

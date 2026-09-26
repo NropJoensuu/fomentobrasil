@@ -38,7 +38,12 @@ import requests
 from bs4 import BeautifulSoup
 
 from app import db
-from app.scraper_utils import detectar_tipo_parceria, processar_registro
+from app.scraper_utils import (
+    coletar_documentos,
+    deduzir_status_oficial,
+    detectar_tipo_parceria,
+    processar_registro,
+)
 
 API_BASE = "https://www.fapespa.pa.gov.br/wp-json/wp/v2"
 SLUGS_CATEGORIAS = ("chamadas", "editais")
@@ -145,6 +150,15 @@ def coletar_chamadas_fapespa(categorias=None, posts_por_categoria=None):
                 data_publicacao = None
 
             descricao = _limpar_excerpt((post.get("excerpt") or {}).get("rendered", ""))
+
+            # Os documentos estão no corpo do post, que a API já devolveu. Usar o `content`
+            # e não a página renderizada é o que mantém o escopo certo: a página traz
+            # barra lateral e rodapé, e ali moram links de OUTROS editais.
+            documentos = coletar_documentos(
+                BeautifulSoup((post.get("content") or {}).get("rendered") or "", "html.parser"),
+                link, filtro_href=lambda u: u.lower().split("?")[0].endswith(".pdf"),
+            )
+
             resultados.append(
                 {
                     "titulo": titulo,
@@ -152,6 +166,8 @@ def coletar_chamadas_fapespa(categorias=None, posts_por_categoria=None):
                     "descricao": descricao,
                     "data_publicacao": data_publicacao,
                     "tipo_parceria": detectar_tipo_parceria(titulo, descricao),
+                    "documentos": documentos,
+                    "status_oficial": deduzir_status_oficial(documentos),
                 }
             )
 
@@ -170,6 +186,8 @@ def salvar_no_banco(registros):
             dados_novos={
                 "link": r["link"][:500],
                 "titulo": r["titulo"][:300],
+                # Monitorado: retificação publicada depois da curadoria reabre o registro.
+                "status_oficial": r["status_oficial"],
             },
             campos_extras_fixos={
                 "descricao": r["descricao"],
@@ -191,6 +209,7 @@ def salvar_no_banco(registros):
                 "origem": "institucional",
                 "status": "pendente",
             },
+            dados_extra_sempre={"documentos": r["documentos"]} if r["documentos"] else None,
         )
         if resultado == "novo":
             novos += 1

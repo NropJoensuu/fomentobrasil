@@ -1432,6 +1432,60 @@ outros documentos e registra a falha —, mas isso é justamente o caso em que o
 saber que não foi lido, porque a alteração pode estar ali. A tela mostra o aviso em destaque e
 lista os documentos efetivamente lidos.
 
+### Retificações, parte 4: coleta espalhada para mais oito scrapers (2026-09-25)
+
+De 4 fontes coletando documentos estruturados para **12 de 19**, e de 9 para **64 registros**
+marcados `retificada`. Cobertura: 149 dos 339 registros.
+
+| fonte | como | custo |
+|---|---|---|
+| FAPESPA, FAPEAL | `content.rendered` da API do WordPress | zero |
+| FAPEG, FAPEPI, FAPITEC, FAPESQ, FAPESB | página do item, escopada a um contêiner | 1 requisição por item |
+| Fundação Araucária | a `<ul>` de documentos que já estava na listagem | zero |
+
+**O escopo é o que separa funcionar de poluir.** `documentos_da_pagina` exige um seletor de
+contêiner, e não é preciosismo: na FAPESB a barra lateral lista as erratas recentes de TODAS
+as chamadas, rotuladas "clique aqui" — sem escopo, uma chamada sem retificação nenhuma
+herdava **oito** retificações alheias. Na FAPEG, a página inteira rendia seis "documentos"
+que eram leis e decretos do menu institucional.
+
+**A Fundação Araucária já tinha os documentos e os jogava fora.** O scraper pegava
+`main.find("a")` — o primeiro link — e descartava o resto da lista. Entre os descartados
+estava "Ato DEFA 181/2026: Prorrogação no Cronograma", uma retificação de prazo.
+
+**Quatro correções de classificação, todas vindas de dados reais desta rodada:**
+
+- **"Diretrizes" depende da fonte.** "Diretrizes da Fapeal" é documento de apoio que acompanha
+  todas as chamadas daquela casa; "DIRETRIZES ESPECÍFICAS DA FAPESB – CHAMADA BIODIVERSA" é o
+  próprio edital. A regra passou a ser: `diretrizes` é anexo **a menos que** o rótulo também
+  diga chamada ou edital.
+- **Anexo numerado no início ganha.** "ANEXO II - EDITAL DE CHAMAMENTO" é anexo: o rótulo
+  começa dizendo o que o documento é, e o resto diz a que edital pertence.
+- **"Adequação" é retificação** por outro nome, e "Ato DEFA 231/2024" segue o padrão com que a
+  Fundação Araucária publica seus atos — sempre o documento que altera, nunca o alterado.
+- **A adjacência no padrão substitutivo se provou.** A FAPESQ rotula
+  "EDITAL 03/2026 - … (Retificado em 13/03/26, Item 2)". Se `retificad` sozinho bastasse para
+  marcar substitutiva, toda retificação incremental da FAPESQ — 40 das 64 — seria lida como
+  texto completo, e o edital verdadeiro deixaria de ser lido. Exigir `edital` ou `chamada`
+  COLADO em `retificad` é o que evita isso.
+
+**Sete fontes continuam sem documentos, por motivo diferente em cada caso:**
+
+| fonte | registros | motivo |
+|---|---|---|
+| FACEPE | 51 | o `link` já é o PDF do edital; os sub-documentos são filtrados na coleta |
+| FAPEMA | 43 | nenhum PDF na página do item, em nenhum contêiner |
+| FAPES | 30 | idem |
+| FAPESP | 16 | idem — a página é um redirecionador |
+| FUNDECT | 14 | o `link` já é o PDF; o histórico de documentos é texto, sem links |
+| FAPERGS | 4 | nenhum PDF na página |
+| FAPAC | 3 | página única; as retificações são descartadas por `PADRAO_EXCLUI` |
+
+As três últimas linhas são as únicas com caminho claro: FUNDECT e FAPAC descartam informação
+que têm, e dá para recuperá-la agrupando por número de edital. FACEPE, FAPEMA, FAPES, FAPESP e
+FAPERGS simplesmente não publicam os documentos de forma alcançável — ali a única saída é o
+curador colar a URL, que o painel já aceita.
+
 ## `status` vs `status_oficial` — não confundir
 
 Dois campos parecidos, com significados completamente diferentes:
